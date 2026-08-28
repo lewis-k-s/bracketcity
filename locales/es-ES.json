@@ -1,0 +1,55 @@
+{
+  "id": "es-ES",
+  "dir": "ltr",
+  "ui": {
+    "gameName": "Nexo",
+    "gameLabel": "Pistas anidadas",
+    "puzzleLabel": "Rompecabezas de pistas anidadas",
+    "clueCount": "{count} pistas",
+    "instructions": "Resuelve primero las pistas resaltadas. Pulsa una pista para ver solo su primera letra. Escribe cada respuesta para continuar.",
+    "guessLabel": "Respuesta",
+    "guessPlaceholder": "Escribe cualquier respuesta",
+    "submit": "Enviar",
+    "peek": "Mostrar la primera letra.",
+    "enterAfterPeek": "Escribe la respuesta para continuar.",
+    "peekValue": "Primera letra: {peek}.",
+    "peekMarker": " · {peek}…",
+    "clueLabel": "Pista: {clue}.",
+    "showKeyboard": "Mostrar teclado español",
+    "hideKeyboard": "Ocultar teclado español",
+    "virtualKeyboard": "Teclado español opcional",
+    "space": "Espacio",
+    "backspace": "Borrar",
+    "correct": "Correcto: {answer}.",
+    "wrong": "No es correcto. Puedes corregir la respuesta e intentarlo de nuevo.",
+    "peeked": "La primera letra es {peek}.",
+    "unlocked": "Se han abierto {count} pistas nuevas.",
+    "complete": "Completado.",
+    "score": "Puntuación",
+    "scoreValue": "Puntuación: {score}.",
+    "completionTitle": "Nexo resuelto",
+    "result": "{score} puntos · {rank}",
+    "rankPerfect": "Precisión total",
+    "rankSharp": "Mente aguda",
+    "rankSteady": "Paso firme"
+  },
+  "matching": {
+    "locale": "es-ES",
+    "foldCase": true,
+    "trim": true,
+    "collapseWhitespace": true,
+    "canonicalizeQuotes": true,
+    "canonicalizeHyphens": true,
+    "optionalAcuteVowels": true,
+    "ignorePunctuation": false
+  },
+  "keyboard": {
+    "mode": "native-preferred",
+    "rows": [
+      ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
+      ["a", "s", "d", "f", "g", "h", "j", "k", "l", "ñ"],
+      ["z", "x", "c", "v", "b", "n", "m"]
+    ],
+    "extras": ["á", "é", "í", "ó", "ú", "ü", " "]
+  }
+}

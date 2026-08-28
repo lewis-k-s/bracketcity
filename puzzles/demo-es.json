@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "id": "primera-luz-es",
+  "revision": 2,
+  "locale": "es-ES",
+  "title": "Primera luz",
+  "releaseDate": "2026-08-28",
+  "factDate": "2022-07-12",
+  "finalText": "El telescopio James Webb envió su primera imagen científica en 2022.",
+  "root": [
+    "El ",
+    { "ref": "c01" },
+    " ",
+    { "ref": "c07" },
+    " su primera ",
+    { "ref": "c09" },
+    " en 2022."
+  ],
+  "clues": {
+    "c01": {
+      "answer": "telescopio James Webb",
+      "prompt": [
+        { "ref": "c02" },
+        " espacial asociado con ",
+        { "ref": "c04" }
+      ]
+    },
+    "c02": {
+      "answer": "telescopio",
+      "prompt": [
+        "instrumento óptico cuyo prefijo es ",
+        { "ref": "c03" }
+      ]
+    },
+    "c03": {
+      "answer": "tele",
+      "prompt": ["prefijo griego que indica distancia"]
+    },
+    "c04": {
+      "answer": "James Webb",
+      "peek": "J",
+      "prompt": [
+        "nombre James y una ",
+        { "ref": "c05" }
+      ]
+    },
+    "c05": {
+      "answer": "Webb",
+      "prompt": [
+        { "ref": "c06" },
+        " con una be extra"
+      ]
+    },
+    "c06": {
+      "answer": "web",
+      "prompt": ["red global de páginas enlazadas"]
+    },
+    "c07": {
+      "answer": "envió",
+      "prompt": [
+        { "ref": "c08" },
+        " en tercera persona del pasado"
+      ]
+    },
+    "c08": {
+      "answer": "enviar",
+      "prompt": ["hacer llegar algo a un destino"]
+    },
+    "c09": {
+      "answer": "imagen científica",
+      "prompt": [
+        { "ref": "c10" },
+        " producida para la ",
+        { "ref": "c11" }
+      ]
+    },
+    "c10": {
+      "answer": "imagen",
+      "prompt": ["representación visual"]
+    },
+    "c11": {
+      "answer": "ciencia",
+      "prompt": [
+        { "ref": "c12" },
+        " sistemático"
+      ]
+    },
+    "c12": {
+      "answer": "saber",
+      "prompt": ["tener conocimiento"]
+    }
+  },
+  "source": {
+    "label": "Demostración original de esquema"
+  },
+  "scoring": {
+    "base": 100,
+    "wrongGuess": -2,
+    "peek": -5,
+    "ranks": [
+      { "minScore": 95, "labelKey": "rankPerfect" },
+      { "minScore": 80, "labelKey": "rankSharp" },
+      { "minScore": 0, "labelKey": "rankSteady" }
+    ]
+  }
+}

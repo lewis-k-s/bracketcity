@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/nexo/puzzle-schema-v1.json",
+  "title": "Nexo puzzle definition",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "locale", "finalText", "root", "clues"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "$ref": "#/$defs/slug" },
+    "revision": { "type": "integer", "minimum": 1 },
+    "locale": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "releaseDate": { "$ref": "#/$defs/date" },
+    "factDate": { "$ref": "#/$defs/date" },
+    "finalText": { "type": "string", "minLength": 1 },
+    "root": { "$ref": "#/$defs/segments" },
+    "clues": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/slug" },
+      "additionalProperties": { "$ref": "#/$defs/clue" }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label"],
+      "properties": {
+        "label": { "type": "string", "minLength": 1 },
+        "url": { "type": "string", "format": "uri", "pattern": "^https?://" }
+      }
+    },
+    "scoring": { "$ref": "#/$defs/scoring" }
+  },
+  "$defs": {
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref"],
+      "properties": { "ref": { "$ref": "#/$defs/slug" } }
+    },
+    "segment": {
+      "oneOf": [
+        { "type": "string" },
+        { "$ref": "#/$defs/reference" }
+      ]
+    },
+    "segments": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/segment" }
+    },
+    "match": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "locale": { "type": "string", "minLength": 1 },
+        "foldCase": { "type": "boolean" },
+        "trim": { "type": "boolean" },
+        "collapseWhitespace": { "type": "boolean" },
+        "canonicalizeQuotes": { "type": "boolean" },
+        "canonicalizeHyphens": { "type": "boolean" },
+        "optionalAcuteVowels": { "type": "boolean" },
+        "ignorePunctuation": { "type": "boolean" }
+      }
+    },
+    "clue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["answer", "prompt"],
+      "properties": {
+        "answer": { "type": "string", "minLength": 1 },
+        "prompt": { "$ref": "#/$defs/segments" },
+        "accept": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "peek": { "type": "string", "minLength": 1 },
+        "match": { "$ref": "#/$defs/match" }
+      }
+    },
+    "rank": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minScore", "labelKey"],
+      "properties": {
+        "minScore": { "type": "number" },
+        "labelKey": { "type": "string", "minLength": 1 }
+      }
+    },
+    "scoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "base": { "type": "number" },
+        "wrongGuess": { "type": "number" },
+        "peek": { "type": "number" },
+        "ranks": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/rank" }
+        }
+      }
+    }
+  }
+}

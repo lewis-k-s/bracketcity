@@ -1,0 +1,96 @@
+.travel-log-globe {
+  position: relative;
+  width: 100%;
+  min-height: 520px;
+  background: radial-gradient(circle at top, rgba(20, 40, 70, 0.85), rgba(5, 10, 20, 0.95));
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.travel-log-globe canvas {
+  cursor: grab;
+}
+
+.travel-log-globe__notice {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 2;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e8eef8;
+  font-size: 13px;
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+}
+
+.travel-log-globe__popup {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  width: min(360px, 90%);
+  max-height: 75%;
+  overflow: auto;
+  padding: 16px;
+  background: rgba(12, 18, 30, 0.92);
+  color: #f4f6fb;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(12px);
+}
+
+.travel-log-globe__popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.travel-log-globe__title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.travel-log-globe__date {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.travel-log-globe__close {
+  background: transparent;
+  color: #f4f6fb;
+  border: 0;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.travel-log-globe__description {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.travel-log-globe__photos {
+  display: grid;
+  gap: 12px;
+}
+
+.travel-log-globe__photos img {
+  width: 100%;
+  border-radius: 12px;
+  display: block;
+}
+
+.travel-log-globe__photos figcaption {
+  font-size: 12px;
+  margin-top: 6px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.travel-log-globe__empty {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
