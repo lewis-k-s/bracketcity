@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "id": "simulacion-huevo-es",
+  "revision": 2,
+  "locale": "es-ES",
+  "title": "Un solo huevo",
+  "releaseDate": "2026-08-31",
+  "finalText": "Lewis se entera de la sartén para un solo huevo.",
+  "root": [
+    "Lewis se ent",
+    { "ref": "c01" },
+    " de la s",
+    { "ref": "c03" },
+    "n para un ",
+    { "ref": "c06" },
+    "o huevo."
+  ],
+  "clues": {
+    "c01": {
+      "answer": "era",
+      "prompt": [
+        "cu",
+        { "ref": "c02" },
+        " ____ niño…"
+      ]
+    },
+    "c02": {
+      "answer": "ando",
+      "prompt": ["voy en argentino"]
+    },
+    "c03": {
+      "answer": "arté",
+      "accept": ["arte"],
+      "prompt": [
+        "algo que imita la v",
+        { "ref": "c04" }
+      ]
+    },
+    "c04": {
+      "answer": "ida",
+      "prompt": [
+        "an",
+        { "ref": "c05" },
+        " de la vuelta"
+      ]
+    },
+    "c05": {
+      "answer": "tes",
+      "accept": ["tés"],
+      "prompt": ["alternativos para cafés"]
+    },
+    "c06": {
+      "answer": "sol",
+      "accept": ["Sol"],
+      "prompt": [
+        "cer",
+        { "ref": "c07" },
+        "a mexicana"
+      ]
+    },
+    "c07": {
+      "answer": "vez",
+      "prompt": ["érase una _____"]
+    }
+  },
+  "source": {
+    "label": "Entrada de texto confirmada"
+  },
+  "scoring": {
+    "base": 100,
+    "wrongGuess": -2,
+    "peek": -5,
+    "ranks": [
+      { "minScore": 95, "labelKey": "rankPerfect" },
+      { "minScore": 80, "labelKey": "rankSharp" },
+      { "minScore": 0, "labelKey": "rankSteady" }
+    ]
+  }
+}

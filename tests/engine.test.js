@@ -293,6 +293,79 @@ test("NFC-equivalent final text passes exact expansion validation", () => {
   assert.equal(validatePuzzle(definition, esLocale).valid, true);
 });
 
+test("old one-sided directed references remain compatible", () => {
+  const definition = freshBranch();
+  definition.clues.book.prompt[0] = { ref: "lib", direction: "left" };
+  const result = validatePuzzle(definition, esLocale);
+  assert.equal(result.valid, true);
+  const puzzle = compilePuzzle(definition, esLocale);
+  assert.deepEqual(puzzle.nodes.get("book").prompt[0], { ref: "lib", direction: "left" });
+});
+
+test("validator rejects invalid directions with a stable code", () => {
+  const definition = freshBranch();
+  definition.clues.book.prompt[0] = { ref: "lib", direction: "up" };
+  assert.equal(errorCodes(definition).includes("INVALID_DIRECTION"), true);
+});
+
+test("directed references may target clues with nested prompt references", () => {
+  const definition = freshBranch();
+  definition.root[1] = { ref: "object", direction: "right" };
+  assert.equal(validatePuzzle(definition, esLocale).valid, true);
+  assert.deepEqual(compilePuzzle(definition, esLocale).nodes.get("object").children, ["book", "colour"]);
+});
+
+test("two-sided prompts compile children from both sides in stable order", () => {
+  const definition = freshBranch();
+  definition.clues.object.prompt = ["objeto con ", { ref: "book" }];
+  definition.clues.object.rightPrompt = [" de color ", { ref: "colour" }];
+  const puzzle = compilePuzzle(definition, esLocale);
+  assert.deepEqual(puzzle.nodes.get("object").prompt, definition.clues.object.prompt);
+  assert.deepEqual(puzzle.nodes.get("object").rightPrompt, definition.clues.object.rightPrompt);
+  assert.deepEqual(puzzle.nodes.get("object").children, ["book", "colour"]);
+  assert.deepEqual(puzzle.order, ["object", "book", "lib", "colour", "sky"]);
+  assert.equal(puzzle.nodes.get("colour").parent, "object");
+});
+
+test("children on both prompt sides must solve before their parent unlocks", () => {
+  const definition = freshBranch();
+  definition.clues.object.prompt = [{ ref: "book" }];
+  definition.clues.object.rightPrompt = [{ ref: "colour" }];
+  const puzzle = compilePuzzle(definition, esLocale);
+  const leftOnly = solve(puzzle, createProgress(puzzle), "lib", "libro");
+  assert.equal(ids(getAvailableClues(puzzle, leftOnly)).includes("object"), false);
+  const both = solve(puzzle, leftOnly, "cielo", "azul");
+  assert.deepEqual(ids(getAvailableClues(puzzle, both)), ["object"]);
+});
+
+test("two-sided prompt references participate in cycle, reachability, and parent validation", () => {
+  const cycle = freshBranch();
+  cycle.clues.lib.rightPrompt = [{ ref: "object" }];
+  assert.equal(errorCodes(cycle).includes("CYCLE"), true);
+
+  const multiple = freshBranch();
+  multiple.clues.colour.rightPrompt = [{ ref: "lib" }];
+  assert.equal(errorCodes(multiple).includes("MULTIPLE_PARENTS"), true);
+
+  const reachable = freshBranch();
+  reachable.clues.extra = { answer: "extra", prompt: ["extra"] };
+  reachable.clues.lib.rightPrompt = [{ ref: "extra" }];
+  assert.equal(errorCodes(reachable).includes("UNREACHABLE_CLUE"), false);
+});
+
+test("two-sided clues reject an explicit incoming direction", () => {
+  const definition = freshBranch();
+  definition.clues.lib.rightPrompt = ["por la derecha"];
+  definition.clues.book.prompt[0] = { ref: "lib", direction: "left" };
+  assert.equal(errorCodes(definition).includes("DIRECTION_WITH_RIGHT_PROMPT"), true);
+});
+
+test("rightPrompt must be a non-empty segment list", () => {
+  const definition = freshBranch();
+  definition.clues.lib.rightPrompt = [];
+  assert.equal(errorCodes(definition).includes("EMPTY_SEGMENTS"), true);
+});
+
 for (const [name, mutate, code] of [
   ["unsupported schema", (d) => { d.schemaVersion = 2; }, "UNSUPPORTED_SCHEMA"],
   ["bad puzzle ID", (d) => { d.id = "Bad ID"; }, "INVALID_PUZZLE_ID"],

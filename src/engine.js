@@ -34,7 +34,7 @@ const TOP_LEVEL_KEYS = new Set([
   "source",
   "scoring"
 ]);
-const CLUE_KEYS = new Set(["answer", "prompt", "accept", "peek", "match"]);
+const CLUE_KEYS = new Set(["answer", "prompt", "rightPrompt", "accept", "peek", "match"]);
 const MATCH_KEYS = new Set([
   "locale",
   "foldCase",
@@ -59,6 +59,10 @@ export class PuzzleValidationError extends Error {
 
 function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isReferenceSegment(value) {
+  return isRecord(value) && typeof value.ref === "string";
 }
 
 function ownEntries(value) {
@@ -199,15 +203,19 @@ function validateSegments(segments, path, clues, errors, warnings, referenceVisi
       if (/[\[\]]/u.test(segment)) addIssue(warnings, "LITERAL_BRACKET", segmentPath, "Literal square brackets can be confusing.");
       continue;
     }
-    if (!isRecord(segment) || Object.keys(segment).length !== 1 || !isNonEmptyString(segment.ref)) {
-      addIssue(errors, "INVALID_SEGMENT", segmentPath, "Segment must be text or an object with one ref key.");
+    const keys = isRecord(segment) ? Object.keys(segment) : [];
+    if (!isRecord(segment) || !isNonEmptyString(segment.ref) || keys.some((key) => !["ref", "direction"].includes(key))) {
+      addIssue(errors, "INVALID_SEGMENT", segmentPath, "Segment must be text or a reference with ref and optional direction keys.");
       continue;
+    }
+    if ("direction" in segment && !["left", "right"].includes(segment.direction)) {
+      addIssue(errors, "INVALID_DIRECTION", `${segmentPath}.direction`, "Reference direction must be 'left' or 'right'.");
     }
     hasContent = true;
     if (!Object.hasOwn(clues, segment.ref)) {
       addIssue(errors, "MISSING_REFERENCE", `${segmentPath}.ref`, `Unknown clue '${segment.ref}'.`);
     }
-    referenceVisitor?.(segment.ref, `${segmentPath}.ref`);
+    referenceVisitor?.(segment.ref, `${segmentPath}.ref`, segment.direction, `${segmentPath}.direction`);
   }
   if (!hasContent) addIssue(errors, "EMPTY_PROMPT", path, "Prompt must contain text or a clue reference.");
 }
@@ -311,7 +319,8 @@ export function validatePuzzle(definition, localePack = null) {
 
   const parentOf = new Map();
   const referencePaths = new Map();
-  const visitReference = (parent) => (child, path) => {
+  const directedReferences = [];
+  const visitReference = (parent) => (child, path, direction, directionPath) => {
     if (!referencePaths.has(child)) referencePaths.set(child, []);
     referencePaths.get(child).push(path);
     if (parentOf.has(child)) {
@@ -319,6 +328,7 @@ export function validatePuzzle(definition, localePack = null) {
     } else {
       parentOf.set(child, parent);
     }
+    if (["left", "right"].includes(direction)) directedReferences.push({ child, directionPath });
   };
 
   validateSegments(definition.root, "$.root", clues, errors, warnings, visitReference(null));
@@ -328,16 +338,25 @@ export function validatePuzzle(definition, localePack = null) {
   for (const [id, clue] of ownEntries(clues)) {
     if (!isRecord(clue)) continue;
     validateSegments(clue.prompt, `$.clues.${id}.prompt`, clues, errors, warnings, visitReference(id));
+    if ("rightPrompt" in clue) {
+      validateSegments(clue.rightPrompt, `$.clues.${id}.rightPrompt`, clues, errors, warnings, visitReference(id));
+    }
   }
 
   const childrenOf = new Map(
     ownEntries(clues).map(([id, clue]) => [
       id,
-      Array.isArray(clue?.prompt)
-        ? clue.prompt.filter((segment) => isRecord(segment) && typeof segment.ref === "string").map((segment) => segment.ref)
-        : []
+      [
+        ...(Array.isArray(clue?.prompt) ? clue.prompt : []),
+        ...(Array.isArray(clue?.rightPrompt) ? clue.rightPrompt : [])
+      ].filter((segment) => isRecord(segment) && typeof segment.ref === "string").map((segment) => segment.ref)
     ])
   );
+  for (const { child, directionPath } of directedReferences) {
+    if (Object.hasOwn(clues, child) && Object.hasOwn(clues[child], "rightPrompt")) {
+      addIssue(errors, "DIRECTION_WITH_RIGHT_PROMPT", directionPath, "A two-sided clue must not have an explicit direction.");
+    }
+  }
 
   const colors = new Map();
   const visitForCycles = (id, trail = []) => {
@@ -375,7 +394,8 @@ export function validatePuzzle(definition, localePack = null) {
 
   for (const [id, clue] of ownEntries(clues)) {
     if (!isRecord(clue) || !Array.isArray(clue.prompt)) continue;
-    const literalLength = clue.prompt.reduce((total, segment) => total + (typeof segment === "string" ? segment.length : 0), 0);
+    const literalLength = [...clue.prompt, ...(Array.isArray(clue.rightPrompt) ? clue.rightPrompt : [])]
+      .reduce((total, segment) => total + (typeof segment === "string" ? segment.length : 0), 0);
     if (literalLength > 240) addIssue(warnings, "LONG_PROMPT", `$.clues.${id}.prompt`, "Clue prompt is long for mobile play.");
   }
 
@@ -418,7 +438,7 @@ export function validatePuzzle(definition, localePack = null) {
     const expanded = definition.root
       .map((segment) => {
         if (typeof segment === "string") return segment;
-        return isRecord(segment) && isRecord(clues[segment.ref]) ? clues[segment.ref].answer ?? "" : "";
+        return isReferenceSegment(segment) && isRecord(clues[segment.ref]) ? clues[segment.ref].answer ?? "" : "";
       })
       .join("")
       .normalize("NFC");
@@ -446,14 +466,14 @@ export function compilePuzzle(definition, localePack = null) {
   const parentOf = new Map();
   const rootChildren = [];
   for (const segment of definition.root) {
-    if (isRecord(segment)) {
+    if (isReferenceSegment(segment)) {
       rootChildren.push(segment.ref);
       parentOf.set(segment.ref, null);
     }
   }
   for (const [id, clue] of Object.entries(definition.clues)) {
-    for (const segment of clue.prompt) {
-      if (isRecord(segment)) parentOf.set(segment.ref, id);
+    for (const segment of [...clue.prompt, ...(clue.rightPrompt ?? [])]) {
+      if (isReferenceSegment(segment)) parentOf.set(segment.ref, id);
     }
   }
 
@@ -463,7 +483,9 @@ export function compilePuzzle(definition, localePack = null) {
     if (seen.has(id)) return;
     seen.add(id);
     order.push(id);
-    for (const segment of definition.clues[id].prompt) if (isRecord(segment)) visit(segment.ref);
+    for (const segment of [...definition.clues[id].prompt, ...(definition.clues[id].rightPrompt ?? [])]) {
+      if (isReferenceSegment(segment)) visit(segment.ref);
+    }
   };
   rootChildren.forEach(visit);
 
@@ -478,7 +500,8 @@ export function compilePuzzle(definition, localePack = null) {
       id,
       answer: clue.answer,
       prompt: clue.prompt,
-      children: clue.prompt.filter((segment) => isRecord(segment)).map((segment) => segment.ref),
+      ...(clue.rightPrompt ? { rightPrompt: clue.rightPrompt } : {}),
+      children: [...clue.prompt, ...(clue.rightPrompt ?? [])].filter(isReferenceSegment).map((segment) => segment.ref),
       parent: parentOf.get(id) ?? null,
       accepted,
       peek: clue.peek ?? firstGrapheme(clue.answer, match.locale),

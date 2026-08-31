@@ -30,7 +30,9 @@ body {
 }
 
 button,
-input {
+input,
+textarea,
+select {
   font: inherit;
 }
 
@@ -43,12 +45,12 @@ button {
   min-height: 100vh;
   min-height: 100dvh;
   margin: 0 auto;
-  padding: 0 clamp(1rem, 5vw, 3rem) calc(var(--composer-height, 8rem) + 2rem);
+  padding: 0 clamp(1rem, 5vw, 3rem) calc(var(--composer-height, 8rem) + 1rem);
 }
 
 .game-header {
   display: flex;
-  min-height: 5rem;
+  min-height: 4.5rem;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
@@ -64,7 +66,6 @@ button {
 }
 
 .eyebrow,
-.puzzle-meta,
 .score-label {
   color: var(--muted);
   font-size: 0.72rem;
@@ -78,6 +79,34 @@ button {
   text-align: right;
 }
 
+.header-actions,
+.mode-nav {
+  display: flex;
+  align-items: center;
+}
+
+.header-actions {
+  gap: 1rem;
+}
+
+.mode-link {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 0.25rem;
+  color: var(--blue-dark);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.mode-link:hover {
+  border-color: var(--blue-dark);
+  background: rgba(82, 104, 174, 0.08);
+}
+
 .score-value {
   display: block;
   margin-top: 0.18rem;
@@ -88,24 +117,45 @@ button {
 }
 
 .puzzle-card {
-  margin-top: clamp(2.5rem, 9vw, 4.5rem);
+  margin-top: clamp(1rem, 4vw, 2rem);
 }
 
-.puzzle-meta {
-  margin: 0 0 1rem;
-  padding: 0 0 1.35rem;
-  border-bottom: 1px dashed var(--ink);
+.date-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.4rem;
+}
+
+.date-label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.date-select {
+  width: min(100%, 16rem);
+  min-width: 0;
+  height: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0.55rem 2rem 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 0.25rem;
+  background: var(--paper);
   color: var(--ink);
-  line-height: 1.55;
+  font-size: 1rem;
 }
 
 .puzzle-text {
   margin: 0;
-  padding: 0.35rem 0 0.75rem;
+  padding: 0;
   font-size: clamp(1.06rem, 3.4vw, 1.25rem);
   font-weight: 400;
-  letter-spacing: 0.005em;
-  line-height: 1.5;
+  letter-spacing: 0;
+  line-height: 1.36;
 }
 
 .clue {
@@ -129,7 +179,7 @@ button {
 .clue-button {
   display: inline;
   margin: 0;
-  padding: 0.12em 0.24em;
+  padding: 0.06em;
   border: 0;
   border-radius: 0.18rem;
   background: var(--blue);
@@ -138,8 +188,9 @@ button {
   font-family: inherit;
   font-size: inherit;
   font-weight: 700;
-  line-height: inherit;
+  line-height: 1.15;
   text-align: left;
+  vertical-align: baseline;
   white-space: normal;
 }
 
@@ -156,6 +207,18 @@ button {
   font-weight: 700;
 }
 
+.answer-slot-arrow,
+.answer-slot {
+  display: inline-block;
+  margin-inline: 0.1em;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.answer-slot {
+  letter-spacing: 0.04em;
+}
+
 .peek-marker {
   color: #ffffff;
   font-size: 0.78em;
@@ -166,27 +229,10 @@ button {
 .clue-button:focus-visible,
 .submit-button:focus-visible,
 .guess-input:focus-visible,
-.keyboard-key:focus-visible,
-.keyboard-toggle:focus-visible {
+.date-select:focus-visible,
+.keyboard-key:focus-visible {
   outline: 3px solid rgba(78, 100, 173, 0.38);
   outline-offset: 3px;
-}
-
-.instruction {
-  margin: 1rem 0 0;
-  color: var(--muted);
-  font-size: 0.82rem;
-  line-height: 1.55;
-}
-
-.source-note {
-  margin: 1rem 0 0;
-  color: var(--muted);
-  font-size: 0.72rem;
-}
-
-.source-note a {
-  color: inherit;
 }
 
 .completion-panel {
@@ -194,6 +240,10 @@ button {
   padding: 1.8rem 0;
   border-top: 1px dashed var(--ink);
   border-bottom: 1px dashed var(--ink);
+}
+
+.puzzle-card > .completion-panel {
+  margin-top: 0;
 }
 
 .completion-title {
@@ -224,7 +274,7 @@ button {
   max-height: min(65dvh, 30rem);
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 0.75rem max(1rem, env(safe-area-inset-left)) max(0.75rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-right));
+  padding: 0.45rem max(0.75rem, env(safe-area-inset-left)) max(0.45rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-right));
   border-top: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(0.75rem);
@@ -235,24 +285,17 @@ button {
   display: flex;
   width: min(100%, 40rem);
   margin: 0 auto;
-  padding-top: 1rem;
+  padding-top: 0;
   gap: 0.55rem;
 }
 
 .guess-form::before {
-  position: absolute;
-  top: 0;
-  left: 0;
-  color: var(--muted);
-  content: "RESPUESTA";
-  font-size: 0.64rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  content: none;
 }
 
 .guess-input {
   min-width: 0;
-  min-height: 3.75rem;
+  min-height: 3rem;
   flex: 1;
   padding: 0.85rem 1rem;
   border: 1px solid #b7b6b4;
@@ -267,7 +310,7 @@ button {
 }
 
 .submit-button {
-  min-height: 3.75rem;
+  min-height: 3rem;
   padding: 0.75rem 1.35rem;
   border: 0;
   border-radius: 0.35rem;
@@ -281,6 +324,25 @@ button {
   background: #11100f;
 }
 
+.submit-button[data-submit-feedback="correct"] {
+  background: #21653b;
+  animation: submit-confirm 180ms ease-out;
+}
+
+.submit-button[data-submit-feedback="wrong"] {
+  background: var(--error);
+  animation: submit-reject 180ms ease-out;
+}
+
+@keyframes submit-confirm {
+  50% { transform: translateY(-0.08rem); }
+}
+
+@keyframes submit-reject {
+  25% { transform: translateX(-0.1rem); }
+  75% { transform: translateX(0.1rem); }
+}
+
 .submit-button::before {
   content: "[";
 }
@@ -289,31 +351,16 @@ button {
   content: "]";
 }
 
-.keyboard-toggle {
-  display: block;
-  min-height: 2.75rem;
-  margin: 0.35rem auto 0;
-  padding: 0.45rem 0.75rem;
-  border: 0;
-  background: transparent;
-  color: var(--blue-dark);
-  cursor: pointer;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-decoration: underline;
-  text-underline-offset: 0.18em;
-}
-
 .virtual-keyboard {
   width: min(100%, 40rem);
-  margin: 0.2rem auto 0;
+  margin: 0.1rem auto 0;
 }
 
 .keyboard-row {
   display: flex;
   justify-content: center;
-  gap: clamp(0.12rem, 1vw, 0.3rem);
-  margin-top: 0.25rem;
+  gap: clamp(0.1rem, 0.8vw, 0.22rem);
+  margin-top: 0.12rem;
 }
 
 .keyboard-key {
@@ -327,15 +374,12 @@ button {
   cursor: pointer;
   font-weight: 700;
   box-shadow: 0 0.1rem 0 rgba(44, 40, 37, 0.18);
+  touch-action: manipulation;
 }
 
 .keyboard-key:active {
   transform: translateY(0.08rem);
   box-shadow: none;
-}
-
-.keyboard-row--actions .keyboard-key {
-  flex: 0 1 8rem;
 }
 
 .fatal-panel {
@@ -345,6 +389,427 @@ button {
   border: 1px solid var(--error);
   background: var(--paper);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.author-shell {
+  width: min(100%, 78rem);
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 0 clamp(1rem, 3vw, 2.5rem) 4rem;
+}
+
+.author-header {
+  display: flex;
+  min-height: 5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.author-intro {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0.75rem 0;
+}
+
+.author-lede {
+  max-width: 64rem;
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.author-steps {
+  display: grid;
+  margin: 1rem 0 0;
+  padding-left: 1.3rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem 2rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.author-reset {
+  margin: 0;
+}
+
+.author-load-controls {
+  display: flex;
+  align-items: end;
+  gap: 0.6rem;
+}
+
+.author-load-controls .author-field {
+  flex: 1 1 auto;
+  margin: 0;
+}
+
+.author-layout {
+  display: grid;
+  align-items: start;
+  grid-template-columns: minmax(0, 1.3fr) minmax(19rem, 0.7fr);
+  gap: 0.9rem;
+}
+
+.author-editor,
+.author-output {
+  min-width: 0;
+}
+
+.author-output {
+  position: sticky;
+  top: 1rem;
+}
+
+.author-panel {
+  min-width: 0;
+  margin: 0 0 0.8rem;
+  padding: clamp(0.75rem, 2vw, 1rem);
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.author-panel-title {
+  margin: 0 0 0.65rem;
+  font-size: 1rem;
+  letter-spacing: -0.025em;
+  line-height: 1.35;
+}
+
+.author-subheading {
+  margin: 0 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.author-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.author-field {
+  min-width: 0;
+  margin: 0 0 0.6rem;
+}
+
+.author-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.author-help,
+.author-empty {
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.author-input {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid #b7b6b4;
+  border-radius: 0.25rem;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+textarea.author-input {
+  display: block;
+  resize: vertical;
+}
+
+.author-input[readonly] {
+  background: #f3f2f0;
+  color: #595653;
+}
+
+.author-input:focus-visible,
+.author-button:focus-visible,
+.author-icon-button:focus-visible,
+.reference-chip:focus-visible,
+.author-tree-button:focus-visible,
+.mode-link:focus-visible {
+  outline: 3px solid rgba(78, 100, 173, 0.38);
+  outline-offset: 2px;
+}
+
+.author-button,
+.author-icon-button,
+.reference-chip,
+.author-tree-button {
+  min-height: 2.75rem;
+  border: 1px solid var(--ink);
+  border-radius: 0.25rem;
+  background: var(--paper);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.author-button {
+  padding: 0.55rem 0.8rem;
+}
+
+.author-button:hover,
+.author-icon-button:hover,
+.author-tree-button:hover {
+  background: #f3f2f0;
+}
+
+.author-button--accent {
+  border-color: var(--blue-dark);
+  background: var(--blue);
+  color: #fff;
+}
+
+.author-button--accent:hover {
+  background: var(--blue-dark);
+}
+
+.author-button--danger {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.author-button:disabled,
+.author-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.author-segments {
+  margin-top: 0.7rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--line);
+}
+
+.author-side-label {
+  margin: 0 0 0.35rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.segment-list {
+  display: grid;
+  gap: 0.4rem;
+  margin-bottom: 0.45rem;
+}
+
+.segment-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.segment-row--literal {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.segment-row--reference {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.segment-actions,
+.author-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.author-publish {
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: 0.65rem;
+}
+
+.author-publish-status {
+  margin: -0.2rem 0 0.65rem;
+  color: var(--ink-muted);
+  font-size: 0.9rem;
+}
+
+.author-button--compact {
+  min-height: 2.25rem;
+  padding: 0.25rem 0.55rem;
+}
+
+.author-icon-button {
+  width: 2.75rem;
+  flex: 0 0 2.75rem;
+  padding: 0;
+  color: var(--blue-dark);
+}
+
+.reference-chip {
+  width: 100%;
+  min-width: 0;
+  padding: 0.4rem 0.6rem;
+  overflow-wrap: anywhere;
+  border-color: var(--blue-dark);
+  background: rgba(82, 104, 174, 0.1);
+  color: var(--blue-dark);
+  text-align: left;
+}
+
+.author-tree {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.author-tree .author-tree {
+  padding-left: 1rem;
+  border-left: 1px dashed var(--line);
+}
+
+.author-tree-item + .author-tree-item {
+  margin-top: 0.45rem;
+}
+
+.author-tree-button {
+  width: 100%;
+  min-width: 0;
+  padding: 0.55rem 0.7rem;
+  overflow-wrap: anywhere;
+  border-color: transparent;
+  text-align: left;
+}
+
+.author-tree-button.is-selected {
+  border-color: var(--blue-dark);
+  background: rgba(82, 104, 174, 0.1);
+  color: var(--blue-dark);
+}
+
+.validation-state {
+  margin: 0;
+  padding: 0.75rem;
+  border-left: 0.25rem solid currentColor;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.validation-state.is-valid {
+  color: #21653b;
+  background: #edf7f0;
+}
+
+.validation-state.is-invalid,
+.author-error {
+  color: var(--error);
+  background: #fbefed;
+}
+
+.author-error {
+  margin: 0.75rem 0 0;
+  padding: 0.65rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.validation-list {
+  margin: 0.85rem 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.72rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.author-preview-text {
+  min-height: 3.5rem;
+  margin: 0;
+  padding: 0.6rem 0;
+  border-top: 1px dashed var(--ink);
+  border-bottom: 1px dashed var(--ink);
+  cursor: text;
+  user-select: text;
+}
+
+.author-structure-preview {
+  margin-top: 0.75rem;
+}
+
+.author-preview-title {
+  margin: 0 0 0.4rem;
+  font-size: 0.82rem;
+}
+
+.author-preview-text [data-author-bracket] {
+  background: rgba(82, 104, 174, 0.08);
+  color: var(--blue-dark);
+}
+
+.author-preview-text [data-author-bracket-edge],
+.author-preview-text [data-author-direction] {
+  user-select: none;
+}
+
+.author-preview-text [data-author-direction],
+.author-preview-text [data-answer-slot] {
+  display: inline-block;
+  margin-inline: 0.1em;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.author-selection-toolbar {
+  display: flex;
+  min-height: 2.25rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-top: 0.45rem;
+}
+
+.author-selection-summary {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.author-aliases {
+  margin: 0 0 0.6rem;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.author-aliases-toggle {
+  padding: 0.55rem 0;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.author-aliases[open] .author-input {
+  margin: 0.25rem 0 0.55rem;
+}
+
+.author-json {
+  margin-bottom: 0.75rem;
+  font-size: 0.72rem;
+  white-space: pre;
 }
 
 [hidden] {
@@ -370,22 +835,31 @@ button {
   }
 
   .game-header {
-    min-height: 4.25rem;
+    min-height: 3.9rem;
   }
 
   .puzzle-card {
-    margin-top: 2rem;
+    margin-top: 0.75rem;
+  }
+
+  .date-picker {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .date-select {
+    width: 100%;
   }
 
   .puzzle-text {
     font-size: 1rem;
-    line-height: 1.55;
+    line-height: 1.38;
   }
 
   .clue-button {
-    padding-top: 0.375em;
-    padding-bottom: 0.375em;
-    line-height: 2;
+    padding: 0.06em;
+    line-height: 1.15;
   }
 
   .guess-form {
@@ -396,9 +870,73 @@ button {
     padding-right: 0.8rem;
     padding-left: 0.8rem;
   }
+
+  .header-actions {
+    gap: 0.4rem;
+  }
+
+  .mode-link {
+    padding-right: 0.45rem;
+    padding-left: 0.45rem;
+  }
+
+  .author-shell {
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
+  }
+
+  .author-header {
+    min-height: 4.25rem;
+  }
+
+  .author-intro {
+    margin: 0.5rem 0;
+  }
+
+  .author-steps,
+  .author-field-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .author-panel {
+    padding: 0.7rem;
+  }
+
+  .author-load-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .segment-actions .author-button,
+  .author-export-actions .author-button {
+    flex: 1 1 9rem;
+  }
+
+  .author-button--compact {
+    min-height: 2.75rem;
+  }
+
+  .author-selection-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 860px) {
+  .author-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .author-output {
+    position: static;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .submit-button[data-submit-feedback] {
+    animation: none;
+  }
+
   *,
   *::before,
   *::after {

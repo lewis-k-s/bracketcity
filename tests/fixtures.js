@@ -4,17 +4,22 @@ export const esLocale = {
   ui: {
     gameName: "Nexo",
     gameLabel: "Pistas anidadas",
+    modeNavigation: "Modo de la aplicación",
+    authorMode: "Crear",
+    dateSelector: "Fecha del rompecabezas",
     puzzleLabel: "Rompecabezas",
     clueCount: "{count} pistas",
     instructions: "Pulsa para obtener pistas, pero escribe cada respuesta para continuar.",
     guessLabel: "Respuesta",
-    guessPlaceholder: "Escribe cualquier respuesta",
+    guessPlaceholder: "Respuesta",
     submit: "Enviar",
     peek: "Mostrar la primera letra.",
     enterAfterPeek: "Escribe la respuesta para continuar.",
     peekValue: "Primera letra: {peek}.",
     peekMarker: " · {peek}…",
     clueLabel: "Pista: {clue}.",
+    directionLeft: "La respuesta va a la izquierda",
+    directionRight: "La respuesta va a la derecha",
     showKeyboard: "Mostrar teclado",
     hideKeyboard: "Ocultar teclado",
     virtualKeyboard: "Teclado español",
@@ -39,7 +44,7 @@ export const esLocale = {
     ignorePunctuation: false
   },
   keyboard: {
-    mode: "native-preferred",
+    mode: "virtual",
     rows: [["a", "ñ"]],
     extras: ["á", " "]
   }

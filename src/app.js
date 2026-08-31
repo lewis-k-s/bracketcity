@@ -3,6 +3,7 @@ import {
   calculateScore,
   compilePuzzle,
   peekClue,
+  progressStorageKey,
   recordKeystroke,
   restoreProgress,
   saveProgress,
@@ -13,10 +14,14 @@ import {
   createGameShell,
   focusGuess,
   formatMessage,
+  getRenderedClueElement,
   renderPuzzle,
   scrollClueIntoView,
+  showSubmitFeedback,
   updateGameSummary
 } from "./view.js";
+import { PuzzleCatalogError, readRequestedPuzzleDate, resolvePuzzleEntry, validatePuzzleCatalog } from "./catalog.js";
+import { mergePublishedPuzzles, publishPuzzle, restorePublishedPuzzles } from "./published.js";
 
 async function loadJson(url) {
   const response = await fetch(url, { headers: { Accept: "application/json" } });
@@ -57,13 +62,22 @@ export async function startApp({
   mount = document.querySelector("#app"),
   puzzleUrl = new URL("puzzles/demo-es.json", document.baseURI),
   localeUrl = new URL("locales/es-ES.json", document.baseURI),
-  storage
+  definition: suppliedDefinition = null,
+  localePack: suppliedLocale = null,
+  storage,
+  dateNavigation = null
 } = {}) {
   if (!mount) return null;
 
   try {
-    const [definition, locale] = await Promise.all([loadJson(puzzleUrl), loadJson(localeUrl)]);
+    const [definition, locale] = await Promise.all([
+      suppliedDefinition ?? loadJson(puzzleUrl),
+      suppliedLocale ?? loadJson(localeUrl)
+    ]);
     if (definition.locale !== locale.id) throw new Error("Puzzle and locale pack do not match.");
+    if (dateNavigation?.selectedDate && definition.releaseDate !== dateNavigation.selectedDate) {
+      throw new Error(`Puzzle releaseDate must match catalog date ${dateNavigation.selectedDate}.`);
+    }
     const puzzle = compilePuzzle(definition, locale);
     let progress = restoreProgress(puzzle, storage ?? null);
     let view;
@@ -94,6 +108,7 @@ export async function startApp({
         return;
       }
       persist();
+      showSubmitFeedback(view, transition.type);
       if (transition.type === "correct") view.input.value = "";
       refresh(transition);
       if (!transition.completed) focusGuess(view, transition.type === "wrong");
@@ -105,7 +120,7 @@ export async function startApp({
       if (transition.type === "noop") return;
       persist();
       refresh(transition);
-      view.puzzleText.querySelector(`[data-clue-id="${clueId}"][data-clue-state="available"]`)?.focus();
+      getRenderedClueElement(view.puzzleText, clueId, "available")?.focus();
     }
 
     const handleInput = () => {
@@ -116,12 +131,11 @@ export async function startApp({
     view = createGameShell(mount, puzzle, locale, {
       onSubmit: handleSubmit,
       onHint: handleHint,
-      onPhysicalInput: handleInput,
       onVirtualInput: handleInput
-    });
+    }, dateNavigation ?? {});
     document.documentElement.lang = locale.id;
     document.documentElement.dir = locale.dir;
-    document.title = `${locale.ui.gameName} — ${definition.title ?? locale.ui.gameLabel}`;
+    document.title = `${locale.ui.gameName} — ${locale.ui.gameLabel}`;
     refresh();
     if (!view.composer.hidden) focusGuess(view);
     return { puzzle, locale, getProgress: () => progress, view };
@@ -133,6 +147,109 @@ export async function startApp({
   }
 }
 
+export async function bootstrapApp({
+  mount = document.querySelector("#app"),
+  puzzleUrl,
+  catalogUrl = new URL("puzzles/manifest.json", document.baseURI),
+  localeUrl = new URL("locales/es-ES.json", document.baseURI),
+  storage
+} = {}) {
+  const currentUrl = new URL(globalThis.location?.href ?? document.baseURI);
+  const mode = currentUrl.searchParams.get("mode");
+  let browserStorage = storage;
+  if (browserStorage === undefined) {
+    try {
+      browserStorage = globalThis.localStorage;
+    } catch {
+      browserStorage = null;
+    }
+  }
+  if (mode !== "author") {
+    if (puzzleUrl) return startApp({ mount, puzzleUrl, localeUrl, storage });
+    try {
+      const [manifest, locale] = await Promise.all([loadJson(catalogUrl), loadJson(localeUrl)]);
+      const catalog = validatePuzzleCatalog(manifest);
+      const published = restorePublishedPuzzles(browserStorage, locale);
+      const entries = mergePublishedPuzzles(catalog.puzzles, published);
+      const requestedDate = readRequestedPuzzleDate(currentUrl.searchParams);
+      const selectedDate = requestedDate ?? catalog.defaultDate;
+      const selectedEntry = entries.find((entry) => entry.date === selectedDate);
+      if (!selectedEntry) {
+        // Reuse the catalog's stable invalid-date and unknown-date errors.
+        resolvePuzzleEntry(manifest, selectedDate);
+      }
+      const dateNavigation = {
+        entries,
+        selectedDate,
+        onDateChange(date) {
+          const nextUrl = new URL(globalThis.location.href);
+          nextUrl.searchParams.set("date", date);
+          nextUrl.searchParams.delete("mode");
+          globalThis.location.assign(nextUrl.href);
+        }
+      };
+      if (selectedEntry.definition) {
+        return startApp({
+          mount,
+          definition: selectedEntry.definition,
+          localePack: locale,
+          storage,
+          dateNavigation
+        });
+      }
+      const selectedPuzzleUrl = new URL(selectedEntry.file, catalogUrl);
+      return startApp({ mount, puzzleUrl: selectedPuzzleUrl, localePack: locale, storage, dateNavigation });
+    } catch (error) {
+      const detail = error instanceof PuzzleCatalogError ? `${error.code}: ${error.message}` : error.message;
+      renderFatalError(mount, `No se pudo cargar la lista de rompecabezas. ${detail ?? ""}`.trim());
+      return null;
+    }
+  }
+  if (!mount) return null;
+
+  try {
+    const [locale, manifest] = await Promise.all([loadJson(localeUrl), loadJson(catalogUrl)]);
+    const catalog = validatePuzzleCatalog(manifest);
+    const published = restorePublishedPuzzles(browserStorage, locale);
+    const entries = mergePublishedPuzzles(catalog.puzzles, published);
+    const staticPuzzles = await Promise.all(catalog.puzzles.map(async (entry) => ({
+      date: entry.date,
+      definition: await loadJson(new URL(entry.file, catalogUrl))
+    })));
+    const staticByDate = new Map(staticPuzzles.map((item) => [item.date, item.definition]));
+    const existingPuzzles = entries.map((entry) => ({
+      date: entry.date,
+      definition: entry.definition ?? staticByDate.get(entry.date)
+    }));
+    const staticDates = new Set(catalog.puzzles.map((entry) => entry.date));
+    const onPublish = (definition, { overwrite = false } = {}) => {
+      const priorDefinition = existingPuzzles.find((item) => item.date === definition.releaseDate)?.definition;
+      const result = publishPuzzle(definition, {
+        storage: browserStorage,
+        localePack: locale,
+        staticDates,
+        staticPuzzles: staticPuzzles.map((item) => item.definition),
+        overwrite
+      });
+      for (const candidate of [priorDefinition, definition]) {
+        if (!candidate || typeof browserStorage?.removeItem !== "function") continue;
+        try {
+          browserStorage.removeItem(progressStorageKey(compilePuzzle(candidate, locale)));
+        } catch {
+          // Publication succeeded. A stale progress record will still fail closed
+          // when its puzzle identity or solved structure does not match.
+        }
+      }
+      return result;
+    };
+    const { startAuthorApp } = await import("./author-view.js");
+    return startAuthorApp({ mount, locale, storage, existingPuzzles, onPublish });
+  } catch (error) {
+    renderFatalError(mount, `No se pudo cargar el editor. ${error.message ?? ""}`.trim());
+    return null;
+  }
+}
+
 if (document.querySelector("#app") && !globalThis.__NEXO_DISABLE_AUTO_START__) {
-  startApp();
+  bootstrapApp();
 }

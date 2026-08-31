@@ -46,7 +46,10 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["ref"],
-      "properties": { "ref": { "$ref": "#/$defs/slug" } }
+      "properties": {
+        "ref": { "$ref": "#/$defs/slug" },
+        "direction": { "enum": ["left", "right"] }
+      }
     },
     "segment": {
       "oneOf": [
@@ -80,6 +83,7 @@
       "properties": {
         "answer": { "type": "string", "minLength": 1 },
         "prompt": { "$ref": "#/$defs/segments" },
+        "rightPrompt": { "$ref": "#/$defs/segments" },
         "accept": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 }

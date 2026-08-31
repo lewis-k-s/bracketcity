@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "id": "traslado-francia-es",
+  "revision": 2,
+  "locale": "es-ES",
+  "title": "Otro sitio",
+  "releaseDate": "2026-08-30",
+  "finalText": "Empieza el viaje para conocer otro sitio a Francia.",
+  "root": [
+    "Em",
+    { "ref": "c01" },
+    " el ",
+    { "ref": "c02" },
+    " para ",
+    { "ref": "c04" },
+    "cer otro si",
+    { "ref": "c06" },
+    " a F",
+    { "ref": "c08" },
+    "cia."
+  ],
+  "clues": {
+    "c01": {
+      "answer": "pieza",
+      "prompt": ["Piso en LATAM"]
+    },
+    "c02": {
+      "answer": "viaje",
+      "prompt": [
+        "tras ",
+        { "ref": "c03" }
+      ]
+    },
+    "c03": {
+      "answer": "lado",
+      "prompt": ["un extremo de algo"]
+    },
+    "c04": {
+      "answer": "cono",
+      "prompt": [
+        "contenedor ",
+        { "ref": "c05" },
+        " un helado"
+      ]
+    },
+    "c05": {
+      "answer": "para",
+      "prompt": ["deja de hacer algo"]
+    },
+    "c06": {
+      "answer": "tio",
+      "accept": ["tío"],
+      "prompt": [
+        { "ref": "c07" },
+        "o de tu madre"
+      ]
+    },
+    "c07": {
+      "answer": "Herman",
+      "accept": ["Hermann"],
+      "prompt": ["Escritor ____ Hesse"]
+    },
+    "c08": {
+      "answer": "ran",
+      "accept": ["Ran"],
+      "prompt": ["Peli de Kurosawa basada en King Lear"]
+    }
+  },
+  "source": {
+    "label": "Transcripción manuscrita confirmada"
+  },
+  "scoring": {
+    "base": 100,
+    "wrongGuess": -2,
+    "peek": -5,
+    "ranks": [
+      { "minScore": 95, "labelKey": "rankPerfect" },
+      { "minScore": 80, "labelKey": "rankSharp" },
+      { "minScore": 0, "labelKey": "rankSteady" }
+    ]
+  }
+}

@@ -2,20 +2,30 @@ import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 async function freshPage(page) {
-  await page.goto("/");
+  await page.goto("/?date=2026-08-28");
   await page.evaluate(() => localStorage.clear());
   await page.reload();
 }
 
-async function submit(page, answer, method = "enter") {
+async function enterWithVirtualKeyboard(page, answer) {
   const input = page.getByTestId("guess-input");
-  await input.fill(answer);
-  if (method === "button") await page.getByRole("button", { name: "Enviar", exact: true }).click();
-  else await input.press("Enter");
+  await expect(input).toHaveValue("");
+  for (const character of answer.toLocaleLowerCase("es-ES")) {
+    const accessibleName = character === " " ? "Espacio" : character;
+    await page.getByRole("button", { name: accessibleName, exact: true }).click();
+  }
+}
+
+async function submit(page, answer) {
+  await enterWithVirtualKeyboard(page, answer);
+  await page.getByRole("button", { name: "Enviar", exact: true }).click();
 }
 
 const canonicalLeafAnswer = "tele";
-const canonicalLeafId = "c03";
+
+function canonicalLeaf(page) {
+  return page.locator('[data-clue-state="available"]').first();
+}
 
 async function expectAnswerAbsentFromRenderedClue(page, answer) {
   const puzzle = page.getByTestId("puzzle");
@@ -34,7 +44,7 @@ test.beforeEach(async ({ page }) => {
 
 test("leaf-first global guesses unlock all branches and complete the sentence", async ({ page }) => {
   await expect(page.locator('[data-clue-state="available"]')).toHaveCount(5);
-  for (const [index, step] of [
+  for (const step of [
     { answer: "tele", canonical: "tele" },
     { answer: "web", canonical: "web" },
     { answer: "enviar", canonical: "enviar" },
@@ -47,9 +57,9 @@ test("leaf-first global guesses unlock all branches and complete the sentence", 
     { answer: "James Webb", canonical: "James Webb" },
     { answer: "imagen científica", canonical: "imagen científica" },
     { answer: "telescopio James Webb", canonical: "telescopio James Webb" }
-  ].entries()) {
+  ]) {
     await expectAnswerAbsentFromRenderedClue(page, step.canonical);
-    await submit(page, step.answer, index % 2 === 0 ? "enter" : "button");
+    await submit(page, step.answer);
   }
   await expect(page.getByTestId("completion")).toBeVisible();
   await expect(page.getByTestId("completion")).toContainText("El telescopio James Webb envió su primera imagen científica en 2022.");
@@ -65,7 +75,7 @@ test("locked answers are wrong and the input stays selected for correction", asy
 });
 
 test("a first-letter peek does not expose the canonical answer", async ({ page }) => {
-  const clue = page.locator(`[data-clue-id="${canonicalLeafId}"][data-clue-state="available"]`);
+  const clue = canonicalLeaf(page);
   await expectAnswerAbsentFromRenderedClue(page, canonicalLeafAnswer);
 
   await clue.click();
@@ -75,22 +85,22 @@ test("a first-letter peek does not expose the canonical answer", async ({ page }
 });
 
 test("repeated clue taps never expose an untyped canonical answer", async ({ page }) => {
-  const clue = page.locator(`[data-clue-id="${canonicalLeafId}"][data-clue-state="available"]`);
+  const clue = canonicalLeaf(page);
   await clue.click();
   await clue.click();
 
   await expectAnswerAbsentFromRenderedClue(page, canonicalLeafAnswer);
-  await expect(page.locator(`[data-clue-id="${canonicalLeafId}"][data-clue-state="solved"]`)).toHaveCount(0);
+  await expect(page.locator('[data-clue-state="solved"]').filter({ hasText: canonicalLeafAnswer })).toHaveCount(0);
 });
 
 test("reload does not expose an answer after clue taps", async ({ page }) => {
-  const clue = page.locator(`[data-clue-id="${canonicalLeafId}"][data-clue-state="available"]`);
+  const clue = canonicalLeaf(page);
   await clue.click();
   await clue.click();
   await page.reload();
 
   await expectAnswerAbsentFromRenderedClue(page, canonicalLeafAnswer);
-  await expect(page.locator(`[data-clue-id="${canonicalLeafId}"][data-clue-state="solved"]`)).toHaveCount(0);
+  await expect(page.locator('[data-clue-state="solved"]').filter({ hasText: canonicalLeafAnswer })).toHaveCount(0);
 });
 
 test("canonical answers are not embedded in the puzzle DOM before typed submission", async ({ page }) => {
@@ -98,19 +108,35 @@ test("canonical answers are not embedded in the puzzle DOM before typed submissi
   expect(html).not.toContain(canonicalLeafAnswer);
 });
 
-test("a correct typed submission may render the canonical answer", async ({ page }) => {
+test("a correct global answer resolves its bracket without clue selection", async ({ page }) => {
   await submit(page, canonicalLeafAnswer);
 
-  await expect(page.locator(`[data-clue-id="${canonicalLeafId}"][data-clue-state="solved"]`)).toHaveText(canonicalLeafAnswer);
-  await expect(page.locator('[data-clue-id="c02"][data-clue-state="available"]')).toBeVisible();
+  const submitButton = page.getByTestId("submit-button");
+  await expect(submitButton).toHaveAttribute("data-submit-feedback", "correct");
+  await expect.poll(() => submitButton.evaluate((node) => getComputedStyle(node).backgroundColor)).toBe("rgb(33, 101, 59)");
+  await expect(page.locator('[data-clue-state="solved"]').filter({ hasText: canonicalLeafAnswer })).toHaveText(canonicalLeafAnswer);
+  await expect(page.locator('[data-clue-state="available"]').filter({ hasText: "instrumento óptico" })).toBeVisible();
   await expectAnswerAbsentFromRenderedClue(page, "telescopio");
+  await expect(submitButton).toHaveAttribute("data-submit-feedback", "idle", { timeout: 1000 });
+});
+
+test("submit feedback distinguishes wrong answers and ignores empty submissions", async ({ page }) => {
+  const submitButton = page.getByTestId("submit-button");
+  await expect(submitButton).toHaveAttribute("data-submit-feedback", "idle");
+  await submitButton.click();
+  await expect(submitButton).toHaveAttribute("data-submit-feedback", "idle");
+  await submit(page, "incorrecto");
+  await expect(submitButton).toHaveAttribute("data-submit-feedback", "wrong");
+  await expect.poll(() => submitButton.evaluate((node) => getComputedStyle(node).backgroundColor)).toBe("rgb(155, 47, 39)");
+  await expect(submitButton).toHaveAttribute("data-submit-feedback", "idle", { timeout: 1000 });
 });
 
 test("tapping every available clue twice cannot solve or unlock the puzzle", async ({ page }) => {
-  const initiallyAvailable = ["c03", "c06", "c08", "c10", "c12"];
-  for (const clueId of initiallyAvailable) {
-    await page.locator(`[data-clue-id="${clueId}"][data-clue-state="available"]`).click();
-    await page.locator(`[data-clue-id="${clueId}"][data-clue-state="available"]`).click();
+  const initiallyAvailable = page.locator('[data-clue-state="available"]');
+  await expect(initiallyAvailable).toHaveCount(5);
+  for (let index = 0; index < 5; index += 1) {
+    await initiallyAvailable.nth(index).click();
+    await initiallyAvailable.nth(index).click();
   }
   await expect(page.locator('[data-clue-state="solved"]')).toHaveCount(0);
   await expect(page.locator('[data-clue-state="available"]')).toHaveCount(5);
@@ -118,11 +144,16 @@ test("tapping every available clue twice cannot solve or unlock the puzzle", asy
   await expect(page.getByTestId("guess-input")).toBeVisible();
 });
 
-test("optional virtual keyboard edits the same input selection", async ({ page }) => {
+test("the visible virtual keyboard is the only input method and preserves selection", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
-  await page.getByRole("button", { name: "Mostrar teclado español" }).click();
   const input = page.getByTestId("guess-input");
-  await input.fill("ao");
+  await expect(page.getByRole("group", { name: "Teclado español" })).toBeVisible();
+  await expect(page.locator(".keyboard-toggle")).toHaveCount(0);
+  await expect(input).toHaveAttribute("readonly", "");
+  await expect(input).toHaveAttribute("inputmode", "none");
+  await expect(input).toHaveAttribute("virtualkeyboardpolicy", "manual");
+  await page.getByRole("button", { name: "a", exact: true }).click();
+  await page.getByRole("button", { name: "o", exact: true }).click();
   await input.evaluate((node) => node.setSelectionRange(1, 1));
   await page.locator('[data-key="ñ"]').click();
   await expect(input).toHaveValue("año");
@@ -146,7 +177,26 @@ test("optional virtual keyboard edits the same input selection", async ({ page }
   expect(inset.paddingBottom).toBeGreaterThanOrEqual(inset.composerHeight + 16);
 });
 
-test("320-pixel layout has no page overflow and keeps readable input", async ({ page }) => {
+test("rapid virtual-key taps disable double-tap zoom without disabling page zoom", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  const input = page.getByTestId("guess-input");
+  const key = page.locator('[data-key="a"]');
+  const touchPolicies = await page.locator(".keyboard-key").evaluateAll((keys) =>
+    keys.map((node) => getComputedStyle(node).touchAction)
+  );
+  expect(touchPolicies.every((policy) => policy === "manipulation")).toBe(true);
+
+  const viewportPolicy = await page.locator('meta[name="viewport"]').getAttribute("content");
+  expect(viewportPolicy).not.toMatch(/user-scalable\s*=\s*no/iu);
+  expect(viewportPolicy).not.toMatch(/maximum-scale\s*=\s*1(?:\.0+)?(?:,|$)/iu);
+
+  await key.click();
+  await key.click();
+  await expect(input).toHaveValue("aa");
+  await expect(input).toBeFocused();
+});
+
+test("320-pixel layout has no overflow and keeps readable text and primary controls", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
   const dimensions = await page.evaluate(() => ({
     scrollWidth: document.documentElement.scrollWidth,
@@ -157,10 +207,11 @@ test("320-pixel layout has no page overflow and keeps readable input", async ({ 
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
   expect(dimensions.inputSize).toBeGreaterThanOrEqual(16);
   expect(dimensions.puzzleSize).toBeGreaterThanOrEqual(16);
-  const targetHeights = await page.locator('[data-clue-state="available"]').evaluateAll((nodes) =>
-    nodes.map((node) => node.getBoundingClientRect().height)
+  // Inline clue controls stay compact; their line geometry is checked in catalog.spec.js.
+  const targets = await page.locator(".guess-input, .submit-button, .date-select, .mode-link, .keyboard-key").evaluateAll((nodes) =>
+    nodes.map((node) => ({ className: node.className, height: node.getBoundingClientRect().height }))
   );
-  expect(targetHeights.every((height) => height >= 43)).toBe(true);
+  expect(targets.every((target) => target.height >= 43), JSON.stringify(targets)).toBe(true);
 });
 
 test("fresh game has no serious or critical automated accessibility violations", async ({ page }) => {
