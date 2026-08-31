@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "seed-puzzle-es",
+  "revision": 1,
+  "locale": "es-ES",
+  "title": "Semilla",
+  "releaseDate": "2026-08-29",
+  "finalText": "Un sol.",
+  "root": ["Un ", {"ref": "sol"}, "."],
+  "clues": {
+    "sol": {"answer": "sol", "prompt": ["estrella cercana"]}
+  }
+}

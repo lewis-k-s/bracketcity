@@ -21,6 +21,14 @@ import {
   updateGameSummary
 } from "./view.js";
 import { PuzzleCatalogError, readRequestedPuzzleDate, resolvePuzzleEntry, validatePuzzleCatalog } from "./catalog.js";
+import {
+  addSuccessfulLegacyImports,
+  assertValidCorrection,
+  createWordPressPuzzleRepository,
+  getLegacyPublishedPuzzles,
+  importLegacyPublishedPuzzles,
+  readWordPressConfig
+} from "./puzzle-repository.js";
 import { mergePublishedPuzzles, publishPuzzle, restorePublishedPuzzles } from "./published.js";
 
 async function loadJson(url) {
@@ -148,12 +156,17 @@ export async function startApp({
 }
 
 export async function bootstrapApp({
-  mount = document.querySelector("#app"),
+  mount = document.querySelector("#bracket-city-app") ?? document.querySelector("#app"),
   puzzleUrl,
   catalogUrl = new URL("puzzles/manifest.json", document.baseURI),
   localeUrl = new URL("locales/es-ES.json", document.baseURI),
   storage
 } = {}) {
+  const wordpressConfig = readWordPressConfig();
+  const repository = wordpressConfig ? createWordPressPuzzleRepository(wordpressConfig) : null;
+  if (wordpressConfig?.localeUrl && localeUrl?.pathname?.endsWith?.("/locales/es-ES.json")) {
+    localeUrl = new URL(wordpressConfig.localeUrl, document.baseURI);
+  }
   const currentUrl = new URL(globalThis.location?.href ?? document.baseURI);
   const mode = currentUrl.searchParams.get("mode");
   let browserStorage = storage;
@@ -167,6 +180,34 @@ export async function bootstrapApp({
   if (mode !== "author") {
     if (puzzleUrl) return startApp({ mount, puzzleUrl, localeUrl, storage });
     try {
+      if (repository) {
+        const [listing, locale] = await Promise.all([repository.listPublic(), loadJson(localeUrl)]);
+        const entries = listing.entries;
+        const requestedDate = readRequestedPuzzleDate(currentUrl.searchParams);
+        const selectedDate = requestedDate ?? listing.currentDate ?? entries[0]?.date;
+        const selectedEntry = entries.find((entry) => entry.date === selectedDate);
+        if (!selectedDate || !selectedEntry) {
+          throw new PuzzleCatalogError("UNKNOWN_PUZZLE_DATE", "$.date", `No hay rompecabezas para ${selectedDate ?? "hoy"}.`);
+        }
+        const definition = await repository.loadPublic(selectedDate);
+        return startApp({
+          mount,
+          definition,
+          localePack: locale,
+          storage,
+          dateNavigation: {
+            entries,
+            selectedDate,
+            canAuthor: wordpressConfig.canAuthor,
+            onDateChange(date) {
+              const nextUrl = new URL(globalThis.location.href);
+              nextUrl.searchParams.set("date", date);
+              nextUrl.searchParams.delete("mode");
+              globalThis.location.assign(nextUrl.href);
+            }
+          }
+        });
+      }
       const [manifest, locale] = await Promise.all([loadJson(catalogUrl), loadJson(localeUrl)]);
       const catalog = validatePuzzleCatalog(manifest);
       const published = restorePublishedPuzzles(browserStorage, locale);
@@ -181,6 +222,7 @@ export async function bootstrapApp({
       const dateNavigation = {
         entries,
         selectedDate,
+        canAuthor: true,
         onDateChange(date) {
           const nextUrl = new URL(globalThis.location.href);
           nextUrl.searchParams.set("date", date);
@@ -208,6 +250,46 @@ export async function bootstrapApp({
   if (!mount) return null;
 
   try {
+    if (repository) {
+      if (!wordpressConfig.canAuthor) throw new Error("No tienes permiso para abrir el editor.");
+      const [locale, listing] = await Promise.all([loadJson(localeUrl), repository.listAdmin()]);
+      const existingPuzzles = await Promise.all(listing.entries.map(async (entry) => ({
+        date: entry.date,
+        definition: await repository.loadAdmin(entry.date)
+      })));
+      const existingDates = new Set(existingPuzzles.map((item) => item.date));
+      const onPublish = async (definition, { overwrite = false } = {}) => {
+        const priorDefinition = existingPuzzles.find((item) => item.date === definition.releaseDate)?.definition;
+        if (overwrite) {
+          assertValidCorrection(definition, priorDefinition, {
+            idMismatch: locale.ui.authorCorrectionIdMismatch,
+            revisionRequired: locale.ui.authorCorrectionRevisionRequired
+          });
+        }
+        const result = await repository.save(definition, { overwrite });
+        for (const candidate of [priorDefinition, definition]) {
+          if (!candidate || typeof browserStorage?.removeItem !== "function") continue;
+          try { browserStorage.removeItem(progressStorageKey(compilePuzzle(candidate, locale))); } catch { /* fail closed */ }
+        }
+        const existing = existingPuzzles.find((item) => item.date === definition.releaseDate);
+        if (existing) existing.definition = structuredClone(definition);
+        else existingPuzzles.push({ date: definition.releaseDate, definition: structuredClone(definition) });
+        existingDates.add(definition.releaseDate);
+        return result;
+      };
+      const legacyPuzzles = getLegacyPublishedPuzzles(browserStorage, locale);
+      const onImportLegacy = async () => {
+        const results = await importLegacyPublishedPuzzles(repository, legacyPuzzles, existingDates);
+        addSuccessfulLegacyImports(existingPuzzles, legacyPuzzles, results);
+        return results;
+      };
+      const { startAuthorApp } = await import("./author-view.js");
+      return startAuthorApp({
+        mount, locale, storage, existingPuzzles, onPublish, legacyPuzzles, onImportLegacy,
+        currentDate: listing.currentDate,
+        pageUrl: wordpressConfig.pageUrl
+      });
+    }
     const [locale, manifest] = await Promise.all([loadJson(localeUrl), loadJson(catalogUrl)]);
     const catalog = validatePuzzleCatalog(manifest);
     const published = restorePublishedPuzzles(browserStorage, locale);
@@ -233,12 +315,7 @@ export async function bootstrapApp({
       });
       for (const candidate of [priorDefinition, definition]) {
         if (!candidate || typeof browserStorage?.removeItem !== "function") continue;
-        try {
-          browserStorage.removeItem(progressStorageKey(compilePuzzle(candidate, locale)));
-        } catch {
-          // Publication succeeded. A stale progress record will still fail closed
-          // when its puzzle identity or solved structure does not match.
-        }
+        try { browserStorage.removeItem(progressStorageKey(compilePuzzle(candidate, locale))); } catch { /* fail closed */ }
       }
       return result;
     };
@@ -250,6 +327,6 @@ export async function bootstrapApp({
   }
 }
 
-if (document.querySelector("#app") && !globalThis.__NEXO_DISABLE_AUTO_START__) {
+if ((document.querySelector("#bracket-city-app") || document.querySelector("#app")) && !globalThis.__NEXO_DISABLE_AUTO_START__) {
   bootstrapApp();
 }

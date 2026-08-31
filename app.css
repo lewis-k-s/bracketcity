@@ -1,4 +1,4 @@
-:root {
+:is(#app, #bracket-city-app) {
   color-scheme: light;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   color: #2c2825;
@@ -11,36 +11,35 @@
   --blue-dark: #3f528f;
   --paper: #ffffff;
   --error: #9b2f27;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  min-height: 100%;
-  margin: 0;
-}
-
-body {
   min-height: 100vh;
   min-height: 100dvh;
   background: var(--paper);
 }
 
-button,
-input,
-textarea,
-select {
+:is(#app, #bracket-city-app),
+:is(#app, #bracket-city-app) * {
+  box-sizing: border-box;
+}
+
+body.nexo-standalone {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #ffffff;
+}
+
+:is(#app, #bracket-city-app) button,
+:is(#app, #bracket-city-app) input,
+:is(#app, #bracket-city-app) textarea,
+:is(#app, #bracket-city-app) select {
   font: inherit;
 }
 
-button {
+:is(#app, #bracket-city-app) button {
   color: inherit;
 }
 
-.game-shell {
+:is(#app, #bracket-city-app) .game-shell {
   width: min(100%, 46rem);
   min-height: 100vh;
   min-height: 100dvh;
@@ -48,7 +47,7 @@ button {
   padding: 0 clamp(1rem, 5vw, 3rem) calc(var(--composer-height, 8rem) + 1rem);
 }
 
-.game-header {
+:is(#app, #bracket-city-app) .game-header {
   display: flex;
   min-height: 4.5rem;
   align-items: center;
@@ -57,7 +56,7 @@ button {
   border-bottom: 1px solid var(--line);
 }
 
-.brand {
+:is(#app, #bracket-city-app) .brand {
   margin: 0.12rem 0 0;
   font-size: clamp(1.35rem, 5vw, 1.75rem);
   font-weight: 700;
@@ -65,8 +64,8 @@ button {
   line-height: 1;
 }
 
-.eyebrow,
-.score-label {
+:is(#app, #bracket-city-app) .eyebrow,
+:is(#app, #bracket-city-app) .score-label {
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 700;
@@ -74,22 +73,22 @@ button {
   text-transform: uppercase;
 }
 
-.score-block {
+:is(#app, #bracket-city-app) .score-block {
   min-width: 4.5rem;
   text-align: right;
 }
 
-.header-actions,
-.mode-nav {
+:is(#app, #bracket-city-app) .header-actions,
+:is(#app, #bracket-city-app) .mode-nav {
   display: flex;
   align-items: center;
 }
 
-.header-actions {
+:is(#app, #bracket-city-app) .header-actions {
   gap: 1rem;
 }
 
-.mode-link {
+:is(#app, #bracket-city-app) .mode-link {
   min-height: 2.75rem;
   display: inline-flex;
   align-items: center;
@@ -102,12 +101,12 @@ button {
   text-decoration: none;
 }
 
-.mode-link:hover {
+:is(#app, #bracket-city-app) .mode-link:hover {
   border-color: var(--blue-dark);
   background: rgba(82, 104, 174, 0.08);
 }
 
-.score-value {
+:is(#app, #bracket-city-app) .score-value {
   display: block;
   margin-top: 0.18rem;
   color: var(--ink);
@@ -116,11 +115,11 @@ button {
   line-height: 1;
 }
 
-.puzzle-card {
+:is(#app, #bracket-city-app) .puzzle-card {
   margin-top: clamp(1rem, 4vw, 2rem);
 }
 
-.date-picker {
+:is(#app, #bracket-city-app) .date-picker {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -128,7 +127,7 @@ button {
   margin-bottom: 0.4rem;
 }
 
-.date-label {
+:is(#app, #bracket-city-app) .date-label {
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 700;
@@ -136,7 +135,7 @@ button {
   text-transform: uppercase;
 }
 
-.date-select {
+:is(#app, #bracket-city-app) .date-select {
   width: min(100%, 16rem);
   min-width: 0;
   height: 2.75rem;
@@ -149,7 +148,7 @@ button {
   font-size: 1rem;
 }
 
-.puzzle-text {
+:is(#app, #bracket-city-app) .puzzle-text {
   margin: 0;
   padding: 0;
   font-size: clamp(1.06rem, 3.4vw, 1.25rem);
@@ -158,25 +157,25 @@ button {
   line-height: 1.36;
 }
 
-.clue {
+:is(#app, #bracket-city-app) .clue {
   border-radius: 0.18rem;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
 }
 
-.clue::before {
+:is(#app, #bracket-city-app) .clue::before {
   content: "[";
 }
 
-.clue::after {
+:is(#app, #bracket-city-app) .clue::after {
   content: "]";
 }
 
-.clue--locked {
+:is(#app, #bracket-city-app) .clue--locked {
   color: var(--ink);
 }
 
-.clue-button {
+:is(#app, #bracket-city-app) .clue-button {
   display: inline;
   margin: 0;
   padding: 0.06em;
@@ -194,78 +193,78 @@ button {
   white-space: normal;
 }
 
-.clue-button:hover {
+:is(#app, #bracket-city-app) .clue-button:hover {
   background: var(--blue-dark);
 }
 
-.clue-button--peeked {
+:is(#app, #bracket-city-app) .clue-button--peeked {
   background: var(--blue-dark);
 }
 
-.clue-answer {
+:is(#app, #bracket-city-app) .clue-answer {
   color: var(--blue-dark);
   font-weight: 700;
 }
 
-.answer-slot-arrow,
-.answer-slot {
+:is(#app, #bracket-city-app) .answer-slot-arrow,
+:is(#app, #bracket-city-app) .answer-slot {
   display: inline-block;
   margin-inline: 0.1em;
   font-weight: 700;
   white-space: nowrap;
 }
 
-.answer-slot {
+:is(#app, #bracket-city-app) .answer-slot {
   letter-spacing: 0.04em;
 }
 
-.peek-marker {
+:is(#app, #bracket-city-app) .peek-marker {
   color: #ffffff;
   font-size: 0.78em;
   font-weight: 700;
   white-space: nowrap;
 }
 
-.clue-button:focus-visible,
-.submit-button:focus-visible,
-.guess-input:focus-visible,
-.date-select:focus-visible,
-.keyboard-key:focus-visible {
+:is(#app, #bracket-city-app) .clue-button:focus-visible,
+:is(#app, #bracket-city-app) .submit-button:focus-visible,
+:is(#app, #bracket-city-app) .guess-input:focus-visible,
+:is(#app, #bracket-city-app) .date-select:focus-visible,
+:is(#app, #bracket-city-app) .keyboard-key:focus-visible {
   outline: 3px solid rgba(78, 100, 173, 0.38);
   outline-offset: 3px;
 }
 
-.completion-panel {
+:is(#app, #bracket-city-app) .completion-panel {
   margin-top: clamp(2.5rem, 9vw, 4.5rem);
   padding: 1.8rem 0;
   border-top: 1px dashed var(--ink);
   border-bottom: 1px dashed var(--ink);
 }
 
-.puzzle-card > .completion-panel {
+:is(#app, #bracket-city-app) .puzzle-card > .completion-panel {
   margin-top: 0;
 }
 
-.completion-title {
+:is(#app, #bracket-city-app) .completion-title {
   margin: 0;
   font-size: clamp(1.6rem, 7vw, 2.4rem);
   font-weight: 700;
   letter-spacing: -0.055em;
 }
 
-.final-text {
+:is(#app, #bracket-city-app) .final-text {
   margin: 1.2rem 0 0;
   font-size: clamp(1.1rem, 3.8vw, 1.35rem);
   line-height: 1.5;
 }
 
-.result-text {
+:is(#app, #bracket-city-app) .result-text {
   margin: 1.15rem 0 0;
   color: var(--blue-dark);
   font-weight: 700;
 }
 
-.composer {
+:is(#app, #bracket-city-app) .composer {
   position: fixed;
   z-index: 10;
   right: 0;
@@ -280,7 +279,7 @@ button {
   backdrop-filter: blur(0.75rem);
 }
 
-.guess-form {
+:is(#app, #bracket-city-app) .guess-form {
   position: relative;
   display: flex;
   width: min(100%, 40rem);
@@ -289,11 +288,11 @@ button {
   gap: 0.55rem;
 }
 
-.guess-form::before {
+:is(#app, #bracket-city-app) .guess-form::before {
   content: none;
 }
 
-.guess-input {
+:is(#app, #bracket-city-app) .guess-input {
   min-width: 0;
   min-height: 3rem;
   flex: 1;
@@ -305,11 +304,11 @@ button {
   font-size: 1rem;
 }
 
-.guess-input::placeholder {
+:is(#app, #bracket-city-app) .guess-input::placeholder {
   color: #85827f;
 }
 
-.submit-button {
+:is(#app, #bracket-city-app) .submit-button {
   min-height: 3rem;
   padding: 0.75rem 1.35rem;
   border: 0;
@@ -320,16 +319,16 @@ button {
   font-weight: 700;
 }
 
-.submit-button:hover {
+:is(#app, #bracket-city-app) .submit-button:hover {
   background: #11100f;
 }
 
-.submit-button[data-submit-feedback="correct"] {
+:is(#app, #bracket-city-app) .submit-button[data-submit-feedback="correct"] {
   background: #21653b;
   animation: submit-confirm 180ms ease-out;
 }
 
-.submit-button[data-submit-feedback="wrong"] {
+:is(#app, #bracket-city-app) .submit-button[data-submit-feedback="wrong"] {
   background: var(--error);
   animation: submit-reject 180ms ease-out;
 }
@@ -343,27 +342,27 @@ button {
   75% { transform: translateX(0.1rem); }
 }
 
-.submit-button::before {
+:is(#app, #bracket-city-app) .submit-button::before {
   content: "[";
 }
 
-.submit-button::after {
+:is(#app, #bracket-city-app) .submit-button::after {
   content: "]";
 }
 
-.virtual-keyboard {
+:is(#app, #bracket-city-app) .virtual-keyboard {
   width: min(100%, 40rem);
   margin: 0.1rem auto 0;
 }
 
-.keyboard-row {
+:is(#app, #bracket-city-app) .keyboard-row {
   display: flex;
   justify-content: center;
   gap: clamp(0.1rem, 0.8vw, 0.22rem);
   margin-top: 0.12rem;
 }
 
-.keyboard-key {
+:is(#app, #bracket-city-app) .keyboard-key {
   min-width: 0;
   min-height: 2.75rem;
   flex: 1 1 0;
@@ -377,12 +376,12 @@ button {
   touch-action: manipulation;
 }
 
-.keyboard-key:active {
+:is(#app, #bracket-city-app) .keyboard-key:active {
   transform: translateY(0.08rem);
   box-shadow: none;
 }
 
-.fatal-panel {
+:is(#app, #bracket-city-app) .fatal-panel {
   width: min(100% - 2rem, 40rem);
   margin: 4rem auto;
   padding: 1.5rem;
@@ -391,7 +390,7 @@ button {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-.author-shell {
+:is(#app, #bracket-city-app) .author-shell {
   width: min(100%, 78rem);
   min-height: 100vh;
   min-height: 100dvh;
@@ -399,7 +398,7 @@ button {
   padding: 0 clamp(1rem, 3vw, 2.5rem) 4rem;
 }
 
-.author-header {
+:is(#app, #bracket-city-app) .author-header {
   display: flex;
   min-height: 5rem;
   align-items: center;
@@ -408,20 +407,20 @@ button {
   border-bottom: 1px solid var(--line);
 }
 
-.author-intro {
+:is(#app, #bracket-city-app) .author-intro {
   display: flex;
   justify-content: flex-end;
   margin: 0.75rem 0;
 }
 
-.author-lede {
+:is(#app, #bracket-city-app) .author-lede {
   max-width: 64rem;
   margin: 0;
   font-size: 1rem;
   line-height: 1.6;
 }
 
-.author-steps {
+:is(#app, #bracket-city-app) .author-steps {
   display: grid;
   margin: 1rem 0 0;
   padding-left: 1.3rem;
@@ -432,39 +431,39 @@ button {
   line-height: 1.45;
 }
 
-.author-reset {
+:is(#app, #bracket-city-app) .author-reset {
   margin: 0;
 }
 
-.author-load-controls {
+:is(#app, #bracket-city-app) .author-load-controls {
   display: flex;
   align-items: end;
   gap: 0.6rem;
 }
 
-.author-load-controls .author-field {
+:is(#app, #bracket-city-app) .author-load-controls .author-field {
   flex: 1 1 auto;
   margin: 0;
 }
 
-.author-layout {
+:is(#app, #bracket-city-app) .author-layout {
   display: grid;
   align-items: start;
   grid-template-columns: minmax(0, 1.3fr) minmax(19rem, 0.7fr);
   gap: 0.9rem;
 }
 
-.author-editor,
-.author-output {
+:is(#app, #bracket-city-app) .author-editor,
+:is(#app, #bracket-city-app) .author-output {
   min-width: 0;
 }
 
-.author-output {
+:is(#app, #bracket-city-app) .author-output {
   position: sticky;
   top: 1rem;
 }
 
-.author-panel {
+:is(#app, #bracket-city-app) .author-panel {
   min-width: 0;
   margin: 0 0 0.8rem;
   padding: clamp(0.75rem, 2vw, 1rem);
@@ -472,14 +471,14 @@ button {
   background: var(--paper);
 }
 
-.author-panel-title {
+:is(#app, #bracket-city-app) .author-panel-title {
   margin: 0 0 0.65rem;
   font-size: 1rem;
   letter-spacing: -0.025em;
   line-height: 1.35;
 }
 
-.author-subheading {
+:is(#app, #bracket-city-app) .author-subheading {
   margin: 0 0 0.75rem;
   color: var(--muted);
   font-size: 0.72rem;
@@ -487,18 +486,18 @@ button {
   text-transform: uppercase;
 }
 
-.author-field-grid {
+:is(#app, #bracket-city-app) .author-field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.6rem;
 }
 
-.author-field {
+:is(#app, #bracket-city-app) .author-field {
   min-width: 0;
   margin: 0 0 0.6rem;
 }
 
-.author-label {
+:is(#app, #bracket-city-app) .author-label {
   display: block;
   margin-bottom: 0.35rem;
   color: var(--ink);
@@ -506,15 +505,15 @@ button {
   font-weight: 700;
 }
 
-.author-help,
-.author-empty {
+:is(#app, #bracket-city-app) .author-help,
+:is(#app, #bracket-city-app) .author-empty {
   margin: 0.4rem 0 0;
   color: var(--muted);
   font-size: 0.72rem;
   line-height: 1.45;
 }
 
-.author-input {
+:is(#app, #bracket-city-app) .author-input {
   width: 100%;
   min-width: 0;
   min-height: 2.75rem;
@@ -527,30 +526,30 @@ button {
   line-height: 1.4;
 }
 
-textarea.author-input {
+:is(#app, #bracket-city-app) textarea.author-input {
   display: block;
   resize: vertical;
 }
 
-.author-input[readonly] {
+:is(#app, #bracket-city-app) .author-input[readonly] {
   background: #f3f2f0;
   color: #595653;
 }
 
-.author-input:focus-visible,
-.author-button:focus-visible,
-.author-icon-button:focus-visible,
-.reference-chip:focus-visible,
-.author-tree-button:focus-visible,
-.mode-link:focus-visible {
+:is(#app, #bracket-city-app) .author-input:focus-visible,
+:is(#app, #bracket-city-app) .author-button:focus-visible,
+:is(#app, #bracket-city-app) .author-icon-button:focus-visible,
+:is(#app, #bracket-city-app) .reference-chip:focus-visible,
+:is(#app, #bracket-city-app) .author-tree-button:focus-visible,
+:is(#app, #bracket-city-app) .mode-link:focus-visible {
   outline: 3px solid rgba(78, 100, 173, 0.38);
   outline-offset: 2px;
 }
 
-.author-button,
-.author-icon-button,
-.reference-chip,
-.author-tree-button {
+:is(#app, #bracket-city-app) .author-button,
+:is(#app, #bracket-city-app) .author-icon-button,
+:is(#app, #bracket-city-app) .reference-chip,
+:is(#app, #bracket-city-app) .author-tree-button {
   min-height: 2.75rem;
   border: 1px solid var(--ink);
   border-radius: 0.25rem;
@@ -560,105 +559,105 @@ textarea.author-input {
   font-weight: 700;
 }
 
-.author-button {
+:is(#app, #bracket-city-app) .author-button {
   padding: 0.55rem 0.8rem;
 }
 
-.author-button:hover,
-.author-icon-button:hover,
-.author-tree-button:hover {
+:is(#app, #bracket-city-app) .author-button:hover,
+:is(#app, #bracket-city-app) .author-icon-button:hover,
+:is(#app, #bracket-city-app) .author-tree-button:hover {
   background: #f3f2f0;
 }
 
-.author-button--accent {
+:is(#app, #bracket-city-app) .author-button--accent {
   border-color: var(--blue-dark);
   background: var(--blue);
   color: #fff;
 }
 
-.author-button--accent:hover {
+:is(#app, #bracket-city-app) .author-button--accent:hover {
   background: var(--blue-dark);
 }
 
-.author-button--danger {
+:is(#app, #bracket-city-app) .author-button--danger {
   border-color: var(--error);
   color: var(--error);
 }
 
-.author-button:disabled,
-.author-input:disabled {
+:is(#app, #bracket-city-app) .author-button:disabled,
+:is(#app, #bracket-city-app) .author-input:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }
 
-.author-segments {
+:is(#app, #bracket-city-app) .author-segments {
   margin-top: 0.7rem;
   padding-top: 0.6rem;
   border-top: 1px dashed var(--line);
 }
 
-.author-side-label {
+:is(#app, #bracket-city-app) .author-side-label {
   margin: 0 0 0.35rem;
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 700;
 }
 
-.segment-list {
+:is(#app, #bracket-city-app) .segment-list {
   display: grid;
   gap: 0.4rem;
   margin-bottom: 0.45rem;
 }
 
-.segment-row {
+:is(#app, #bracket-city-app) .segment-row {
   display: flex;
   min-width: 0;
   align-items: center;
   gap: 0.45rem;
 }
 
-.segment-row--literal {
+:is(#app, #bracket-city-app) .segment-row--literal {
   align-items: stretch;
   flex-direction: column;
 }
 
-.segment-row--reference {
+:is(#app, #bracket-city-app) .segment-row--reference {
   align-items: stretch;
   flex-direction: column;
 }
 
-.segment-actions,
-.author-export-actions {
+:is(#app, #bracket-city-app) .segment-actions,
+:is(#app, #bracket-city-app) .author-export-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
 }
 
-.author-publish {
+:is(#app, #bracket-city-app) .author-publish {
   width: 100%;
   min-height: 44px;
   margin-bottom: 0.65rem;
 }
 
-.author-publish-status {
+:is(#app, #bracket-city-app) .author-publish-status {
   margin: -0.2rem 0 0.65rem;
   color: var(--ink-muted);
   font-size: 0.9rem;
 }
 
-.author-button--compact {
+:is(#app, #bracket-city-app) .author-button--compact {
   min-height: 2.25rem;
   padding: 0.25rem 0.55rem;
 }
 
-.author-icon-button {
+:is(#app, #bracket-city-app) .author-icon-button {
   width: 2.75rem;
   flex: 0 0 2.75rem;
   padding: 0;
   color: var(--blue-dark);
 }
 
-.reference-chip {
+:is(#app, #bracket-city-app) .reference-chip {
   width: 100%;
   min-width: 0;
   padding: 0.4rem 0.6rem;
@@ -669,22 +668,22 @@ textarea.author-input {
   text-align: left;
 }
 
-.author-tree {
+:is(#app, #bracket-city-app) .author-tree {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.author-tree .author-tree {
+:is(#app, #bracket-city-app) .author-tree .author-tree {
   padding-left: 1rem;
   border-left: 1px dashed var(--line);
 }
 
-.author-tree-item + .author-tree-item {
+:is(#app, #bracket-city-app) .author-tree-item + .author-tree-item {
   margin-top: 0.45rem;
 }
 
-.author-tree-button {
+:is(#app, #bracket-city-app) .author-tree-button {
   width: 100%;
   min-width: 0;
   padding: 0.55rem 0.7rem;
@@ -693,13 +692,13 @@ textarea.author-input {
   text-align: left;
 }
 
-.author-tree-button.is-selected {
+:is(#app, #bracket-city-app) .author-tree-button.is-selected {
   border-color: var(--blue-dark);
   background: rgba(82, 104, 174, 0.1);
   color: var(--blue-dark);
 }
 
-.validation-state {
+:is(#app, #bracket-city-app) .validation-state {
   margin: 0;
   padding: 0.75rem;
   border-left: 0.25rem solid currentColor;
@@ -708,25 +707,25 @@ textarea.author-input {
   line-height: 1.4;
 }
 
-.validation-state.is-valid {
+:is(#app, #bracket-city-app) .validation-state.is-valid {
   color: #21653b;
   background: #edf7f0;
 }
 
-.validation-state.is-invalid,
-.author-error {
+:is(#app, #bracket-city-app) .validation-state.is-invalid,
+:is(#app, #bracket-city-app) .author-error {
   color: var(--error);
   background: #fbefed;
 }
 
-.author-error {
+:is(#app, #bracket-city-app) .author-error {
   margin: 0.75rem 0 0;
   padding: 0.65rem;
   font-size: 0.75rem;
   line-height: 1.45;
 }
 
-.validation-list {
+:is(#app, #bracket-city-app) .validation-list {
   margin: 0.85rem 0 0;
   padding-left: 1.2rem;
   font-size: 0.72rem;
@@ -734,7 +733,7 @@ textarea.author-input {
   overflow-wrap: anywhere;
 }
 
-.author-preview-text {
+:is(#app, #bracket-city-app) .author-preview-text {
   min-height: 3.5rem;
   margin: 0;
   padding: 0.6rem 0;
@@ -744,34 +743,34 @@ textarea.author-input {
   user-select: text;
 }
 
-.author-structure-preview {
+:is(#app, #bracket-city-app) .author-structure-preview {
   margin-top: 0.75rem;
 }
 
-.author-preview-title {
+:is(#app, #bracket-city-app) .author-preview-title {
   margin: 0 0 0.4rem;
   font-size: 0.82rem;
 }
 
-.author-preview-text [data-author-bracket] {
+:is(#app, #bracket-city-app) .author-preview-text [data-author-bracket] {
   background: rgba(82, 104, 174, 0.08);
   color: var(--blue-dark);
 }
 
-.author-preview-text [data-author-bracket-edge],
-.author-preview-text [data-author-direction] {
+:is(#app, #bracket-city-app) .author-preview-text [data-author-bracket-edge],
+:is(#app, #bracket-city-app) .author-preview-text [data-author-direction] {
   user-select: none;
 }
 
-.author-preview-text [data-author-direction],
-.author-preview-text [data-answer-slot] {
+:is(#app, #bracket-city-app) .author-preview-text [data-author-direction],
+:is(#app, #bracket-city-app) .author-preview-text [data-answer-slot] {
   display: inline-block;
   margin-inline: 0.1em;
   font-weight: 700;
   white-space: nowrap;
 }
 
-.author-selection-toolbar {
+:is(#app, #bracket-city-app) .author-selection-toolbar {
   display: flex;
   min-height: 2.25rem;
   align-items: center;
@@ -780,7 +779,7 @@ textarea.author-input {
   padding-top: 0.45rem;
 }
 
-.author-selection-summary {
+:is(#app, #bracket-city-app) .author-selection-summary {
   min-width: 0;
   overflow: hidden;
   color: var(--muted);
@@ -789,34 +788,34 @@ textarea.author-input {
   white-space: nowrap;
 }
 
-.author-aliases {
+:is(#app, #bracket-city-app) .author-aliases {
   margin: 0 0 0.6rem;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
 
-.author-aliases-toggle {
+:is(#app, #bracket-city-app) .author-aliases-toggle {
   padding: 0.55rem 0;
   cursor: pointer;
   font-size: 0.78rem;
   font-weight: 700;
 }
 
-.author-aliases[open] .author-input {
+:is(#app, #bracket-city-app) .author-aliases[open] .author-input {
   margin: 0.25rem 0 0.55rem;
 }
 
-.author-json {
+:is(#app, #bracket-city-app) .author-json {
   margin-bottom: 0.75rem;
   font-size: 0.72rem;
   white-space: pre;
 }
 
-[hidden] {
+:is(#app, #bracket-city-app) [hidden] {
   display: none !important;
 }
 
-.visually-hidden {
+:is(#app, #bracket-city-app) .visually-hidden {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -829,117 +828,117 @@ textarea.author-input {
 }
 
 @media (max-width: 420px) {
-  .game-shell {
+  :is(#app, #bracket-city-app) .game-shell {
     padding-right: 0.8rem;
     padding-left: 0.8rem;
   }
 
-  .game-header {
+  :is(#app, #bracket-city-app) .game-header {
     min-height: 3.9rem;
   }
 
-  .puzzle-card {
+  :is(#app, #bracket-city-app) .puzzle-card {
     margin-top: 0.75rem;
   }
 
-  .date-picker {
+  :is(#app, #bracket-city-app) .date-picker {
     align-items: stretch;
     flex-direction: column;
     gap: 0.4rem;
   }
 
-  .date-select {
+  :is(#app, #bracket-city-app) .date-select {
     width: 100%;
   }
 
-  .puzzle-text {
+  :is(#app, #bracket-city-app) .puzzle-text {
     font-size: 1rem;
     line-height: 1.38;
   }
 
-  .clue-button {
+  :is(#app, #bracket-city-app) .clue-button {
     padding: 0.06em;
     line-height: 1.15;
   }
 
-  .guess-form {
+  :is(#app, #bracket-city-app) .guess-form {
     gap: 0.4rem;
   }
 
-  .submit-button {
+  :is(#app, #bracket-city-app) .submit-button {
     padding-right: 0.8rem;
     padding-left: 0.8rem;
   }
 
-  .header-actions {
+  :is(#app, #bracket-city-app) .header-actions {
     gap: 0.4rem;
   }
 
-  .mode-link {
+  :is(#app, #bracket-city-app) .mode-link {
     padding-right: 0.45rem;
     padding-left: 0.45rem;
   }
 
-  .author-shell {
+  :is(#app, #bracket-city-app) .author-shell {
     padding-right: 0.75rem;
     padding-left: 0.75rem;
   }
 
-  .author-header {
+  :is(#app, #bracket-city-app) .author-header {
     min-height: 4.25rem;
   }
 
-  .author-intro {
+  :is(#app, #bracket-city-app) .author-intro {
     margin: 0.5rem 0;
   }
 
-  .author-steps,
-  .author-field-grid {
+  :is(#app, #bracket-city-app) .author-steps,
+  :is(#app, #bracket-city-app) .author-field-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .author-panel {
+  :is(#app, #bracket-city-app) .author-panel {
     padding: 0.7rem;
   }
 
-  .author-load-controls {
+  :is(#app, #bracket-city-app) .author-load-controls {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .segment-actions .author-button,
-  .author-export-actions .author-button {
+  :is(#app, #bracket-city-app) .segment-actions .author-button,
+  :is(#app, #bracket-city-app) .author-export-actions .author-button {
     flex: 1 1 9rem;
   }
 
-  .author-button--compact {
+  :is(#app, #bracket-city-app) .author-button--compact {
     min-height: 2.75rem;
   }
 
-  .author-selection-toolbar {
+  :is(#app, #bracket-city-app) .author-selection-toolbar {
     align-items: stretch;
     flex-direction: column;
   }
 }
 
 @media (max-width: 860px) {
-  .author-layout {
+  :is(#app, #bracket-city-app) .author-layout {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .author-output {
+  :is(#app, #bracket-city-app) .author-output {
     position: static;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .submit-button[data-submit-feedback] {
+  :is(#app, #bracket-city-app) .submit-button[data-submit-feedback] {
     animation: none;
   }
 
-  *,
-  *::before,
-  *::after {
+  :is(#app, #bracket-city-app) *,
+  :is(#app, #bracket-city-app) *::before,
+  :is(#app, #bracket-city-app) *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }

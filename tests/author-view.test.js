@@ -437,3 +437,92 @@ test("an invalid creator draft cannot publish", () => {
   publish.click();
   assert.equal(calls, 0);
 });
+
+test("an asynchronous WordPress save reports progress and a useful failure", async () => {
+  installDom();
+  const storage = memoryStorage();
+  buildDirectedDraft(storage);
+  let rejectSave;
+  startAuthorApp({
+    mount: document.querySelector("#app"),
+    locale,
+    storage,
+    onPublish() {
+      return new Promise((resolve, reject) => { rejectSave = reject; });
+    }
+  });
+  document.querySelector("#author-release-date").value = "2026-09-01";
+  document.querySelector('[data-testid="author-publish"]').click();
+  assert.equal(document.querySelector('[data-testid="author-publish"]').disabled, true);
+  rejectSave(Object.assign(new Error("La fecha ya existe."), { code: "DATE_EXISTS" }));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.match(document.querySelector(".author-error").textContent, /DATE_EXISTS.*fecha ya existe/u);
+  assert.equal(document.querySelector('[data-testid="author-publish"]').disabled, false);
+});
+
+test("an asynchronous correction succeeds and keeps the WordPress page permalink", async () => {
+  installDom();
+  const storage = memoryStorage();
+  buildDirectedDraft(storage);
+  const existing = readPuzzle("2026-08-31-es.json");
+  const calls = [];
+  startAuthorApp({
+    mount: document.querySelector("#app"),
+    locale,
+    storage,
+    existingPuzzles: [{ date: "2026-09-01", definition: existing }],
+    currentDate: "2026-09-01",
+    pageUrl: "https://example.test/juegos/nexo/?ref=menu",
+    async onPublish(definition, options) {
+      calls.push({ definition, options });
+      return { ok: true };
+    }
+  });
+  document.querySelector("#author-release-date").value = "2026-09-01";
+  globalThis.confirm = () => true;
+  document.querySelector('[data-testid="author-publish"]').click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(calls[0].options.overwrite, true);
+  assert.equal(document.querySelector('[data-testid="author-publish-status"]').textContent, "Guardado para jugar el 2026-09-01.");
+  assert.equal(document.querySelector(".mode-link").href, "https://example.test/juegos/nexo/?ref=menu&date=2026-09-01");
+});
+
+test("a future save never adds its date to the WordPress play link", async () => {
+  installDom();
+  const storage = memoryStorage();
+  buildDirectedDraft(storage);
+  startAuthorApp({
+    mount: document.querySelector("#app"),
+    locale,
+    storage,
+    currentDate: "2026-09-01",
+    pageUrl: "https://example.test/juegos/nexo/",
+    async onPublish() { return { ok: true }; }
+  });
+  document.querySelector("#author-release-date").value = "2026-09-02";
+  document.querySelector('[data-testid="author-publish"]').click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(document.querySelector(".mode-link").href, "https://example.test/juegos/nexo/");
+});
+
+test("legacy browser puzzles have an import action that keeps local records", async () => {
+  installDom();
+  const storage = memoryStorage();
+  const definition = readPuzzle("2026-08-31-es.json");
+  let imported = 0;
+  startAuthorApp({
+    mount: document.querySelector("#app"),
+    locale,
+    storage,
+    legacyPuzzles: [definition],
+    async onImportLegacy() {
+      imported += 1;
+      return [{ date: definition.releaseDate, ok: true }];
+    }
+  });
+  document.querySelector('[data-testid="author-import-legacy"]').click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(imported, 1);
+  assert.equal(document.querySelector('[data-testid="author-import-legacy"]'), null);
+  assert.match(document.body.textContent, /datos locales se conservaron/u);
+});

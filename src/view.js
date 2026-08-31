@@ -253,13 +253,15 @@ export function createGameShell(mount, puzzle, locale, handlers, dateNavigation 
   scoreBlock.append(scoreLabel, scoreValue);
   const headerActions = element("div", { className: "header-actions" });
   const modeNav = element("nav", { className: "mode-nav", attributes: { "aria-label": locale.ui.modeNavigation } });
-  modeNav.append(
-    element("a", {
-      className: "mode-link",
-      text: locale.ui.authorMode,
-      attributes: { href: "?mode=author" }
-    })
-  );
+  if (dateNavigation.canAuthor) {
+    modeNav.append(
+      element("a", {
+        className: "mode-link",
+        text: locale.ui.authorMode,
+        attributes: { href: "?mode=author" }
+      })
+    );
+  }
   headerActions.append(modeNav, scoreBlock);
   header.append(identity, headerActions);
 

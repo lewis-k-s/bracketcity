@@ -1,16 +1,22 @@
 {
-  "name": "homepage-components",
+  "name": "nexo",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "A clean-room multilingual nested-clue game and preserved homepage components.",
+  "description": "The Nexo multilingual nested-clue game and WordPress plugin.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --test tests/*.test.js",
     "test:unit": "node --test tests/*.test.js",
+    "test:php": "node scripts/test-php.mjs",
+    "test:wordpress": "sh tests/php/run-wordpress-integration.sh",
+    "test:package": "npm run build && node --test tests/package/*.test.js",
     "test:e2e": "playwright test",
-    "test:all": "npm run test:unit && npm run test:e2e"
+    "test:all": "npm run test:unit && npm run test:php && npm run test:package && npm run test:wordpress && npm run test:e2e",
+    "package:plugin": "node scripts/package-plugin.mjs && node scripts/verify-wordpress-package.mjs",
+    "package:verify": "node scripts/package-plugin.mjs --verify-only --skip-checks"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

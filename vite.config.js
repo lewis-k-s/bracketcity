@@ -17,6 +17,16 @@ function copyRuntimeData() {
 export default defineConfig({
   base: "./",
   plugins: [copyRuntimeData()],
+  build: {
+    manifest: true,
+    rollupOptions: {
+      output: {
+        assetFileNames: "assets/[name]-[hash][extname]",
+        chunkFileNames: "assets/[name]-[hash].js",
+        entryFileNames: "assets/[name]-[hash].js"
+      }
+    }
+  },
   preview: {
     allowedHosts: ["macsimus.tail6f70c7.ts.net"]
   }

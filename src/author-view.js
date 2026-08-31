@@ -90,13 +90,21 @@ export function startAuthorApp({
   locale,
   storage,
   existingPuzzles = [],
-  onPublish = null
+  onPublish = null,
+  legacyPuzzles = [],
+  onImportLegacy = null,
+  currentDate = null,
+  pageUrl = null
 } = {}) {
   if (!mount || !locale) return null;
 
   let operationError = "";
   let liveMessage = "";
   let publishedDate = null;
+  let savedDate = null;
+  let publishing = false;
+  let importing = false;
+  let legacyImportComplete = false;
   const knownPuzzleDates = new Set(existingPuzzles.map((item) => item.date));
   let storageTarget = storage;
   let storageUnavailable = false;
@@ -111,6 +119,15 @@ export function startAuthorApp({
   }
   let draft = restoreAuthorDraft(serializedDraft);
   let previewSelection = null;
+
+  const playHref = () => {
+    if (!pageUrl) return publishedDate ? `?date=${encodeURIComponent(publishedDate)}` : "./";
+    const target = new URL(pageUrl, document.baseURI);
+    target.searchParams.delete("mode");
+    target.searchParams.delete("date");
+    if (publishedDate) target.searchParams.set("date", publishedDate);
+    return target.href;
+  };
 
   const draftLiteral = ({ owner, segmentIndex }) => {
     const segments = segmentsForOwner(draft, owner);
@@ -389,9 +406,9 @@ export function startAuthorApp({
   };
 
   const renderExistingPuzzleLoader = () => {
-    if (!existingPuzzles.length) return null;
+    if (!existingPuzzles.length && (!legacyPuzzles.length || typeof onImportLegacy !== "function")) return null;
     const section = element("section", { className: "author-panel author-load-panel" });
-    section.append(element("h2", { className: "author-panel-title", text: locale.ui.authorLoadHeading }));
+    if (existingPuzzles.length) section.append(element("h2", { className: "author-panel-title", text: locale.ui.authorLoadHeading }));
     const select = element("select", {
       className: "author-input",
       attributes: { id: "author-existing-puzzle", "data-testid": "author-existing-puzzle" }
@@ -415,9 +432,48 @@ export function startAuthorApp({
       const selected = existingPuzzles[Number(select.value)];
       apply(() => authorDraftFromDefinition(selected.definition, locale), locale.ui.authorPuzzleLoaded);
     });
-    const controls = element("div", { className: "author-load-controls" });
-    controls.append(field(locale.ui.authorLoadPuzzleLabel, select), load);
-    section.append(controls);
+    if (existingPuzzles.length) {
+      const controls = element("div", { className: "author-load-controls" });
+      controls.append(field(locale.ui.authorLoadPuzzleLabel, select), load);
+      section.append(controls);
+    }
+    if (legacyPuzzles.length && typeof onImportLegacy === "function" && !legacyImportComplete) {
+      const importButton = element("button", {
+        className: "author-button author-button--quiet author-button--compact",
+        text: importing
+          ? locale.ui.authorImportingLegacy
+          : formatMessage(locale.ui.authorImportLegacy, { count: legacyPuzzles.length }),
+        attributes: {
+          type: "button",
+          disabled: importing ? "" : undefined,
+          "data-testid": "author-import-legacy"
+        }
+      });
+      importButton.addEventListener("click", async () => {
+        if (importing) return;
+        importing = true;
+        operationError = "";
+        liveMessage = locale.ui.authorImportingLegacy;
+        render();
+        try {
+          const results = await onImportLegacy();
+          const failed = results.filter((item) => !item.ok);
+          if (failed.length) {
+            throw new Error(formatMessage(locale.ui.authorImportLegacyFailed, { count: failed.length }));
+          }
+          legacyImportComplete = true;
+          const importedCount = results.filter((item) => item.ok && !item.skipped).length;
+          liveMessage = formatMessage(locale.ui.authorImportLegacyComplete, { count: importedCount });
+        } catch (error) {
+          operationError = error?.code ? `${error.code}: ${error.message}` : error.message;
+          liveMessage = operationError;
+        } finally {
+          importing = false;
+          render();
+        }
+      });
+      section.append(importButton);
+    }
     return section;
   };
 
@@ -664,7 +720,7 @@ export function startAuthorApp({
         text: locale.ui.authorPublish,
         attributes: {
           type: "button",
-          disabled: validation.valid ? undefined : "",
+          disabled: validation.valid && !publishing ? undefined : "",
           "data-testid": "author-publish"
         }
       });
@@ -684,24 +740,40 @@ export function startAuthorApp({
           publish.focus({ preventScroll: true });
           return;
         }
-        try {
-          onPublish(definition, { overwrite: replace });
+        const complete = () => {
           knownPuzzleDates.add(date);
-          publishedDate = date;
+          savedDate = date;
+          publishedDate = !currentDate || date <= currentDate ? date : null;
           operationError = "";
           liveMessage = formatMessage(locale.ui.authorPublished, { date });
+          publishing = false;
           render();
-        } catch (error) {
+        };
+        const fail = (error) => {
+          publishing = false;
           operationError = error?.code ? `${error.code}: ${error.message}` : error.message;
           liveMessage = operationError;
           render();
+        };
+        try {
+          const result = onPublish(definition, { overwrite: replace });
+          if (result && typeof result.then === "function") {
+            publishing = true;
+            liveMessage = locale.ui.authorPublishing;
+            render();
+            result.then(complete, fail);
+          } else {
+            complete();
+          }
+        } catch (error) {
+          fail(error);
         }
       });
       exportPanel.append(publish);
-      if (publishedDate) {
+      if (savedDate) {
         exportPanel.append(element("p", {
           className: "author-publish-status",
-          text: formatMessage(locale.ui.authorPublished, { date: publishedDate }),
+          text: formatMessage(locale.ui.authorPublished, { date: savedDate }),
           attributes: { "data-testid": "author-publish-status" }
         }));
       }
@@ -759,7 +831,7 @@ export function startAuthorApp({
     nav.append(element("a", {
       className: "mode-link",
       text: locale.ui.playMode,
-      attributes: { href: publishedDate ? `?date=${encodeURIComponent(publishedDate)}` : "./" }
+      attributes: { href: playHref() }
     }));
     header.append(identity, nav);
 
