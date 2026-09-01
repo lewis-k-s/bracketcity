@@ -47,7 +47,7 @@ async function copyDirectoryContents(source, destination) {
   }
   await mkdir(destination, { recursive: true });
   for (const entry of await readdir(source, { withFileTypes: true })) {
-    if (entry.name === "build" || entry.name === ".DS_Store") continue;
+    if (["build", "seed", ".DS_Store", ".gitkeep"].includes(entry.name)) continue;
     await cp(join(source, entry.name), join(destination, entry.name), {
       recursive: true
     });
