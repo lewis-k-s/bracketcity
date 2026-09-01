@@ -42,6 +42,10 @@ body:has(#bracket-city-app) .wp-block-columns:has(#bracket-city-app) {
   padding-top: clamp(0.75rem, 2vw, 1.25rem) !important;
 }
 
+body:has(#bracket-city-app) #bracket-city-app {
+  margin-block-start: 0 !important;
+}
+
 #bracket-city-app {
   background: transparent;
 }
@@ -856,6 +860,7 @@ body:has(#bracket-city-app) .wp-block-columns:has(#bracket-city-app) {
   }
 
   body:has(#bracket-city-app) .wp-block-columns:has(#bracket-city-app) {
+    gap: 0 !important;
     padding-top: 0.5rem !important;
   }
 

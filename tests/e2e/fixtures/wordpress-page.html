@@ -25,6 +25,21 @@
       .wp-block-column {
         min-width: 0;
       }
+
+      .entry-content > #bracket-city-app {
+        margin-block-start: 24px;
+      }
+
+      @media (max-width: 781px) {
+        .wp-block-columns {
+          flex-wrap: wrap;
+          gap: 24px;
+        }
+
+        .wp-block-column {
+          flex-basis: 100% !important;
+        }
+      }
     </style>
   </head>
   <body>
@@ -37,7 +52,7 @@
       <div class="wp-block-column" style="flex-basis: 10%"></div>
     </div>
     <div class="wp-block-columns" data-testid="wordpress-content-row" style="padding-top: var(--wp--preset--spacing--50)">
-      <div class="wp-block-column" style="flex-basis: 100%">
+      <div class="wp-block-column entry-content" style="flex-basis: 100%">
         <script id="bracket-city-config" type="application/json">
           {
             "restBase": "http://127.0.0.1:4174/wp-json/bracket-city/v1",

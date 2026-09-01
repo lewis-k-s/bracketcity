@@ -30,6 +30,7 @@ async function selectPreviewText(page, selectedText) {
 }
 
 test("classic Pages bundle runs on the WordPress origin and keeps progress there", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
   await page.route("**/wp-json/bracket-city/v1/**", (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith("/puzzles")) {
@@ -63,13 +64,15 @@ test("classic Pages bundle runs on the WordPress origin and keeps progress there
       spacerHeight: parseFloat(getComputedStyle(spacer).height),
       contentPadding: parseFloat(getComputedStyle(content).paddingTop),
       titleBottom: title.getBoundingClientRect().bottom,
-      contentTop: content.getBoundingClientRect().top
+      contentTop: content.getBoundingClientRect().top,
+      gameTop: document.querySelector(".game-shell").getBoundingClientRect().top
     };
   });
   expect(desktopTitleLayout.titleSize).toBeLessThanOrEqual(36);
   expect(desktopTitleLayout.spacerHeight).toBeLessThanOrEqual(8);
   expect(desktopTitleLayout.contentPadding).toBeLessThanOrEqual(20);
   expect(desktopTitleLayout.contentTop - desktopTitleLayout.titleBottom).toBeLessThanOrEqual(20);
+  expect(desktopTitleLayout.gameTop - desktopTitleLayout.titleBottom).toBeLessThanOrEqual(20);
 
   await page.setViewportSize({ width: 375, height: 812 });
   const mobileTitleLayout = await page.evaluate(() => {
@@ -78,13 +81,17 @@ test("classic Pages bundle runs on the WordPress origin and keeps progress there
     return {
       titleSize: parseFloat(getComputedStyle(title).fontSize),
       contentPadding: parseFloat(getComputedStyle(content).paddingTop),
+      contentGap: parseFloat(getComputedStyle(content).gap),
       titleBottom: title.getBoundingClientRect().bottom,
-      contentTop: content.getBoundingClientRect().top
+      contentTop: content.getBoundingClientRect().top,
+      gameTop: document.querySelector(".game-shell").getBoundingClientRect().top
     };
   });
   expect(mobileTitleLayout.titleSize).toBeLessThanOrEqual(28);
   expect(mobileTitleLayout.contentPadding).toBeLessThanOrEqual(8);
-  expect(mobileTitleLayout.contentTop - mobileTitleLayout.titleBottom).toBeLessThanOrEqual(8);
+  expect(mobileTitleLayout.contentGap).toBe(0);
+  expect(mobileTitleLayout.contentTop - mobileTitleLayout.titleBottom).toBeLessThanOrEqual(24);
+  expect(mobileTitleLayout.gameTop - mobileTitleLayout.titleBottom).toBeLessThanOrEqual(32);
 
   const input = page.getByTestId("guess-input");
   const keyboard = page.getByRole("group", { name: "Teclado español" });
