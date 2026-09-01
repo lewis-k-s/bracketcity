@@ -932,6 +932,13 @@ body.nexo-standalone {
 }
 
 @media (min-width: 861px) {
+  :is(#app, #bracket-city-app) .game-shell {
+    width: min(calc(100vw - 2rem), 46rem);
+    margin-right: 0;
+    margin-left: 50%;
+    transform: translateX(calc(-50% + var(--nexo-viewport-center-offset, 0px)));
+  }
+
   :is(#app, #bracket-city-app) .virtual-keyboard {
     display: none;
   }

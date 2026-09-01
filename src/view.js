@@ -377,6 +377,17 @@ export function createGameShell(mount, puzzle, locale, handlers, dateNavigation 
   });
   mount.append(shell, composer, live);
 
+  const syncShellCenter = () => {
+    const mountRect = mount.getBoundingClientRect();
+    const viewportWidth = document.documentElement.clientWidth || globalThis.innerWidth || mountRect.width;
+    const mountCenter = mountRect.left + (mountRect.width / 2);
+    shell.style.setProperty("--nexo-viewport-center-offset", `${viewportWidth / 2 - mountCenter}px`);
+  };
+  const layoutObserver = typeof ResizeObserver === "function" ? new ResizeObserver(syncShellCenter) : null;
+  layoutObserver?.observe(mount);
+  globalThis.addEventListener?.("resize", syncShellCenter);
+  syncShellCenter();
+
   syncComposerHeight = () => {
     const height = composer.getBoundingClientRect().height;
     if (height > 0) shell.style.setProperty("--composer-height", `${Math.ceil(height)}px`);
@@ -407,6 +418,7 @@ export function createGameShell(mount, puzzle, locale, handlers, dateNavigation 
     submit,
     keyboard,
     composerObserver,
+    layoutObserver,
     live
   };
 }

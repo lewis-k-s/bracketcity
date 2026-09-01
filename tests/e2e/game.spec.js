@@ -160,6 +160,38 @@ test("desktop hides the virtual keyboard and accepts normal keyboard input", asy
   await expect(page.locator('[data-clue-state="solved"]').filter({ hasText: canonicalLeafAnswer })).toHaveText(canonicalLeafAnswer);
 });
 
+test("desktop puzzle and answer row share a wide centered content column", async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.locator("#app").evaluate((mount) => {
+    mount.style.width = "30rem";
+    mount.style.marginLeft = "18rem";
+    window.dispatchEvent(new Event("resize"));
+  });
+
+  const readDimensions = () => page.evaluate(() => {
+    const shell = document.querySelector(".game-shell");
+    const form = document.querySelector(".guess-form");
+    const shellRect = shell.getBoundingClientRect();
+    const formRect = form.getBoundingClientRect();
+    const shellStyle = getComputedStyle(shell);
+    return {
+      viewportCenter: document.documentElement.clientWidth / 2,
+      shellWidth: shellRect.width,
+      shellCenter: shellRect.left + (shellRect.width / 2),
+      formLeft: formRect.left,
+      formRight: formRect.right,
+      contentLeft: shellRect.left + Number.parseFloat(shellStyle.paddingLeft),
+      contentRight: shellRect.right - Number.parseFloat(shellStyle.paddingRight)
+    };
+  });
+  await expect.poll(readDimensions).toMatchObject({ shellWidth: 736 });
+  const dimensions = await readDimensions();
+
+  expect(dimensions.shellCenter).toBeCloseTo(dimensions.viewportCenter, 0);
+  expect(dimensions.formLeft).toBeCloseTo(dimensions.contentLeft, 0);
+  expect(dimensions.formRight).toBeCloseTo(dimensions.contentRight, 0);
+});
+
 test("the visible virtual keyboard is the only input method and preserves selection", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
   const input = page.getByTestId("guess-input");
