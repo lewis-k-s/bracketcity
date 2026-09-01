@@ -28,6 +28,15 @@ body.nexo-standalone {
   background: #ffffff;
 }
 
+#bracket-city-app {
+  background: transparent;
+}
+
+#bracket-city-app .game-shell,
+#bracket-city-app .author-shell {
+  background: var(--paper);
+}
+
 :is(#app, #bracket-city-app) button,
 :is(#app, #bracket-city-app) input,
 :is(#app, #bracket-city-app) textarea,

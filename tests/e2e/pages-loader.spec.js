@@ -48,6 +48,12 @@ test("classic Pages bundle runs on the WordPress origin and keeps progress there
   await expect(page.getByTestId("date-selector")).toHaveValue(puzzle.releaseDate);
   await expect(page.locator("iframe")).toHaveCount(0);
   await expect(page.locator('script[src^="http://127.0.0.1:4175/assets/nexo-"]')).toHaveCount(1);
+  const backgrounds = await page.evaluate(() => ({
+    mount: getComputedStyle(document.querySelector("#bracket-city-app")).backgroundColor,
+    shell: getComputedStyle(document.querySelector(".game-shell")).backgroundColor
+  }));
+  expect(backgrounds.mount).toBe("rgba(0, 0, 0, 0)");
+  expect(backgrounds.shell).toBe("rgb(255, 255, 255)");
   const input = page.getByTestId("guess-input");
   const keyboard = page.getByRole("group", { name: "Teclado español" });
   if (await keyboard.isVisible()) await page.getByRole("button", { name: "a", exact: true }).click();
