@@ -30,6 +30,7 @@ import {
   readWordPressConfig
 } from "./puzzle-repository.js";
 import { mergePublishedPuzzles, publishPuzzle, restorePublishedPuzzles } from "./published.js";
+import { startAuthorApp } from "./author-view.js";
 
 async function loadJson(url) {
   const response = await fetch(url, { headers: { Accept: "application/json" } });
@@ -164,6 +165,7 @@ export async function bootstrapApp({
 } = {}) {
   const wordpressConfig = readWordPressConfig();
   const repository = wordpressConfig ? createWordPressPuzzleRepository(wordpressConfig) : null;
+  const deployedLocale = globalThis.__NEXO_LOCALE_PACK__ ?? null;
   if (wordpressConfig?.localeUrl && localeUrl?.pathname?.endsWith?.("/locales/es-ES.json")) {
     localeUrl = new URL(wordpressConfig.localeUrl, document.baseURI);
   }
@@ -181,7 +183,10 @@ export async function bootstrapApp({
     if (puzzleUrl) return startApp({ mount, puzzleUrl, localeUrl, storage });
     try {
       if (repository) {
-        const [listing, locale] = await Promise.all([repository.listPublic(), loadJson(localeUrl)]);
+        const [listing, locale] = await Promise.all([
+          repository.listPublic(),
+          deployedLocale ?? loadJson(localeUrl)
+        ]);
         const entries = listing.entries;
         const requestedDate = readRequestedPuzzleDate(currentUrl.searchParams);
         const selectedDate = requestedDate ?? listing.currentDate ?? entries[0]?.date;
@@ -208,7 +213,10 @@ export async function bootstrapApp({
           }
         });
       }
-      const [manifest, locale] = await Promise.all([loadJson(catalogUrl), loadJson(localeUrl)]);
+      const [manifest, locale] = await Promise.all([
+        loadJson(catalogUrl),
+        deployedLocale ?? loadJson(localeUrl)
+      ]);
       const catalog = validatePuzzleCatalog(manifest);
       const published = restorePublishedPuzzles(browserStorage, locale);
       const entries = mergePublishedPuzzles(catalog.puzzles, published);
@@ -252,7 +260,7 @@ export async function bootstrapApp({
   try {
     if (repository) {
       if (!wordpressConfig.canAuthor) throw new Error("No tienes permiso para abrir el editor.");
-      const [locale, listing] = await Promise.all([loadJson(localeUrl), repository.listAdmin()]);
+      const [locale, listing] = await Promise.all([deployedLocale ?? loadJson(localeUrl), repository.listAdmin()]);
       const existingPuzzles = await Promise.all(listing.entries.map(async (entry) => ({
         date: entry.date,
         definition: await repository.loadAdmin(entry.date)
@@ -283,14 +291,16 @@ export async function bootstrapApp({
         addSuccessfulLegacyImports(existingPuzzles, legacyPuzzles, results);
         return results;
       };
-      const { startAuthorApp } = await import("./author-view.js");
       return startAuthorApp({
         mount, locale, storage, existingPuzzles, onPublish, legacyPuzzles, onImportLegacy,
         currentDate: listing.currentDate,
         pageUrl: wordpressConfig.pageUrl
       });
     }
-    const [locale, manifest] = await Promise.all([loadJson(localeUrl), loadJson(catalogUrl)]);
+    const [locale, manifest] = await Promise.all([
+      deployedLocale ?? loadJson(localeUrl),
+      loadJson(catalogUrl)
+    ]);
     const catalog = validatePuzzleCatalog(manifest);
     const published = restorePublishedPuzzles(browserStorage, locale);
     const entries = mergePublishedPuzzles(catalog.puzzles, published);
@@ -319,7 +329,6 @@ export async function bootstrapApp({
       }
       return result;
     };
-    const { startAuthorApp } = await import("./author-view.js");
     return startAuthorApp({ mount, locale, storage, existingPuzzles, onPublish });
   } catch (error) {
     renderFatalError(mount, `No se pudo cargar el editor. ${error.message ?? ""}`.trim());

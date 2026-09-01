@@ -16,7 +16,6 @@ import { fileURLToPath } from "node:url";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const pluginSource = join(projectRoot, "wordpress-plugin");
-const distDirectory = join(projectRoot, "dist");
 const releaseDirectory = join(projectRoot, "release");
 const archiveRoot = "bracket-city";
 
@@ -52,26 +51,6 @@ async function copyDirectoryContents(source, destination) {
     await cp(join(source, entry.name), join(destination, entry.name), {
       recursive: true
     });
-  }
-}
-
-async function copyBuild(destination) {
-  const manifestSource = join(distDirectory, ".vite", "manifest.json");
-  if (!(await pathExists(manifestSource))) {
-    throw new Error("Vite manifest is missing. Run `npm run build` before packaging.");
-  }
-  await mkdir(destination, { recursive: true });
-  await cp(join(distDirectory, "assets"), join(destination, "assets"), {
-    recursive: true
-  });
-  await mkdir(join(destination, ".vite"), { recursive: true });
-  await cp(manifestSource, join(destination, ".vite", "manifest.json"));
-
-  for (const directory of ["locales"]) {
-    const source = join(distDirectory, directory);
-    if (await pathExists(source)) {
-      await cp(source, join(destination, directory), { recursive: true });
-    }
   }
 }
 
@@ -177,7 +156,6 @@ export async function stagePlugin() {
   const stageDirectory = await mkdtemp(join(tmpdir(), "nexo-package-"));
   const pluginStage = join(stageDirectory, archiveRoot);
   await copyDirectoryContents(pluginSource, pluginStage);
-  await copyBuild(join(pluginStage, "build"));
   await copySeeds(join(pluginStage, "seed"));
   return pluginStage;
 }
@@ -185,18 +163,13 @@ export async function stagePlugin() {
 export async function verifyStagedPlugin(pluginStage) {
   const required = [
     "nexo.php",
-    "build/.vite/manifest.json",
-    "build/assets",
+    "includes",
     "seed"
   ];
   for (const item of required) {
     if (!(await pathExists(join(pluginStage, item)))) {
       throw new Error(`Packaged plugin is missing ${item}`);
     }
-  }
-  const manifest = JSON.parse(await readFile(join(pluginStage, "build", ".vite", "manifest.json"), "utf8"));
-  if (!manifest["index.html"]?.file) {
-    throw new Error("Vite manifest does not contain the index.html entry.");
   }
   return collectFiles(pluginStage);
 }
@@ -209,7 +182,6 @@ export async function packagePlugin({
   if (runChecks) {
     run("npm", ["run", "test:unit"]);
     run("npm", ["run", "test:php"]);
-    run("npm", ["run", "build"]);
     run("node", ["--test", "tests/package/package.test.js", "tests/package/php-runner.test.js"]);
   }
   const packageDefinition = JSON.parse(await readFile(join(projectRoot, "package.json"), "utf8"));

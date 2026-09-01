@@ -20,17 +20,19 @@ after(async () => {
   if (createdTestArchive) await rm(testArchive, { force: true });
 });
 
-test("staged WordPress plugin contains bootstrap, hashed build, and dated seeds", async () => {
+test("staged WordPress plugin contains the bridge and dated seeds only", async () => {
   const result = await packagePlugin({ runChecks: false, writeArchive: false });
   createdStages.push(dirname(result.pluginStage));
   const names = result.files.map((file) => file.name);
   assert.ok(names.includes("bracket-city/nexo.php"));
-  assert.ok(names.includes("bracket-city/build/.vite/manifest.json"));
-  assert.ok(names.some((name) => /^bracket-city\/build\/assets\/index-[\w-]+\.js$/.test(name)));
+  assert.ok(names.includes("bracket-city/includes/class-nexo-capabilities.php"));
   assert.ok(names.includes("bracket-city/seed/2026-08-30-es.json"));
   assert.ok(names.includes("bracket-city/seed/2026-08-31-es.json"));
   assert.ok(!names.some((name) => name.endsWith("manifest.json") && name.includes("seed/")));
   assert.ok(!names.some((name) => name.includes("demo-es.json")));
+  assert.ok(!names.some((name) => name.startsWith("bracket-city/build/")));
+  assert.ok(!names.some((name) => /\.(?:css|js)$/.test(name)));
+  assert.ok(!names.some((name) => name.endsWith(".gitkeep")));
 });
 
 test("upload ZIP passes system validation and declares the package version", async () => {
@@ -52,21 +54,14 @@ test("upload ZIP passes system validation and declares the package version", asy
   const listing = await execute("unzip", ["-Z1", testArchive]);
   const names = listing.stdout.trim().split("\n");
   assert.ok(names.includes("bracket-city/nexo.php"));
-  assert.ok(names.includes("bracket-city/build/.vite/manifest.json"));
-  assert.ok(names.some((name) => name.startsWith("bracket-city/build/assets/index-") && name.endsWith(".js")));
-  assert.ok(names.includes("bracket-city/build/locales/es-ES.json"));
+  assert.ok(names.includes("bracket-city/includes/class-nexo-capabilities.php"));
   assert.ok(names.includes("bracket-city/seed/2026-08-30-es.json"));
   assert.ok(names.every((name) => name.startsWith("bracket-city/")));
+  assert.ok(!names.some((name) => name.startsWith("bracket-city/build/")));
+  assert.ok(!names.some((name) => name.endsWith(".gitkeep")));
 
   const bootstrap = await execute("unzip", ["-p", testArchive, "bracket-city/nexo.php"]);
   const version = bootstrap.stdout.match(/^\s*\*\s*Version:\s*(\S+)\s*$/m)?.[1];
   assert.equal(version, packageDefinition.version);
 
-  const manifestOutput = await execute("unzip", [
-    "-p",
-    testArchive,
-    "bracket-city/build/.vite/manifest.json"
-  ]);
-  const manifest = JSON.parse(manifestOutput.stdout);
-  assert.ok(manifest["index.html"]?.file.startsWith("assets/index-"));
 });

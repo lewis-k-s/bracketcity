@@ -1,9 +1,0 @@
-{
-  "index.html": {
-    "file": "assets/app-test.js",
-    "name": "index",
-    "src": "index.html",
-    "isEntry": true,
-    "css": ["assets/app-test.css"]
-  }
-}

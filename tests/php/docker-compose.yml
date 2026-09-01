@@ -32,7 +32,6 @@ services:
     volumes:
       - wordpress_data:/var/www/html
       - ../../wordpress-plugin:/var/www/html/wp-content/plugins/bracket-city:ro
-      - ./fixtures/build:/var/www/html/wp-content/plugins/bracket-city/build:ro
       - ./fixtures/seed:/var/www/html/wp-content/plugins/bracket-city/seed:ro
       - ./integration.php:/nexo-tests/integration.php:ro
 

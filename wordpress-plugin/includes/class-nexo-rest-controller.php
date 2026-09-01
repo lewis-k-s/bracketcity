@@ -19,7 +19,7 @@ final class Nexo_REST_Controller {
 		register_rest_route( self::NS, '/admin/puzzles/(?P<date>\d{4}-\d{2}-\d{2})', array( 'methods' => WP_REST_Server::READABLE, 'callback' => array( self::class, 'admin_get' ), 'permission_callback' => array( self::class, 'can_publish' ) ) );
 	}
 
-	public static function can_publish(): bool { return current_user_can( 'edit_others_posts' ); }
+	public static function can_publish(): bool { return current_user_can( Nexo_Capabilities::MANAGE_PUZZLES ); }
 
 	public static function public_list(): WP_REST_Response {
 		return rest_ensure_response( array( 'schemaVersion' => 1, 'currentDate' => Nexo_Puzzles::current_date(), 'timeZone' => NEXO_TIME_ZONE, 'puzzles' => Nexo_Puzzles::list_metadata( false ) ) );

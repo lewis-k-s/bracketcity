@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nexo WordPress fixture</title>
+  </head>
+  <body>
+    <script id="bracket-city-config" type="application/json">
+      {
+        "restBase": "http://127.0.0.1:4174/wp-json/bracket-city/v1",
+        "currentDate": "2026-09-01",
+        "timeZone": "Europe/Madrid",
+        "pageUrl": "http://127.0.0.1:4174/tests/e2e/fixtures/wordpress-page.html",
+        "assetBase": "http://127.0.0.1:4175",
+        "canAuthor": true,
+        "nonce": "rest-nonce"
+      }
+    </script>
+    <main id="bracket-city-app"></main>
+    <script src="http://127.0.0.1:4175/loader.js"></script>
+  </body>
+</html>
