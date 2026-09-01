@@ -34,7 +34,7 @@ test("classic Pages bundle runs on the WordPress origin and keeps progress there
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith("/puzzles")) {
       return json(route, {
-        currentDate: puzzle.releaseDate,
+        currentDate: "2026-09-01",
         timeZone: "Europe/Madrid",
         puzzles: [{ date: puzzle.releaseDate, id: puzzle.id, revision: puzzle.revision }]
       });
@@ -45,6 +45,7 @@ test("classic Pages bundle runs on the WordPress origin and keeps progress there
 
   await page.goto(fixtureUrl);
   await expect(page.getByTestId("puzzle")).toBeVisible();
+  await expect(page.getByTestId("date-selector")).toHaveValue(puzzle.releaseDate);
   await expect(page.locator("iframe")).toHaveCount(0);
   await expect(page.locator('script[src^="http://127.0.0.1:4175/assets/nexo-"]')).toHaveCount(1);
   await page.getByRole("button", { name: "a", exact: true }).click();

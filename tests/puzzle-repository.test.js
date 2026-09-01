@@ -7,6 +7,7 @@ import {
   assertValidCorrection,
   createWordPressPuzzleRepository,
   importLegacyPublishedPuzzles,
+  latestAvailablePuzzleDate,
   readWordPressConfig
 } from "../src/puzzle-repository.js";
 
@@ -36,6 +37,15 @@ test("shortcode JSON configuration is read without executing markup", () => {
     nonce: "n"
   });
   assert.equal(readWordPressConfig(new JSDOM("").window.document), null);
+});
+
+test("the newest available puzzle is selected independently of the server calendar date", () => {
+  assert.equal(latestAvailablePuzzleDate([
+    { date: "2026-08-28" },
+    { date: "2026-08-31" },
+    { date: "2026-08-30" }
+  ]), "2026-08-31");
+  assert.equal(latestAvailablePuzzleDate([]), null);
 });
 
 test("public listing uses the server canonical date and public puzzle route", async () => {

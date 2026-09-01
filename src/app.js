@@ -27,6 +27,7 @@ import {
   createWordPressPuzzleRepository,
   getLegacyPublishedPuzzles,
   importLegacyPublishedPuzzles,
+  latestAvailablePuzzleDate,
   readWordPressConfig
 } from "./puzzle-repository.js";
 import { mergePublishedPuzzles, publishPuzzle, restorePublishedPuzzles } from "./published.js";
@@ -189,7 +190,7 @@ export async function bootstrapApp({
         ]);
         const entries = listing.entries;
         const requestedDate = readRequestedPuzzleDate(currentUrl.searchParams);
-        const selectedDate = requestedDate ?? listing.currentDate ?? entries[0]?.date;
+        const selectedDate = requestedDate ?? latestAvailablePuzzleDate(entries);
         const selectedEntry = entries.find((entry) => entry.date === selectedDate);
         if (!selectedDate || !selectedEntry) {
           throw new PuzzleCatalogError("UNKNOWN_PUZZLE_DATE", "$.date", `No hay rompecabezas para ${selectedDate ?? "hoy"}.`);

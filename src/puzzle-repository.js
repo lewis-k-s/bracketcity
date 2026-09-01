@@ -33,6 +33,15 @@ function trimSlash(value) {
   return String(value ?? "").replace(/\/+$/u, "");
 }
 
+export function latestAvailablePuzzleDate(entries) {
+  if (!Array.isArray(entries)) return null;
+  return entries.reduce((latest, entry) => {
+    const date = entry?.date;
+    if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/u.test(date)) return latest;
+    return latest === null || date > latest ? date : latest;
+  }, null);
+}
+
 function responseMessage(body, status) {
   return body?.message ?? body?.error ?? `La solicitud falló (${status}).`;
 }
