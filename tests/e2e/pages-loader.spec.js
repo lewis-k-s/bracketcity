@@ -54,6 +54,38 @@ test("classic Pages bundle runs on the WordPress origin and keeps progress there
   }));
   expect(backgrounds.mount).toBe("rgba(0, 0, 0, 0)");
   expect(backgrounds.shell).toBe("rgb(255, 255, 255)");
+  const desktopTitleLayout = await page.evaluate(() => {
+    const title = document.querySelector(".wp-block-post-title");
+    const spacer = document.querySelector(".wp-block-spacer");
+    const content = document.querySelector('[data-testid="wordpress-content-row"]');
+    return {
+      titleSize: parseFloat(getComputedStyle(title).fontSize),
+      spacerHeight: parseFloat(getComputedStyle(spacer).height),
+      contentPadding: parseFloat(getComputedStyle(content).paddingTop),
+      titleBottom: title.getBoundingClientRect().bottom,
+      contentTop: content.getBoundingClientRect().top
+    };
+  });
+  expect(desktopTitleLayout.titleSize).toBeLessThanOrEqual(36);
+  expect(desktopTitleLayout.spacerHeight).toBeLessThanOrEqual(8);
+  expect(desktopTitleLayout.contentPadding).toBeLessThanOrEqual(20);
+  expect(desktopTitleLayout.contentTop - desktopTitleLayout.titleBottom).toBeLessThanOrEqual(20);
+
+  await page.setViewportSize({ width: 375, height: 812 });
+  const mobileTitleLayout = await page.evaluate(() => {
+    const title = document.querySelector(".wp-block-post-title");
+    const content = document.querySelector('[data-testid="wordpress-content-row"]');
+    return {
+      titleSize: parseFloat(getComputedStyle(title).fontSize),
+      contentPadding: parseFloat(getComputedStyle(content).paddingTop),
+      titleBottom: title.getBoundingClientRect().bottom,
+      contentTop: content.getBoundingClientRect().top
+    };
+  });
+  expect(mobileTitleLayout.titleSize).toBeLessThanOrEqual(28);
+  expect(mobileTitleLayout.contentPadding).toBeLessThanOrEqual(8);
+  expect(mobileTitleLayout.contentTop - mobileTitleLayout.titleBottom).toBeLessThanOrEqual(8);
+
   const input = page.getByTestId("guess-input");
   const keyboard = page.getByRole("group", { name: "Teclado español" });
   if (await keyboard.isVisible()) await page.getByRole("button", { name: "a", exact: true }).click();

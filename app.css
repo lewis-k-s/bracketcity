@@ -28,6 +28,20 @@ body.nexo-standalone {
   background: #ffffff;
 }
 
+body:has(#bracket-city-app) .wp-block-spacer:has(+ .wp-block-post-title) {
+  height: 0.5rem !important;
+}
+
+body:has(#bracket-city-app) .wp-block-post-title {
+  margin: 0;
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  line-height: 1.05;
+}
+
+body:has(#bracket-city-app) .wp-block-columns:has(#bracket-city-app) {
+  padding-top: clamp(0.75rem, 2vw, 1.25rem) !important;
+}
+
 #bracket-city-app {
   background: transparent;
 }
@@ -837,6 +851,14 @@ body.nexo-standalone {
 }
 
 @media (max-width: 420px) {
+  body:has(#bracket-city-app) .wp-block-post-title {
+    font-size: 1.75rem;
+  }
+
+  body:has(#bracket-city-app) .wp-block-columns:has(#bracket-city-app) {
+    padding-top: 0.5rem !important;
+  }
+
   :is(#app, #bracket-city-app) .game-shell {
     padding-right: 0.8rem;
     padding-left: 0.8rem;

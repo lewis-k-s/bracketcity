@@ -4,20 +4,54 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Nexo WordPress fixture</title>
+    <style>
+      :root {
+        --wp--preset--spacing--50: 6rem;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      .wp-block-columns {
+        display: flex;
+      }
+
+      .wp-block-post-title {
+        margin-bottom: 0;
+        font-size: 4rem;
+      }
+
+      .wp-block-column {
+        min-width: 0;
+      }
+    </style>
   </head>
   <body>
-    <script id="bracket-city-config" type="application/json">
-      {
-        "restBase": "http://127.0.0.1:4174/wp-json/bracket-city/v1",
-        "currentDate": "2026-09-01",
-        "timeZone": "Europe/Madrid",
-        "pageUrl": "http://127.0.0.1:4174/tests/e2e/fixtures/wordpress-page.html",
-        "assetBase": "http://127.0.0.1:4175",
-        "canAuthor": true,
-        "nonce": "rest-nonce"
-      }
-    </script>
-    <main id="bracket-city-app"></main>
+    <div class="wp-block-columns">
+      <div class="wp-block-column" style="flex-basis: 30%"></div>
+      <div class="wp-block-column" style="flex-basis: 60%">
+        <div class="wp-block-spacer" style="height: 20px"></div>
+        <h2 class="wp-block-post-title has-text-align-center">Puzzles</h2>
+      </div>
+      <div class="wp-block-column" style="flex-basis: 10%"></div>
+    </div>
+    <div class="wp-block-columns" data-testid="wordpress-content-row" style="padding-top: var(--wp--preset--spacing--50)">
+      <div class="wp-block-column" style="flex-basis: 100%">
+        <script id="bracket-city-config" type="application/json">
+          {
+            "restBase": "http://127.0.0.1:4174/wp-json/bracket-city/v1",
+            "currentDate": "2026-09-01",
+            "timeZone": "Europe/Madrid",
+            "pageUrl": "http://127.0.0.1:4174/tests/e2e/fixtures/wordpress-page.html",
+            "assetBase": "http://127.0.0.1:4175",
+            "canAuthor": true,
+            "nonce": "rest-nonce"
+          }
+        </script>
+        <main id="bracket-city-app"></main>
+      </div>
+    </div>
     <script src="http://127.0.0.1:4175/loader.js"></script>
   </body>
 </html>
