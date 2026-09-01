@@ -69,16 +69,16 @@ test("play shell hides answer-bearing titles and uses only the visible virtual k
   assert.equal(document.querySelector(".keyboard-toggle"), null);
 });
 
-test("recursive rendering exposes only leaves as buttons and never nests buttons", () => {
+test("recursive rendering exposes only leaves as inline button controls", () => {
   installDom();
   const puzzle = compilePuzzle(branchPuzzle, esLocale);
   const progress = createProgress(puzzle);
   const view = shell(puzzle);
   renderPuzzle(view.puzzleText, puzzle, progress, esLocale, () => {});
-  assert.equal(view.puzzleText.querySelectorAll("button").length, 2);
-  assert.equal(getRenderedClueElement(view.puzzleText, "lib", "available").tagName, "BUTTON");
-  assert.equal(getRenderedClueElement(view.puzzleText, "sky", "available").tagName, "BUTTON");
-  assert.equal(view.puzzleText.querySelector("button button"), null);
+  assert.equal(view.puzzleText.querySelectorAll('[role="button"]').length, 2);
+  assert.equal(getRenderedClueElement(view.puzzleText, "lib", "available").tagName, "SPAN");
+  assert.equal(getRenderedClueElement(view.puzzleText, "sky", "available").tagName, "SPAN");
+  assert.equal(view.puzzleText.querySelector('[role="button"] [role="button"]'), null);
   assert.equal(getRenderedClueElement(view.puzzleText, "object").dataset.clueState, "locked");
 });
 
@@ -90,8 +90,8 @@ test("solving a leaf replaces its button with canonical answer and unlocks its p
   renderPuzzle(view.puzzleText, puzzle, progress, esLocale, () => {});
   assert.equal(getRenderedClueElement(view.puzzleText, "lib").textContent, "lib");
   assert.equal(getRenderedClueElement(view.puzzleText, "lib").dataset.clueState, "solved");
-  assert.equal(getRenderedClueElement(view.puzzleText, "book").tagName, "BUTTON");
-  assert.equal(view.puzzleText.querySelector("button button"), null);
+  assert.equal(getRenderedClueElement(view.puzzleText, "book").tagName, "SPAN");
+  assert.equal(view.puzzleText.querySelector('[role="button"] [role="button"]'), null);
 });
 
 test("puzzle rendering treats answer text as text, never HTML", () => {
@@ -125,6 +125,18 @@ test("available clue activation calls the hint handler with its stable ID", () =
   renderPuzzle(view.puzzleText, puzzle, createProgress(puzzle), esLocale, (id) => activated.push(id));
   getRenderedClueElement(view.puzzleText, "lib").click();
   assert.deepEqual(activated, ["lib"]);
+});
+
+test("inline clue controls support Enter and Space", () => {
+  installDom();
+  const puzzle = compilePuzzle(branchPuzzle, esLocale);
+  const view = shell(puzzle);
+  const activated = [];
+  renderPuzzle(view.puzzleText, puzzle, createProgress(puzzle), esLocale, (id) => activated.push(id));
+  const clue = getRenderedClueElement(view.puzzleText, "lib");
+  clue.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+  clue.dispatchEvent(new window.KeyboardEvent("keydown", { key: " ", bubbles: true }));
+  assert.deepEqual(activated, ["lib", "lib"]);
 });
 
 test("one-sided directions render an answer slot inside the unresolved bracket", () => {

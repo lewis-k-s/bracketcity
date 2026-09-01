@@ -282,7 +282,7 @@ body.nexo-standalone {
   max-height: min(65dvh, 30rem);
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 0.45rem max(0.75rem, env(safe-area-inset-left)) max(0.45rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-right));
+  padding: 0.45rem max(0.75rem, env(safe-area-inset-right)) max(0.45rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
   border-top: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(0.75rem);
@@ -931,6 +931,20 @@ body.nexo-standalone {
 }
 
 @media (max-width: 860px) {
+  :is(#app, #bracket-city-app) .game-shell {
+    width: 100vw;
+    margin-right: 0;
+    margin-left: 50%;
+    padding-right: max(0.5rem, env(safe-area-inset-right));
+    padding-left: max(0.5rem, env(safe-area-inset-left));
+    transform: translateX(calc(-50% + var(--nexo-viewport-center-offset, 0px)));
+  }
+
+  :is(#app, #bracket-city-app) .composer {
+    padding-right: max(0.5rem, env(safe-area-inset-right));
+    padding-left: max(0.5rem, env(safe-area-inset-left));
+  }
+
   :is(#app, #bracket-city-app) .author-layout {
     grid-template-columns: minmax(0, 1fr);
   }

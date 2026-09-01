@@ -114,10 +114,11 @@ function renderSegments(target, segments, puzzle, progress, locale, onHint, elem
     const actionText = hasPeek ? locale.ui.enterAfterPeek : locale.ui.peek;
     const accessiblePrompt = formatMessage(locale.ui.clueLabel, { clue: prompt });
     const hintText = hasPeek ? formatMessage(locale.ui.peekValue, { peek: node.peek }) : "";
-    const button = element("button", {
+    const button = element("span", {
       className: `clue clue-button${hasPeek ? " clue-button--peeked" : ""}`,
       attributes: {
-        type: "button",
+        role: "button",
+        tabindex: "0",
         "data-clue-state": "available",
         "data-hint-state": hasPeek ? "peeked" : "none",
         "aria-label": [accessiblePrompt, hintText, actionText].filter(Boolean).join(" ")
@@ -135,6 +136,11 @@ function renderSegments(target, segments, puzzle, progress, locale, onHint, elem
       );
     }
     button.addEventListener("click", () => onHint(node.id));
+    button.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      onHint(node.id);
+    });
     target.append(button);
   }
 }

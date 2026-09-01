@@ -157,6 +157,54 @@ test("mobile clue highlights stay compact within each puzzle line", async ({ pag
   expect(metrics.puzzleBottom).toBeLessThanOrEqual(metrics.composerTop);
 });
 
+test("mobile game fills the viewport and inline clues wrap with surrounding text", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await openFresh(page, "/?date=2026-08-31");
+  await page.locator("#app").evaluate((mount) => {
+    mount.style.width = "16rem";
+    mount.style.marginLeft = "2.5rem";
+    window.dispatchEvent(new Event("resize"));
+  });
+
+  const metrics = await page.evaluate(() => {
+    const shell = document.querySelector(".game-shell");
+    const shellRect = shell.getBoundingClientRect();
+    const shellStyle = getComputedStyle(shell);
+    const probe = document.createElement("p");
+    probe.className = "puzzle-text";
+    probe.style.width = "11rem";
+    const prefix = document.createTextNode("foo ");
+    const clue = document.createElement("span");
+    clue.className = "clue clue-button";
+    clue.setAttribute("role", "button");
+    clue.textContent = "bar baz quux corge";
+    probe.append(prefix, clue);
+    shell.append(probe);
+    const prefixRange = document.createRange();
+    prefixRange.selectNodeContents(prefix);
+    const prefixRect = prefixRange.getBoundingClientRect();
+    const clueRects = [...clue.getClientRects()];
+    probe.remove();
+    return {
+      viewportWidth: document.documentElement.clientWidth,
+      shellLeft: shellRect.left,
+      shellWidth: shellRect.width,
+      shellPaddingLeft: Number.parseFloat(shellStyle.paddingLeft),
+      shellPaddingRight: Number.parseFloat(shellStyle.paddingRight),
+      clueLineCount: clueRects.length,
+      prefixTop: prefixRect.top,
+      clueFirstTop: clueRects[0]?.top
+    };
+  });
+
+  expect(metrics.shellLeft).toBeCloseTo(0, 0);
+  expect(metrics.shellWidth).toBeCloseTo(metrics.viewportWidth, 0);
+  expect(metrics.shellPaddingLeft).toBeLessThanOrEqual(8);
+  expect(metrics.shellPaddingRight).toBeLessThanOrEqual(8);
+  expect(metrics.clueLineCount).toBeGreaterThan(1);
+  expect(Math.abs(metrics.clueFirstTop - metrics.prefixTop)).toBeLessThan(2);
+});
+
 test("the default catalog state has no serious or critical accessibility violations", async ({ page }) => {
   await openFresh(page);
   const results = await new AxeBuilder({ page }).analyze();
