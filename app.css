@@ -931,6 +931,12 @@ body.nexo-standalone {
   }
 }
 
+@media (min-width: 861px) {
+  :is(#app, #bracket-city-app) .virtual-keyboard {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   :is(#app, #bracket-city-app) .submit-button[data-submit-feedback] {
     animation: none;

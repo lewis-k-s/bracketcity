@@ -68,6 +68,13 @@ async function createPublishableDraft(page) {
 }
 
 async function submitWithVirtualKeyboard(page, answer) {
+  const input = page.getByTestId("guess-input");
+  const keyboard = page.getByRole("group", { name: "Teclado español" });
+  if (!(await keyboard.isVisible())) {
+    await input.fill(answer);
+    await input.press("Enter");
+    return;
+  }
   for (const character of answer.toLocaleLowerCase("es-ES")) {
     await page.getByRole("button", { name: character, exact: true }).click();
   }

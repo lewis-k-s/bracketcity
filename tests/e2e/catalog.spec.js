@@ -10,6 +10,12 @@ async function openFresh(page, path = "/") {
 async function submitWithVirtualKeyboard(page, answer) {
   const input = page.getByTestId("guess-input");
   await expect(input).toHaveValue("");
+  const keyboard = page.getByRole("group", { name: "Teclado español" });
+  if (!(await keyboard.isVisible())) {
+    await input.fill(answer);
+    await input.press("Enter");
+    return;
+  }
   for (const character of answer.toLocaleLowerCase("es-ES")) {
     const accessibleName = character === " " ? "Espacio" : character;
     await page.getByRole("button", { name: accessibleName, exact: true }).click();

@@ -337,6 +337,20 @@ export function createGameShell(mount, puzzle, locale, handlers, dateNavigation 
       "data-testid": "guess-input"
     }
   });
+  const desktopInputQuery = globalThis.matchMedia?.("(min-width: 861px)") ?? null;
+  const syncInputMode = () => {
+    const usePhysicalKeyboard = desktopInputQuery?.matches === true;
+    input.readOnly = !usePhysicalKeyboard;
+    if (usePhysicalKeyboard) {
+      input.removeAttribute("inputmode");
+      input.removeAttribute("virtualkeyboardpolicy");
+    } else {
+      input.setAttribute("inputmode", "none");
+      input.setAttribute("virtualkeyboardpolicy", "manual");
+    }
+  };
+  syncInputMode();
+  desktopInputQuery?.addEventListener?.("change", syncInputMode);
   const submit = element("button", {
     className: "submit-button",
     text: locale.ui.submit,
@@ -375,6 +389,7 @@ export function createGameShell(mount, puzzle, locale, handlers, dateNavigation 
     event.preventDefault();
     handlers.onSubmit(input.value);
   });
+  input.addEventListener("input", handlers.onVirtualInput);
 
   return {
     shell,

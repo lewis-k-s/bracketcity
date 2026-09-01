@@ -10,6 +10,11 @@ async function freshPage(page) {
 async function enterWithVirtualKeyboard(page, answer) {
   const input = page.getByTestId("guess-input");
   await expect(input).toHaveValue("");
+  const keyboard = page.getByRole("group", { name: "Teclado español" });
+  if (!(await keyboard.isVisible())) {
+    await input.fill(answer);
+    return;
+  }
   for (const character of answer.toLocaleLowerCase("es-ES")) {
     const accessibleName = character === " " ? "Espacio" : character;
     await page.getByRole("button", { name: accessibleName, exact: true }).click();
@@ -142,6 +147,17 @@ test("tapping every available clue twice cannot solve or unlock the puzzle", asy
   await expect(page.locator('[data-clue-state="available"]')).toHaveCount(5);
   await expect(page.getByTestId("completion")).toBeHidden();
   await expect(page.getByTestId("guess-input")).toBeVisible();
+});
+
+test("desktop hides the virtual keyboard and accepts normal keyboard input", async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  const input = page.getByTestId("guess-input");
+  await expect(page.getByRole("group", { name: "Teclado español" })).toBeHidden();
+  await expect(input).not.toHaveAttribute("readonly", "");
+  await expect(input).not.toHaveAttribute("inputmode", "none");
+  await input.pressSequentially(canonicalLeafAnswer);
+  await input.press("Enter");
+  await expect(page.locator('[data-clue-state="solved"]').filter({ hasText: canonicalLeafAnswer })).toHaveText(canonicalLeafAnswer);
 });
 
 test("the visible virtual keyboard is the only input method and preserves selection", async ({ page }) => {

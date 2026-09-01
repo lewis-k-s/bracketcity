@@ -48,7 +48,10 @@ test("classic Pages bundle runs on the WordPress origin and keeps progress there
   await expect(page.getByTestId("date-selector")).toHaveValue(puzzle.releaseDate);
   await expect(page.locator("iframe")).toHaveCount(0);
   await expect(page.locator('script[src^="http://127.0.0.1:4175/assets/nexo-"]')).toHaveCount(1);
-  await page.getByRole("button", { name: "a", exact: true }).click();
+  const input = page.getByTestId("guess-input");
+  const keyboard = page.getByRole("group", { name: "Teclado español" });
+  if (await keyboard.isVisible()) await page.getByRole("button", { name: "a", exact: true }).click();
+  else await input.fill("a");
 
   const storage = await page.evaluate(() => ({
     origin: location.origin,
