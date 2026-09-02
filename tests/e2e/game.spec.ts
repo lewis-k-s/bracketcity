@@ -6,6 +6,7 @@ async function freshPage(page: Page): Promise<void> {
   await page.goto("/?date=2026-08-28");
   await page.evaluate(() => localStorage.clear());
   await page.reload();
+  await expect(page.getByTestId("guess-input")).toBeVisible();
 }
 
 async function enterWithVirtualKeyboard(page: Page, answer: string): Promise<void> {

@@ -331,7 +331,11 @@ export function startAuthorApp({
       if (!persist()) liveMessage = locale.ui.authorStorageError ?? "";
       render();
       if (focusSelector) {
-        const focus = (): void => mount.querySelector<HTMLElement>(focusSelector)?.focus({ preventScroll: true });
+        const focus = (): void => {
+          const active = document.activeElement;
+          if (active instanceof HTMLElement && mount.contains(active)) return;
+          mount.querySelector<HTMLElement>(focusSelector)?.focus({ preventScroll: true });
+        };
         if (globalThis.requestAnimationFrame) globalThis.requestAnimationFrame(focus);
         else setTimeout(focus, 0);
       }
