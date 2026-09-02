@@ -41,28 +41,23 @@ async function convertPreviewText(page: Page, owner: string, segmentIndex: numbe
 async function createNestedDraft(page: Page): Promise<void> {
   const finalText = page.getByTestId("author-final-text");
   await finalText.fill("AX");
-  await page.getByRole("button", { name: "Aplicar texto final", exact: true }).click();
 
   await convertPreviewText(page, "root", 0, "AX");
 
   const parentPrompt = page.getByTestId("c01-literal-0");
   await parentPrompt.fill("AX");
-  await page.getByTestId("clue-inspector").getByTestId("author-save-text").click();
   await convertPreviewText(page, "c01", 0, "X");
 
   const leafPrompt = page.getByTestId("c02-literal-0");
   await leafPrompt.fill("última letra");
-  await page.getByTestId("clue-inspector").getByRole("button", { name: "Guardar texto", exact: true }).click();
 }
 
 async function createPublishableDraft(page: Page): Promise<void> {
   const finalText = page.getByTestId("author-final-text");
   await finalText.fill("La gata.");
-  await page.getByRole("button", { name: "Aplicar texto final", exact: true }).click();
 
   await convertPreviewText(page, "root", 0, "gata");
   await page.getByTestId("c01-literal-0").fill("animal doméstico");
-  await page.getByTestId("clue-inspector").getByRole("button", { name: "Guardar texto", exact: true }).click();
 
   await page.getByTestId("author-puzzle-id").fill("gata-local-es");
   await page.locator("#author-title-input").fill("La gata");
@@ -133,14 +128,11 @@ test("allows a directed hint to contain a nested clue", async ({ page }) => {
 
 test("authors two independent hints and nests from the right-side preview", async ({ page }) => {
   await page.getByTestId("author-final-text").fill("light");
-  await page.getByRole("button", { name: "Aplicar texto final", exact: true }).click();
   await convertPreviewText(page, "root", 0, "light");
 
   await page.getByTestId("c01-literal-0").fill("sun");
-  await page.getByTestId("clue-inspector").getByTestId("author-save-text").click();
   await page.getByTestId("author-right-prompt-toggle").click();
   await page.getByTestId("c01:right-literal-0").fill("house");
-  await page.getByTestId("clue-inspector").getByTestId("author-save-text").last().click();
 
   await expect(page.getByTestId("author-direction")).toHaveCount(0);
   await expect(page.getByTestId("author-structure-preview")).toHaveText("[sun→___←house]");
@@ -156,7 +148,6 @@ test("authors two independent hints and nests from the right-side preview", asyn
 test("the preview is the only surface that creates exact partial-word bracket layers", async ({ page }) => {
   const finalText = page.getByTestId("author-final-text");
   await finalText.fill("La sartén.");
-  await page.getByRole("button", { name: "Aplicar texto final", exact: true }).click();
 
   const finalPanel = finalText.locator("xpath=ancestor::section[contains(@class, 'author-panel')]");
   await expect(finalPanel.getByTestId("author-structure-preview")).toBeVisible();
@@ -173,7 +164,6 @@ test("the preview is the only surface that creates exact partial-word bracket la
   await prompt.fill("algo que imita la vida");
   await selectTextareaRange(prompt, 19, 23);
   await expect(page.getByTestId("author-convert-selection")).toBeDisabled();
-  await page.getByTestId("clue-inspector").getByTestId("author-save-text").click();
   await convertPreviewText(page, "c01", 0, "ida");
 
   const draft = await page.evaluate(() => JSON.parse(localStorage.getItem("nested-clue:author:v1") ?? "null"));
@@ -184,7 +174,6 @@ test("the preview is the only surface that creates exact partial-word bracket la
 
 test("enables only selections that stay within one preview literal", async ({ page }) => {
   await page.getByTestId("author-final-text").fill("Empieza el viaje.");
-  await page.getByRole("button", { name: "Aplicar texto final", exact: true }).click();
 
   await page.getByTestId("author-structure-preview").evaluate((preview) => {
     const range = document.createRange();
@@ -204,10 +193,8 @@ test("enables only selections that stay within one preview literal", async ({ pa
 
   await freshAuthorPage(page);
   await page.getByTestId("author-final-text").fill("Empieza el viaje.");
-  await page.getByRole("button", { name: "Aplicar texto final", exact: true }).click();
   await convertPreviewText(page, "root", 0, "viaje");
   await page.getByTestId("c01-literal-0").fill("desplazamiento");
-  await page.getByTestId("clue-inspector").getByTestId("author-save-text").click();
   await page.getByTestId("author-structure-preview").evaluate((preview) => {
     const [before, nested] = preview.querySelectorAll('[data-testid="author-preview-literal"]');
     const range = document.createRange();

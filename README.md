@@ -14,7 +14,7 @@ npm install
 npm run dev              # local standalone Vite server
 npm run build:pages      # create dist-pages/
 npm run test:all         # unit, PHP, Pages, WordPress, and browser gates
-npm run package:plugin   # create and install-test release/nexo-1.1.0.zip
+npm run package:plugin   # create and install-test release/nexo-1.2.0.zip
 ```
 
 The WordPress integration test uses disposable WordPress and MariaDB
@@ -37,6 +37,23 @@ can open the editor and save puzzles. Editors, Authors, and Subscribers cannot.
 Public REST routes expose only puzzles released at midnight in
 `Europe/Madrid`.
 
+Authenticated editors can manage the catalog through these REST endpoints:
+
+```text
+GET    /wp-json/bracket-city/v1/admin/puzzles
+GET    /wp-json/bracket-city/v1/admin/puzzles/YYYY-MM-DD
+POST   /wp-json/bracket-city/v1/puzzles
+PUT    /wp-json/bracket-city/v1/puzzles/YYYY-MM-DD
+DELETE /wp-json/bracket-city/v1/puzzles/YYYY-MM-DD
+GET    /wp-json/bracket-city/v1/admin/puzzles/trash
+GET    /wp-json/bracket-city/v1/admin/puzzles/trash/YYYY-MM-DD
+POST   /wp-json/bracket-city/v1/admin/puzzles/trash/YYYY-MM-DD
+```
+
+`DELETE` moves a puzzle to WordPress Trash. It disappears from the active
+catalog and can be restored with the final `POST` endpoint. A trashed bundled
+seed is not imported again when the plugin is reactivated.
+
 The installable ZIP contains only the PHP bridge and bootstrap seeds:
 
 ```text
@@ -47,7 +64,8 @@ bracket-city/
 ```
 
 The dated files in `puzzles/` are activation seeds and regression fixtures.
-Activation imports each missing date once and never replaces WordPress data.
+Activation imports a seed only when no active or trashed puzzle has its date,
+and never replaces WordPress data.
 Create all future puzzles through the authenticated builder or REST API.
 
 ## Deploy

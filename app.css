@@ -9,6 +9,7 @@
   --line: rgba(44, 40, 37, 0.42);
   --blue: #5268ae;
   --blue-dark: #3f528f;
+  --clue-answer-highlight: #fff4bf;
   --paper: #ffffff;
   --error: #9b2f27;
   min-height: 100vh;
@@ -231,6 +232,15 @@ body:has(#bracket-city-app) #bracket-city-app {
 :is(#app, #bracket-city-app) .clue-answer {
   color: var(--blue-dark);
   font-weight: 700;
+}
+
+:is(#app, #bracket-city-app) .clue-button .clue-answer {
+  padding-inline: 0.08em;
+  border-radius: 0.1em;
+  background: var(--clue-answer-highlight);
+  color: var(--ink);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
 :is(#app, #bracket-city-app) .answer-slot-arrow,

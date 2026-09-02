@@ -45,6 +45,20 @@ final class Nexo_Puzzles {
 		return $posts[0] ?? null;
 	}
 
+	public static function find_trashed( string $date ): ?WP_Post {
+		$posts = get_posts(
+			array(
+				'post_type' => self::POST_TYPE,
+				'post_status' => 'trash',
+				'meta_key' => self::META_DATE,
+				'meta_value' => $date,
+				'numberposts' => 1,
+				'suppress_filters' => true,
+			)
+		);
+		return $posts[0] ?? null;
+	}
+
 	public static function definition( WP_Post $post ): ?array {
 		$value = json_decode( $post->post_content, true );
 		return is_array( $value ) && ! array_is_list( $value ) ? $value : null;
@@ -69,6 +83,33 @@ final class Nexo_Puzzles {
 			$definition = self::definition( $post );
 			if ( ! Nexo_Validator::is_date( $date ) || ! is_array( $definition ) || ( $definition['releaseDate'] ?? null ) !== $date || ! Nexo_Validator::validate( $definition )['valid'] ) continue;
 			if ( ! $include_future && $date > $today ) continue;
+			$result[] = array(
+				'date' => $date,
+				'title' => $post->post_title,
+				'id' => (string) get_post_meta( $post->ID, self::META_ID, true ),
+				'revision' => (int) get_post_meta( $post->ID, self::META_REVISION, true ),
+			);
+		}
+		return $result;
+	}
+
+	public static function list_trashed_metadata(): array {
+		$posts = get_posts(
+			array(
+				'post_type' => self::POST_TYPE,
+				'post_status' => 'trash',
+				'numberposts' => -1,
+				'orderby' => 'meta_value',
+				'meta_key' => self::META_DATE,
+				'order' => 'DESC',
+				'suppress_filters' => true,
+			)
+		);
+		$result = array();
+		foreach ( $posts as $post ) {
+			$date = (string) get_post_meta( $post->ID, self::META_DATE, true );
+			$definition = self::definition( $post );
+			if ( ! Nexo_Validator::is_date( $date ) || ! is_array( $definition ) || ( $definition['releaseDate'] ?? null ) !== $date || ! Nexo_Validator::validate( $definition )['valid'] ) continue;
 			$result[] = array(
 				'date' => $date,
 				'title' => $post->post_title,
@@ -115,6 +156,24 @@ final class Nexo_Puzzles {
 		return $result;
 	}
 
+	/** Move a puzzle out of the public and administrative catalogs without erasing it. */
+	public static function trash( WP_Post $post ) {
+		$result = wp_trash_post( $post->ID );
+		if ( false === $result ) {
+			return new WP_Error( 'nexo_trash_failed', 'Puzzle could not be moved to Trash.' );
+		}
+		return $result;
+	}
+
+	/** Restore a puzzle that was moved to WordPress Trash. */
+	public static function restore( WP_Post $post ) {
+		$result = wp_untrash_post( $post->ID );
+		if ( false === $result ) {
+			return new WP_Error( 'nexo_restore_failed', 'Puzzle could not be restored from Trash.' );
+		}
+		return wp_update_post( array( 'ID' => $post->ID, 'post_status' => 'private' ), true );
+	}
+
 	private static function write_meta( int $post_id, array $definition ): bool {
 		$values = array(
 			self::META_DATE => $definition['releaseDate'],
@@ -146,7 +205,7 @@ final class Nexo_Puzzles {
 				self::rollback( $inserted );
 				return new WP_Error( 'nexo_invalid_seed_date', 'Seed releaseDate is missing or invalid: ' . basename( $file ) );
 			}
-			if ( null !== self::find( $date ) ) continue;
+			if ( null !== self::find( $date ) || null !== self::find_trashed( $date ) ) continue;
 			$post_id = self::insert( $definition );
 			if ( is_wp_error( $post_id ) ) {
 				self::rollback( $inserted );

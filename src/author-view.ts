@@ -269,10 +269,9 @@ export function startAuthorApp({
     let next = draft;
     const id = mount.querySelector<HTMLInputElement>("#author-puzzle-id")?.value;
     const title = mount.querySelector<HTMLInputElement>("#author-title-input")?.value;
-    const revisionValue = mount.querySelector<HTMLInputElement>("#author-revision")?.value;
     const releaseDate = mount.querySelector<HTMLInputElement>("#author-release-date")?.value;
-    if (id !== undefined && title !== undefined && revisionValue !== undefined && releaseDate !== undefined) {
-      next = updateMetadata(next, { id, title, revision: Number(revisionValue), releaseDate });
+    if (id !== undefined && title !== undefined && releaseDate !== undefined) {
+      next = updateMetadata(next, { id, title, releaseDate });
     }
 
     const finalInput = mount.querySelector<HTMLTextAreaElement>('[data-testid="author-final-text"]');
@@ -300,6 +299,20 @@ export function startAuthorApp({
       next = updateClue(next, next.selectedClueId, changes);
     }
     draft = next;
+  };
+
+  const refreshPreview = (): void => {
+    const preview = mount.querySelector<HTMLElement>('[data-testid="author-structure-preview"]');
+    if (!preview) return;
+    renderAuthorPreview(preview, draft);
+    clearPreviewSelection({ clearBrowserSelection: true });
+  };
+
+  const persistInput = (): void => {
+    operationError = "";
+    if (!persist()) liveMessage = locale.ui.authorStorageError ?? "";
+    const live = mount.querySelector<HTMLElement>('[data-testid="author-live"]');
+    if (live) live.textContent = liveMessage;
   };
 
   const apply = (
@@ -409,18 +422,13 @@ export function startAuthorApp({
           }
         });
         textarea.value = segment;
-        const actions = element("div", { className: "segment-actions" });
-        const save = element("button", {
-          className: "author-button author-button--quiet author-button--compact",
-          text: locale.ui.authorSaveText,
-          attributes: { type: "button", "data-testid": "author-save-text" }
+        textarea.addEventListener("input", () => {
+          draft = updateLiteral(draft, { owner, segmentIndex, value: textarea.value });
+          persistInput();
+          refreshPreview();
+          refreshDerivedPanels();
         });
-        save.addEventListener("click", () => apply(
-          () => updateLiteral(draft, { owner, segmentIndex, value: textarea.value }),
-          locale.ui.authorTextSaved
-        ));
-        actions.append(save);
-        row.append(textarea, actions);
+        row.append(textarea);
       } else {
         const clue = draft.clues[segment.ref];
         const direction = Array.isArray(clue?.rightPrompt)
@@ -456,11 +464,6 @@ export function startAuthorApp({
       attributes: { id: "author-title-input", type: "text" }
     });
     titleInput.value = draft.metadata.title;
-    const revisionInput = element("input", {
-      className: "author-input",
-      attributes: { id: "author-revision", type: "number", min: "1", step: "1" }
-    });
-    revisionInput.value = String(draft.metadata.revision);
     const releaseInput = element("input", {
       className: "author-input",
       attributes: { id: "author-release-date", type: "date" }
@@ -469,21 +472,21 @@ export function startAuthorApp({
     grid.append(
       field(locale.ui.authorPuzzleId, idInput),
       field(locale.ui.authorPuzzleTitle, titleInput),
-      field(locale.ui.authorRevision, revisionInput),
       field(locale.ui.authorReleaseDate, releaseInput)
     );
-    const save = element("button", {
-      className: "author-button",
-      text: locale.ui.authorSaveDetails,
-      attributes: { type: "button" }
-    });
-    save.addEventListener("click", () => apply(() => updateMetadata(draft, {
-      id: idInput.value.trim(),
-      title: titleInput.value,
-      revision: Number(revisionInput.value),
-      releaseDate: releaseInput.value
-    }), locale.ui.authorDetailsSaved));
-    section.append(grid, save);
+    const syncMetadata = () => {
+      draft = updateMetadata(draft, {
+        id: idInput.value.trim(),
+        title: titleInput.value,
+        releaseDate: releaseInput.value
+      });
+      persistInput();
+      refreshDerivedPanels();
+    };
+    idInput.addEventListener("input", syncMetadata);
+    titleInput.addEventListener("input", syncMetadata);
+    releaseInput.addEventListener("input", syncMetadata);
+    section.append(grid);
     return section;
   };
 
@@ -624,13 +627,14 @@ export function startAuthorApp({
       }
     });
     finalInput.value = draft.finalText;
-    const applyText = element("button", {
-      className: "author-button",
-      text: locale.ui.authorApplyFinal,
-      attributes: { type: "button", disabled: Object.keys(draft.clues).length ? "" : undefined }
+    finalInput.addEventListener("input", () => {
+      if (Object.keys(draft.clues).length) return;
+      draft = setFinalText(draft, finalInput.value);
+      persistInput();
+      refreshPreview();
+      refreshDerivedPanels();
     });
-    applyText.addEventListener("click", () => apply(() => setFinalText(draft, finalInput.value), locale.ui.authorFinalSaved));
-    section.append(field(locale.ui.authorFinalText, finalInput), applyText, renderStructurePreview());
+    section.append(field(locale.ui.authorFinalText, finalInput), renderStructurePreview());
     return section;
   };
 
@@ -685,16 +689,20 @@ export function startAuthorApp({
       }),
       aliasesInput
     );
-    const save = element("button", {
-      className: "author-button",
-      text: locale.ui.authorSaveClue,
-      attributes: { type: "button" }
-    });
-    save.addEventListener("click", () => apply(() => updateClue(draft, clueId, {
-      answer: answerInput.value,
-      accept: aliasesInput.value.split(/\r?\n/u).map((value) => value.trim()).filter(Boolean)
-    }), locale.ui.authorClueSaved));
-    section.append(fields, aliases, save);
+    const syncClue = () => {
+      draft = updateClue(draft, clueId, {
+        answer: answerInput.value,
+        accept: aliasesInput.value.split(/\r?\n/u).map((value) => value.trim()).filter(Boolean)
+      });
+      persistInput();
+      const finalInput = mount.querySelector<HTMLTextAreaElement>('[data-testid="author-final-text"]');
+      if (finalInput?.readOnly) finalInput.value = draft.finalText;
+      refreshPreview();
+      refreshDerivedPanels();
+    };
+    answerInput.addEventListener("input", syncClue);
+    aliasesInput.addEventListener("input", syncClue);
+    section.append(fields, aliases);
 
     const incoming = incomingReference(draft, clueId);
     const hasRightPrompt = Array.isArray(clue.rightPrompt);
@@ -812,7 +820,7 @@ export function startAuthorApp({
       publish.addEventListener("click", () => {
         const currentJson = prepareExport();
         if (currentJson === null) return;
-        const definition = JSON.parse(currentJson) as PuzzleDefinition;
+        let definition = JSON.parse(currentJson) as PuzzleDefinition;
         const date = definition.releaseDate;
         if (!date) {
           operationError = locale.ui.authorPublishDateRequired ?? "";
@@ -820,12 +828,18 @@ export function startAuthorApp({
           render();
           return;
         }
-        const replace = knownPuzzleDates.has(date);
-        if (replace && globalThis.confirm?.(formatMessage(locale.ui.authorPublishReplaceConfirm, { date })) === false) {
-          publish.focus({ preventScroll: true });
-          return;
+        const existing = existingPuzzles.find((item) => item.date === date);
+        const replace = existing !== undefined || knownPuzzleDates.has(date);
+        if (existing) {
+          const revision = (existing.definition.revision ?? 1) + 1;
+          definition = { ...definition, revision };
+          draft = updateMetadata(draft, { revision });
+          persistInput();
         }
         const complete = () => {
+          const stored = existingPuzzles.find((item) => item.date === date);
+          if (stored) stored.definition = structuredClone(definition);
+          else existingPuzzles.push({ date, definition: structuredClone(definition) });
           knownPuzzleDates.add(date);
           savedDate = date;
           publishedDate = !currentDate || date <= currentDate ? date : null;
@@ -900,6 +914,14 @@ export function startAuthorApp({
     exportPanel.append(output, actions);
     aside.append(exportPanel);
     return aside;
+  };
+
+  const refreshDerivedPanels = (): void => {
+    const validation = validateAuthorDraft(draft, locale);
+    const currentValidation = mount.querySelector<HTMLElement>('[data-testid="author-validation"]');
+    if (currentValidation) currentValidation.replaceWith(renderValidation(validation));
+    const currentOutput = mount.querySelector<HTMLElement>(".author-output");
+    if (currentOutput) currentOutput.replaceWith(renderOutput(validation));
   };
 
   function render(): void {

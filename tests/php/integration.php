@@ -51,6 +51,10 @@ nexo_check( true === $seed_result && $seed_id === Nexo_Puzzles::find( $seed_date
 wp_update_post( array( 'ID' => $seed_id, 'post_title' => 'WordPress-owned seed title' ) );
 Nexo_Puzzles::import_seeds();
 nexo_check( 'WordPress-owned seed title' === Nexo_Puzzles::find( $seed_date )->post_title, 'Seed import must never replace WordPress data.' );
+Nexo_Puzzles::trash( $seed );
+nexo_check( null === Nexo_Puzzles::find( $seed_date ), 'A trashed seed must leave the active catalog.' );
+nexo_check( true === Nexo_Puzzles::import_seeds() && null === Nexo_Puzzles::find( $seed_date ), 'A trashed seed must not return on a later plugin activation.' );
+nexo_check( ! is_wp_error( Nexo_Puzzles::restore( $seed ) ), 'Seed restore must succeed for the remaining integration checks.' );
 
 wp_set_current_user( 0 );
 $public_list = nexo_request( 'GET', '/bracket-city/v1/puzzles' );
@@ -99,6 +103,10 @@ foreach ( array( 'editor', 'author', 'subscriber' ) as $role ) {
 	nexo_check( ! Nexo_REST_Controller::can_publish(), $role . ' must fail the REST capability gate.' );
 	$denied = nexo_request( 'POST', '/bracket-city/v1/puzzles', nexo_puzzle( '2099-01-01', 'denied-' . $role ) );
 	nexo_check( in_array( $denied->get_status(), array( 401, 403 ), true ), $role . ' must not create puzzles.' );
+	$denied_delete = nexo_request( 'DELETE', '/bracket-city/v1/puzzles/' . $seed_date );
+	nexo_check( in_array( $denied_delete->get_status(), array( 401, 403 ), true ), $role . ' must not remove puzzles.' );
+	$denied_trash = nexo_request( 'GET', '/bracket-city/v1/admin/puzzles/trash' );
+	nexo_check( in_array( $denied_trash->get_status(), array( 401, 403 ), true ), $role . ' must not inspect removed puzzles.' );
 }
 
 wp_set_current_user( $roles['nexo_puzzle_manager'] );
@@ -120,6 +128,19 @@ $corrected['title'] = 'Corrected';
 nexo_check( 200 === nexo_request( 'PUT', '/bracket-city/v1/puzzles/2099-01-01', $corrected )->get_status(), 'A same-ID higher revision correction must succeed.' );
 $future_post = Nexo_Puzzles::find( '2099-01-01' );
 nexo_check( count( wp_get_post_revisions( $future_post->ID ) ) >= 1, 'Correction must create a WordPress revision.' );
+$trashed = nexo_request( 'DELETE', '/bracket-city/v1/puzzles/2099-01-01' );
+nexo_check( 200 === $trashed->get_status(), 'Puzzle Manager must be able to remove a puzzle.' );
+nexo_check( 'trashed' === $trashed->get_data()['status'] && '2099-01-01' === $trashed->get_data()['date'], 'Puzzle removal must report the removed date and status.' );
+nexo_check( null === Nexo_Puzzles::find( '2099-01-01' ), 'A removed puzzle must not remain in the active catalog.' );
+nexo_check( 'trash' === get_post_status( $future_post->ID ), 'Puzzle removal must preserve the puzzle in WordPress Trash.' );
+nexo_check( 404 === nexo_request( 'DELETE', '/bracket-city/v1/puzzles/2099-01-01' )->get_status(), 'Removing an already removed puzzle must return 404.' );
+$trash_list = nexo_request( 'GET', '/bracket-city/v1/admin/puzzles/trash' );
+nexo_check( 200 === $trash_list->get_status() && '2099-01-01' === $trash_list->get_data()['puzzles'][0]['date'], 'Puzzle Manager must be able to list removed puzzles.' );
+nexo_check( 200 === nexo_request( 'GET', '/bracket-city/v1/admin/puzzles/trash/2099-01-01' )->get_status(), 'Puzzle Manager must be able to preview a removed puzzle.' );
+$restored = nexo_request( 'POST', '/bracket-city/v1/admin/puzzles/trash/2099-01-01' );
+nexo_check( 200 === $restored->get_status() && 'restored' === $restored->get_data()['status'], 'Puzzle Manager must be able to restore a removed puzzle.' );
+nexo_check( $future_post->ID === Nexo_Puzzles::find( '2099-01-01' )->ID, 'Restoring a puzzle must preserve its post identity.' );
+nexo_check( 'private' === get_post_status( $future_post->ID ), 'Puzzle restore must return the puzzle to the active catalog.' );
 
 $page_id = wp_insert_post( array( 'post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'Nexo', 'post_content' => '[bracket_city asset_base="https://owner.github.io/bracketcity/"][bracket_city asset_base="https://owner.github.io/bracketcity/"]' ) );
 $GLOBALS['wp_query'] = new WP_Query( array( 'page_id' => $page_id ) );

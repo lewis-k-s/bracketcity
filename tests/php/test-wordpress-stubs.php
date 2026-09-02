@@ -89,11 +89,15 @@ check( in_array( 'revisions', $type['supports'], true ), 'Puzzle CPT must preser
 Nexo_REST_Controller::register_routes();
 check( isset( $GLOBALS['nexo_calls']['routes']['bracket-city/v1/puzzles'] ), 'Public collection route must register.' );
 check( isset( $GLOBALS['nexo_calls']['routes']['bracket-city/v1/admin/puzzles'] ), 'Admin collection route must register.' );
+check( isset( $GLOBALS['nexo_calls']['routes']['bracket-city/v1/admin/puzzles/trash'] ), 'Admin Trash collection route must register.' );
 check( ! Nexo_REST_Controller::can_publish(), 'A user without the custom capability must not publish.' );
 $GLOBALS['nexo_current_capabilities'] = array( Nexo_Capabilities::MANAGE_PUZZLES );
 check( Nexo_REST_Controller::can_publish(), 'The custom capability must permit publishing.' );
 $item_routes = $GLOBALS['nexo_calls']['routes']['bracket-city/v1/puzzles/(?P<date>\d{4}-\d{2}-\d{2})'];
 check( 'PUT' === $item_routes[1]['methods'], 'Correction route must accept PUT only.' );
+check( 'DELETE' === $item_routes[2]['methods'], 'Puzzle removal route must accept DELETE only.' );
+$trash_item_routes = $GLOBALS['nexo_calls']['routes']['bracket-city/v1/admin/puzzles/trash/(?P<date>\d{4}-\d{2}-\d{2})'];
+check( 'POST' === $trash_item_routes[1]['methods'], 'Puzzle restore route must accept POST only.' );
 
 $invalid_post = new WP_Post();
 $invalid_post->post_content = '{"schemaVersion":1,"releaseDate":"' . Nexo_Puzzles::current_date() . '"}';

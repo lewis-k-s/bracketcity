@@ -168,10 +168,8 @@ test("WordPress author publication sends the page nonce", async ({ page }) => {
   await page.goto(`${fixtureUrl}?mode=author`);
   await expect(page.getByTestId("author-final-text")).toBeVisible();
   await page.getByTestId("author-final-text").fill("La gata.");
-  await page.getByRole("button", { name: "Aplicar texto final", exact: true }).click();
   await selectPreviewText(page, "gata");
   await page.getByTestId("c01-literal-0").fill("animal doméstico");
-  await page.getByTestId("clue-inspector").getByRole("button", { name: "Guardar texto", exact: true }).click();
   await page.getByTestId("author-puzzle-id").fill("gata-pages-es");
   await page.locator("#author-title-input").fill("La gata");
   await page.locator("#author-release-date").fill("2026-09-01");
@@ -181,4 +179,44 @@ test("WordPress author publication sends the page nonce", async ({ page }) => {
   expect(publishedRequest!.nonce).toBe("rest-nonce");
   expect(publishedRequest!.body.id).toBe("gata-pages-es");
   await expect(page.getByTestId("author-publish-status")).toContainText("2026-09-01");
+});
+
+test("WordPress correction increments its hidden revision and publishes without a second confirmation", async ({ page }) => {
+  let correctionRequest: { method: string; body: Record<string, unknown> } | null = null;
+  let dialogCount = 0;
+  page.on("dialog", async (dialog) => {
+    dialogCount += 1;
+    await dialog.accept();
+  });
+  await page.route("**/wp-json/bracket-city/v1/**", async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    if (request.method() === "GET" && path.endsWith("/admin/puzzles")) {
+      return json(route, {
+        currentDate: "2026-09-01",
+        timeZone: "Europe/Madrid",
+        puzzles: [{ date: puzzle.releaseDate, id: puzzle.id, revision: puzzle.revision }]
+      });
+    }
+    if (request.method() === "GET" && path.endsWith(`/admin/puzzles/${puzzle.releaseDate}`)) {
+      return json(route, puzzle);
+    }
+    if (request.method() === "PUT" && path.endsWith(`/puzzles/${puzzle.releaseDate}`)) {
+      correctionRequest = { method: request.method(), body: request.postDataJSON() as Record<string, unknown> };
+      return json(route, { date: puzzle.releaseDate });
+    }
+    return json(route, { message: "Not found" }, 404);
+  });
+
+  await page.goto(`${fixtureUrl}?mode=author`);
+  await page.getByTestId("author-existing-puzzle").selectOption({ label: `${puzzle.releaseDate} · ${puzzle.title}` });
+  await page.getByTestId("author-load-existing").click();
+  await expect(page.locator("#author-revision")).toHaveCount(0);
+  await page.locator("#author-title-input").fill(`${puzzle.title} corregido`);
+  await page.getByTestId("author-publish").click();
+
+  await expect.poll(() => correctionRequest).not.toBeNull();
+  expect(correctionRequest!.method).toBe("PUT");
+  expect(correctionRequest!.body.revision).toBe((puzzle.revision ?? 1) + 1);
+  expect(dialogCount).toBe(1);
 });

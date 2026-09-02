@@ -14,9 +14,15 @@ final class Nexo_REST_Controller {
 		register_rest_route( self::NS, '/puzzles/(?P<date>\d{4}-\d{2}-\d{2})', array(
 			array( 'methods' => WP_REST_Server::READABLE, 'callback' => array( self::class, 'public_get' ), 'permission_callback' => '__return_true' ),
 			array( 'methods' => 'PUT', 'callback' => array( self::class, 'update' ), 'permission_callback' => array( self::class, 'can_publish' ) ),
+			array( 'methods' => 'DELETE', 'callback' => array( self::class, 'trash' ), 'permission_callback' => array( self::class, 'can_publish' ) ),
 		) );
 		register_rest_route( self::NS, '/admin/puzzles', array( 'methods' => WP_REST_Server::READABLE, 'callback' => array( self::class, 'admin_list' ), 'permission_callback' => array( self::class, 'can_publish' ) ) );
 		register_rest_route( self::NS, '/admin/puzzles/(?P<date>\d{4}-\d{2}-\d{2})', array( 'methods' => WP_REST_Server::READABLE, 'callback' => array( self::class, 'admin_get' ), 'permission_callback' => array( self::class, 'can_publish' ) ) );
+		register_rest_route( self::NS, '/admin/puzzles/trash', array( 'methods' => WP_REST_Server::READABLE, 'callback' => array( self::class, 'admin_list_trashed' ), 'permission_callback' => array( self::class, 'can_publish' ) ) );
+		register_rest_route( self::NS, '/admin/puzzles/trash/(?P<date>\d{4}-\d{2}-\d{2})', array(
+			array( 'methods' => WP_REST_Server::READABLE, 'callback' => array( self::class, 'admin_get_trashed' ), 'permission_callback' => array( self::class, 'can_publish' ) ),
+			array( 'methods' => WP_REST_Server::CREATABLE, 'callback' => array( self::class, 'restore' ), 'permission_callback' => array( self::class, 'can_publish' ) ),
+		) );
 	}
 
 	public static function can_publish(): bool { return current_user_can( Nexo_Capabilities::MANAGE_PUZZLES ); }
@@ -39,6 +45,18 @@ final class Nexo_REST_Controller {
 	public static function admin_get( WP_REST_Request $request ) {
 		$date = self::date( $request );
 		return is_wp_error( $date ) ? $date : self::get_definition( $date );
+	}
+
+	public static function admin_list_trashed(): WP_REST_Response {
+		return rest_ensure_response( array( 'schemaVersion' => 1, 'currentDate' => Nexo_Puzzles::current_date(), 'timeZone' => NEXO_TIME_ZONE, 'puzzles' => Nexo_Puzzles::list_trashed_metadata() ) );
+	}
+
+	public static function admin_get_trashed( WP_REST_Request $request ) {
+		$date = self::date( $request );
+		if ( is_wp_error( $date ) ) return $date;
+		$post = Nexo_Puzzles::find_trashed( $date );
+		if ( null === $post ) return self::error( 'nexo_not_found', 'Puzzle not found.', 404 );
+		return self::definition_from_post( $post, $date );
 	}
 
 	public static function create( WP_REST_Request $request ) {
@@ -68,9 +86,34 @@ final class Nexo_REST_Controller {
 		return is_wp_error( $result ) ? $result : rest_ensure_response( self::saved( $definition, $post->ID ) );
 	}
 
+	public static function trash( WP_REST_Request $request ) {
+		$date = self::date( $request );
+		if ( is_wp_error( $date ) ) return $date;
+		$post = Nexo_Puzzles::find( $date );
+		if ( null === $post ) return self::error( 'nexo_not_found', 'Puzzle not found.', 404 );
+		$result = Nexo_Puzzles::trash( $post );
+		if ( is_wp_error( $result ) ) return $result;
+		return rest_ensure_response( array( 'date' => $date, 'postId' => $post->ID, 'status' => 'trashed' ) );
+	}
+
+	public static function restore( WP_REST_Request $request ) {
+		$date = self::date( $request );
+		if ( is_wp_error( $date ) ) return $date;
+		$post = Nexo_Puzzles::find_trashed( $date );
+		if ( null === $post ) return self::error( 'nexo_not_found', 'Puzzle not found.', 404 );
+		if ( null !== Nexo_Puzzles::find( $date ) ) return self::error( 'nexo_conflict', 'An active puzzle already exists for this date.', 409 );
+		$result = Nexo_Puzzles::restore( $post );
+		if ( is_wp_error( $result ) ) return $result;
+		return rest_ensure_response( array( 'date' => $date, 'postId' => $post->ID, 'status' => 'restored' ) );
+	}
+
 	private static function get_definition( string $date ) {
 		$post = Nexo_Puzzles::find( $date );
 		if ( null === $post ) return self::error( 'nexo_not_found', 'Puzzle not found.', 404 );
+		return self::definition_from_post( $post, $date );
+	}
+
+	private static function definition_from_post( WP_Post $post, string $date ) {
 		$definition = Nexo_Puzzles::definition( $post );
 		$validation = is_array( $definition ) ? Nexo_Validator::validate( $definition ) : array( 'valid' => false );
 		if ( null === $definition || ! $validation['valid'] || ( $definition['releaseDate'] ?? null ) !== $date ) return self::error( 'nexo_invalid_stored_puzzle', 'Stored puzzle is invalid.', 500 );

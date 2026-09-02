@@ -5,7 +5,7 @@ import { JSDOM } from "jsdom";
 import { AUTHOR_STORAGE_KEY } from "../src/author.ts";
 import { startAuthorApp } from "../src/author-view.ts";
 import type { LocalePack, PuzzleDefinition, StorageLike } from "../src/types.ts";
-import { installDomWindow, q, qa } from "./test-dom.ts";
+import { installDomWindow, q, qa, type TestElement } from "./test-dom.ts";
 
 interface PublishCall {
   readonly definition: PuzzleDefinition;
@@ -50,6 +50,11 @@ function button(label: string | undefined): HTMLElement {
   return match;
 }
 
+function inputValue(control: TestElement, value: string): void {
+  control.value = value;
+  control.dispatchEvent(new window.Event("input", { bubbles: true }));
+}
+
 function setPreviewSelection(owner: string, segmentIndex: number, selectedText: string): Element {
   const literals = [...qa('[data-testid="author-preview-literal"]')]
     .filter((node) => node.textContent.includes(selectedText));
@@ -79,19 +84,16 @@ function buildDirectedDraft(storage: StorageLike) {
   const app = startAuthorApp({ mount: q("#app"), locale, storage });
   assert.ok(app);
   const finalInput = q('[data-testid="author-final-text"]');
-  finalInput.value = "El dosel.";
-  button(locale.ui.authorApplyFinal).click();
+  inputValue(finalInput, "El dosel.");
 
   convertPreviewSelection("root", 0, "dosel");
 
   const parentPrompt = q('[data-testid="c01-literal-0"]');
-  parentPrompt.value = "cubierta formada por dos";
-  parentPrompt.closest(".segment-row").querySelector('[data-testid="author-save-text"]').click();
+  inputValue(parentPrompt, "cubierta formada por dos");
   convertPreviewSelection("c01", 0, "dos");
 
   const leafPrompt = q('[data-testid="c02-literal-0"]');
-  leafPrompt.value = "número después de uno";
-  leafPrompt.closest(".segment-row").querySelector('[data-testid="author-save-text"]').click();
+  inputValue(leafPrompt, "número después de uno");
 
   const direction = q('[data-testid="author-direction"]');
   direction.value = "right";
@@ -124,8 +126,7 @@ test("author mode falls back to an in-memory draft when storage reads fail", () 
   assert.match(q(".author-error").textContent, /No se pudo guardar/u);
   assert.equal(q("main main"), null);
   const finalInput = q('[data-testid="author-final-text"]');
-  finalInput.value = "Texto sin guardar";
-  button(locale.ui.authorApplyFinal).click();
+  inputValue(finalInput, "Texto sin guardar");
   assert.equal(app.getDraft().finalText, "Texto sin guardar");
   assert.match(q(".author-error").textContent, /No se pudo guardar/u);
   assert.equal(q('[data-testid="author-live"]').textContent, locale.ui.authorStorageError);
@@ -135,8 +136,7 @@ test("an initial phrase selection enables conversion when the browser uses previ
   installDom();
   startAuthorApp({ mount: q("#app"), locale, storage: memoryStorage() });
   const finalInput = q('[data-testid="author-final-text"]');
-  finalInput.value = "Empieza el viaje.";
-  button(locale.ui.authorApplyFinal).click();
+  inputValue(finalInput, "Empieza el viaje.");
 
   const preview = q('[data-testid="author-structure-preview"]');
   const range = document.createRange();
@@ -160,13 +160,11 @@ test("a selection that crosses an existing bracket boundary cannot be converted"
   installDom();
   startAuthorApp({ mount: q("#app"), locale, storage: memoryStorage() });
   const finalInput = q('[data-testid="author-final-text"]');
-  finalInput.value = "Empieza el viaje.";
-  button(locale.ui.authorApplyFinal).click();
+  inputValue(finalInput, "Empieza el viaje.");
   convertPreviewSelection("root", 0, "viaje");
 
   const prompt = q('[data-testid="c01-literal-0"]');
-  prompt.value = "desplazamiento";
-  prompt.closest(".segment-row").querySelector('[data-testid="author-save-text"]').click();
+  inputValue(prompt, "desplazamiento");
   const [before, nested] = qa('[data-testid="author-preview-literal"]');
   const range = document.createRange();
   range.setStart(before!.firstChild, 2);
@@ -223,17 +221,14 @@ test("the editor adds two independent hints and supports preview selection on th
   installDom();
   const app = startAuthorApp({ mount: q("#app"), locale, storage: memoryStorage() });
   const finalInput = q('[data-testid="author-final-text"]');
-  finalInput.value = "light";
-  button(locale.ui.authorApplyFinal).click();
+  inputValue(finalInput, "light");
   convertPreviewSelection("root", 0, "light");
 
   const left = q('[data-testid="c01-literal-0"]');
-  left.value = "sun";
-  left.closest(".segment-row").querySelector('[data-testid="author-save-text"]').click();
+  inputValue(left, "sun");
   q('[data-testid="author-right-prompt-toggle"]').click();
   const right = q('[data-testid="c01:right-literal-0"]');
-  right.value = "house";
-  right.closest(".segment-row").querySelector('[data-testid="author-save-text"]').click();
+  inputValue(right, "house");
 
   assert.equal(q('[data-testid="author-direction"]'), null);
   assert.equal(q('[data-testid="author-structure-preview"]').textContent, "[sun→___←house]");
@@ -249,8 +244,7 @@ test("only preview selections add exact partial-word bracket layers", () => {
   installDom();
   const app = startAuthorApp({ mount: q("#app"), locale, storage: memoryStorage() });
   const finalInput = q('[data-testid="author-final-text"]');
-  finalInput.value = "La sartén.";
-  button(locale.ui.authorApplyFinal).click();
+  inputValue(finalInput, "La sartén.");
   convertPreviewSelection("root", 0, "arté");
 
   assert.deepEqual(app.getDraft().root, ["La s", { ref: "c01" }, "n."]);
@@ -259,11 +253,10 @@ test("only preview selections add exact partial-word bracket layers", () => {
   assert.equal(q('[data-testid="root-literal-0"]'), null);
 
   const prompt = q('[data-testid="c01-literal-0"]');
-  prompt.value = "algo que imita la vida";
+  inputValue(prompt, "algo que imita la vida");
   prompt.focus();
   prompt.setSelectionRange(19, 23);
   assert.equal(q('[data-testid="author-convert-selection"]').disabled, true);
-  prompt.closest(".segment-row").querySelector('[data-testid="author-save-text"]').click();
   convertPreviewSelection("c01", 0, "ida");
 
   assert.deepEqual(app.getDraft().clues.c01!.prompt, ["algo que imita la v", { ref: "c02" }]);
@@ -304,7 +297,7 @@ test("existing dated puzzles load into the creator without rebuilding them by ha
   assert.equal(document.body.textContent.includes(locale.ui.authorPeek ?? ""), false);
 });
 
-test("copy and download include edits that are still visible in fields", async () => {
+test("field edits update the draft before copy and download", async () => {
   installDom();
   const storage = memoryStorage();
   buildDirectedDraft(storage);
@@ -314,7 +307,7 @@ test("copy and download include edits that are still visible in fields", async (
     value: { clipboard: { writeText: async (value: string) => { copied.push(value); } } }
   });
 
-  q('[data-testid="author-answer"]').value = "tres";
+  inputValue(q('[data-testid="author-answer"]'), "tres");
   button(locale.ui.authorCopyJson).click();
   await Promise.resolve();
   const copiedDefinition = JSON.parse(copied.at(-1)!);
@@ -335,8 +328,8 @@ test("copy and download include edits that are still visible in fields", async (
     downloadedName = this.download;
   };
   try {
-    q('[data-testid="author-answer"]').value = "cuatro";
-    q('[data-testid="author-puzzle-id"]').value = "puzzle-updated";
+    inputValue(q('[data-testid="author-answer"]'), "cuatro");
+    inputValue(q('[data-testid="author-puzzle-id"]'), "puzzle-updated");
     q('[data-testid="author-download"]').click();
     const downloadedDefinition = JSON.parse(await downloadedBlob!.text());
     assert.equal(downloadedDefinition.id, "puzzle-updated");
@@ -349,19 +342,17 @@ test("copy and download include edits that are still visible in fields", async (
   }
 });
 
-test("a stale preview selection fails safely and still persists visible edits", () => {
+test("editing text clears an old preview selection and persists the draft", () => {
   installDom();
   const storage = memoryStorage();
   startAuthorApp({ mount: q("#app"), locale, storage });
   const finalInput = q('[data-testid="author-final-text"]');
-  finalInput.value = "Texto inicial";
-  button(locale.ui.authorApplyFinal).click();
+  inputValue(finalInput, "Texto inicial");
 
   setPreviewSelection("root", 0, "inicial");
-  q('[data-testid="author-final-text"]').value = "Texto editado";
-  q('[data-testid="author-convert-selection"]').click();
+  inputValue(q('[data-testid="author-final-text"]'), "Texto editado");
 
-  assert.match(q(".author-error").textContent, /STALE_SELECTION/u);
+  assert.equal(q('[data-testid="author-convert-selection"]').disabled, true);
   const restored = JSON.parse(storage.value(AUTHOR_STORAGE_KEY)!);
   assert.equal(restored.root[0], "Texto editado");
   assert.equal(restored.finalText, "Texto editado");
@@ -380,7 +371,7 @@ test("a valid dated draft publishes for play and updates the Jugar link", () => 
   });
 
   const date = q("#author-release-date");
-  date.value = "2026-09-01";
+  inputValue(date, "2026-09-01");
   const publish = q('[data-testid="author-publish"]');
   assert.equal(publish.disabled, false);
   publish.click();
@@ -392,7 +383,7 @@ test("a valid dated draft publishes for play and updates the Jugar link", () => 
   assert.equal(q(".mode-link").getAttribute("href"), "?date=2026-09-01");
 });
 
-test("publishing an existing date requires confirmation before replacement", () => {
+test("publishing an existing date increments its revision without a confirmation", () => {
   installDom();
   const storage = memoryStorage();
   buildDirectedDraft(storage);
@@ -405,16 +396,13 @@ test("publishing an existing date requires confirmation before replacement", () 
     existingPuzzles: [{ date: definition.releaseDate!, definition }],
     onPublish(next, options) { published.push({ next, options }); }
   });
-  q("#author-release-date").value = definition.releaseDate!;
-
-  globalThis.confirm = () => false;
-  q('[data-testid="author-publish"]').click();
-  assert.equal(published.length, 0);
-
-  globalThis.confirm = () => true;
+  inputValue(q("#author-release-date"), definition.releaseDate!);
+  globalThis.confirm = () => { throw new Error("Publishing must not ask for confirmation."); };
   q('[data-testid="author-publish"]').click();
   assert.equal(published.length, 1);
   assert.equal(published[0]!.options.overwrite, true);
+  assert.equal(published[0]!.next.revision, (definition.revision ?? 1) + 1);
+  assert.equal(q("#author-revision"), null);
 });
 
 test("a valid draft asks for a date instead of publishing without one", () => {
@@ -464,7 +452,7 @@ test("an asynchronous WordPress save reports progress and a useful failure", asy
       return new Promise((resolve, reject) => { rejectSave = reject; });
     }
   });
-  q("#author-release-date").value = "2026-09-01";
+  inputValue(q("#author-release-date"), "2026-09-01");
   q('[data-testid="author-publish"]').click();
   assert.equal(q('[data-testid="author-publish"]').disabled, true);
   rejectSave(Object.assign(new Error("La fecha ya existe."), { code: "DATE_EXISTS" }));
@@ -491,7 +479,7 @@ test("an asynchronous correction succeeds and keeps the WordPress page permalink
       return { ok: true };
     }
   });
-  q("#author-release-date").value = "2026-09-01";
+  inputValue(q("#author-release-date"), "2026-09-01");
   globalThis.confirm = () => true;
   q('[data-testid="author-publish"]').click();
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -512,7 +500,7 @@ test("a future save never adds its date to the WordPress play link", async () =>
     pageUrl: "https://example.test/juegos/nexo/",
     async onPublish() { return { ok: true }; }
   });
-  q("#author-release-date").value = "2026-09-02";
+  inputValue(q("#author-release-date"), "2026-09-02");
   q('[data-testid="author-publish"]').click();
   await new Promise((resolve) => setTimeout(resolve, 0));
   assert.equal(q(".mode-link").href, "https://example.test/juegos/nexo/");

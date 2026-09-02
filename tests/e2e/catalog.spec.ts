@@ -104,6 +104,15 @@ test("lado unlocks the outer tras lado bracket, whose answer is viaje", async ({
   await expect(page.locator('[data-clue-state="solved"]').filter({ hasText: "viaje" })).toHaveText("viaje");
 });
 
+test("nested solved answers use a high-contrast highlight inside available brackets", async ({ page }) => {
+  await openFresh(page, "/?date=2026-08-31");
+  await submitWithVirtualKeyboard(page, "ando");
+
+  const nestedAnswer = page.locator(".clue-button .clue-answer").filter({ hasText: "ando" });
+  await expect(nestedAnswer).toHaveCSS("color", "rgb(44, 40, 37)");
+  await expect(nestedAnswer).toHaveCSS("background-color", "rgb(255, 244, 191)");
+});
+
 test("changing the native date selector updates the game without reloading the page", async ({ page }) => {
   await openFresh(page);
   await page.evaluate(() => { window.__nexoDocumentSentinel = true; });
