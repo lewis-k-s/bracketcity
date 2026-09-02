@@ -59,6 +59,7 @@ nexo_check( ! is_wp_error( Nexo_Puzzles::restore( $seed ) ), 'Seed restore must 
 wp_set_current_user( 0 );
 $public_list = nexo_request( 'GET', '/bracket-city/v1/puzzles' );
 nexo_check( 200 === $public_list->get_status(), 'Anonymous users must read the public archive.' );
+nexo_check( ! array_key_exists( 'title', $public_list->get_data()['puzzles'][0] ), 'Puzzle listings must not disclose answer-bearing titles.' );
 $cache_response = Nexo_REST_Controller::prevent_private_caching(
 	new WP_REST_Response( array() ),
 	null,
@@ -136,6 +137,7 @@ nexo_check( 'trash' === get_post_status( $future_post->ID ), 'Puzzle removal mus
 nexo_check( 404 === nexo_request( 'DELETE', '/bracket-city/v1/puzzles/2099-01-01' )->get_status(), 'Removing an already removed puzzle must return 404.' );
 $trash_list = nexo_request( 'GET', '/bracket-city/v1/admin/puzzles/trash' );
 nexo_check( 200 === $trash_list->get_status() && '2099-01-01' === $trash_list->get_data()['puzzles'][0]['date'], 'Puzzle Manager must be able to list removed puzzles.' );
+nexo_check( ! array_key_exists( 'title', $trash_list->get_data()['puzzles'][0] ), 'Removed puzzle listings must not disclose titles.' );
 nexo_check( 200 === nexo_request( 'GET', '/bracket-city/v1/admin/puzzles/trash/2099-01-01' )->get_status(), 'Puzzle Manager must be able to preview a removed puzzle.' );
 $restored = nexo_request( 'POST', '/bracket-city/v1/admin/puzzles/trash/2099-01-01' );
 nexo_check( 200 === $restored->get_status() && 'restored' === $restored->get_data()['status'], 'Puzzle Manager must be able to restore a removed puzzle.' );

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Nexo
  * Description: A daily nested-clue word game and its private puzzle publisher.
- * Version: 1.2.0
+ * Version: 1.2.1
  * Requires at least: 6.5
  * Requires PHP: 8.1
  * Author: Nexo
@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'NEXO_VERSION', '1.2.0' );
+define( 'NEXO_VERSION', '1.2.1' );
 define( 'NEXO_FILE', __FILE__ );
 define( 'NEXO_DIR', plugin_dir_path( __FILE__ ) );
 define( 'NEXO_TIME_ZONE', 'Europe/Madrid' );

@@ -85,7 +85,6 @@ final class Nexo_Puzzles {
 			if ( ! $include_future && $date > $today ) continue;
 			$result[] = array(
 				'date' => $date,
-				'title' => $post->post_title,
 				'id' => (string) get_post_meta( $post->ID, self::META_ID, true ),
 				'revision' => (int) get_post_meta( $post->ID, self::META_REVISION, true ),
 			);
@@ -112,7 +111,6 @@ final class Nexo_Puzzles {
 			if ( ! Nexo_Validator::is_date( $date ) || ! is_array( $definition ) || ( $definition['releaseDate'] ?? null ) !== $date || ! Nexo_Validator::validate( $definition )['valid'] ) continue;
 			$result[] = array(
 				'date' => $date,
-				'title' => $post->post_title,
 				'id' => (string) get_post_meta( $post->ID, self::META_ID, true ),
 				'revision' => (int) get_post_meta( $post->ID, self::META_REVISION, true ),
 			);

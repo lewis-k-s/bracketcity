@@ -14,7 +14,7 @@ npm install
 npm run dev              # local standalone Vite server
 npm run build:pages      # create dist-pages/
 npm run test:all         # unit, PHP, Pages, WordPress, and browser gates
-npm run package:plugin   # create and install-test release/nexo-1.2.0.zip
+npm run package:plugin   # create and install-test release/nexo-1.2.1.zip
 ```
 
 The WordPress integration test uses disposable WordPress and MariaDB

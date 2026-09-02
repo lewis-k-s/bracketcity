@@ -150,6 +150,7 @@ export interface CatalogEntry {
   readonly definition?: PuzzleDefinition;
   readonly id?: string;
   readonly revision?: number;
+  readonly title?: string;
 }
 
 export interface PuzzleCatalog {

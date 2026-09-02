@@ -68,13 +68,14 @@ test("public listing uses the server canonical date and public puzzle route", as
     if (href.endsWith("/puzzles")) return response({
       currentDate: "2026-09-01",
       timeZone: "Europe/Madrid",
-      puzzles: [{ date: "2026-09-01" }, { date: "2026-08-31" }]
+      puzzles: [{ date: "2026-09-01", title: "Legacy metadata" }, { date: "2026-08-31" }]
     });
     return response(puzzle({ id: "daily", releaseDate: "2026-09-01" }));
   });
   const listing = await repository.listPublic();
   assert.equal(listing.currentDate, "2026-09-01");
   assert.deepEqual(listing.entries.map((entry) => entry.date), ["2026-09-01", "2026-08-31"]);
+  assert.equal(listing.entries[0]!.title, "Legacy metadata");
   assert.equal((await repository.loadPublic("2026-09-01")).id, "daily");
   assert.deepEqual(calls.map((call) => call.url), [
     "https://example.test/wp-json/bracket-city/v1/puzzles",

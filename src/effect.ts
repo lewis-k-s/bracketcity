@@ -81,7 +81,10 @@ export const CatalogEntrySchema = Schema.Struct({
   file: Schema.optionalKey(Schema.String),
   definition: Schema.optionalKey(PuzzleDefinitionSchema),
   id: Schema.optionalKey(Schema.String),
-  revision: Schema.optionalKey(Schema.Finite)
+  revision: Schema.optionalKey(Schema.Finite),
+  // Older bridge releases included this metadata. Accept it during the
+  // rollout, but never use it in the player.
+  title: Schema.optionalKey(Schema.String)
 });
 
 export const PuzzleCatalogSchema = Schema.Struct({
