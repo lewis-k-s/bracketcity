@@ -2,8 +2,8 @@
 
 ## Project Structure & Module Organization
 
-The browser game is in `src/`: `engine.js` validates and evaluates puzzles,
-while `view.js`, `app.js`, and the author modules render the public and creator
+The browser game is in `src/`: `engine.ts` validates and evaluates puzzles,
+while `view.ts`, `app.ts`, and the author modules render the public and creator
 interfaces. Static runtime data is in `puzzles/` and `locales/`; keep puzzle
 definitions valid against `puzzles/schema-v1.json`.
 
@@ -13,8 +13,8 @@ in `wordpress-plugin/includes/`. The Pages build writes external frontend
 assets to `dist-pages/`. The plugin ZIP contains only PHP and bootstrap seeds.
 Do not edit generated `dist/`, `dist-pages/`, or `release/` files.
 
-Tests live in `tests/`. Unit tests use `tests/*.test.js`, end-to-end browser
-tests use `tests/e2e/*.spec.js`, and PHP/WordPress checks live in `tests/php/`.
+Tests live in `tests/`. Unit tests use `tests/*.test.ts`, end-to-end browser
+tests use `tests/e2e/*.spec.ts`, and PHP/WordPress checks live in `tests/php/`.
 
 ## Build, Test, and Development Commands
 
@@ -36,7 +36,7 @@ removes its containers and volumes after completion.
 
 Use ES modules, two-space indentation, semicolons, double-quoted JavaScript
 strings, and `camelCase` for functions and variables. Name Node tests
-`*.test.js` and Playwright tests `*.spec.js`. Use `Nexo_`-prefixed PHP classes,
+`*.test.ts` and Playwright tests `*.spec.ts`. Use `Nexo_`-prefixed PHP classes,
 WordPress coding style (tabs for indentation), and snake_case for WordPress
 hooks and data keys. Keep puzzle filenames date-based, for example
 `puzzles/2026-08-31-es.json`.
