@@ -165,6 +165,54 @@ test("WordPress puzzle dates load through REST without reloading the host page",
   expect(await page.evaluate(() => window.__nexoHostPageSentinel === true)).toBe(true);
 });
 
+test("WordPress author adapts to a narrow desktop content column", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.route("**/wp-json/bracket-city/v1/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/admin/puzzles")) {
+      return json(route, { currentDate: "2026-09-01", timeZone: "Europe/Madrid", puzzles: [] });
+    }
+    if (path.endsWith("/admin/suggestions")) return json(route, { suggestions: [] });
+    return json(route, { message: "Not found" }, 404);
+  });
+
+  await page.goto(`${fixtureUrl}?mode=author`);
+  await page.getByTestId("author-final-text").fill("La gata.");
+  await selectPreviewText(page, "gata");
+  await expect(page.getByTestId("clue-inspector")).toBeVisible();
+
+  const layout = await page.evaluate(() => {
+    const content = document.querySelector('[data-testid="wordpress-content-row"]')!;
+    const hostColumn = document.querySelector("#bracket-city-app")!.parentElement!;
+    const shell = document.querySelector(".author-shell")!;
+    const authorLayout = document.querySelector(".author-layout")!;
+    const editor = document.querySelector(".author-editor")!;
+    const utilities = document.querySelector(".author-utilities")!;
+    const workspace = document.querySelector(".author-guided-workspace")!;
+    const tracks = (element: Element) => getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/u);
+    return {
+      contentWidth: content.getBoundingClientRect().width,
+      hostColumnWidth: hostColumn.getBoundingClientRect().width,
+      shellWidth: shell.getBoundingClientRect().width,
+      authorTracks: tracks(authorLayout),
+      workspaceTracks: tracks(workspace),
+      editor: editor.getBoundingClientRect().toJSON(),
+      utilities: utilities.getBoundingClientRect().toJSON(),
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth
+    };
+  });
+
+  expect(layout.contentWidth).toBeCloseTo(1280, 1);
+  expect(layout.hostColumnWidth).toBeCloseTo(768, 1);
+  expect(layout.shellWidth).toBeCloseTo(768, 1);
+  expect(layout.authorTracks).toHaveLength(1);
+  expect(layout.workspaceTracks).toHaveLength(1);
+  expect(layout.utilities.x).toBeCloseTo(layout.editor.x, 1);
+  expect(layout.utilities.y).toBeGreaterThanOrEqual(layout.editor.y + layout.editor.height - 1);
+  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
+});
+
 test("WordPress author publication sends the page nonce", async ({ page }) => {
   let publishedRequest: { nonce: string | undefined; body: Record<string, unknown> } | null = null;
   await page.route("**/wp-json/bracket-city/v1/**", async (route) => {

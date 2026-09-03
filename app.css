@@ -440,6 +440,7 @@ body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
   min-height: 100dvh;
   margin: 0 auto;
   padding: 0 clamp(0.5rem, 1.5vw, 1.25rem) 4rem;
+  container: author-shell / inline-size;
   transition: background-color 160ms ease;
 }
 
@@ -2013,19 +2014,6 @@ body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
 }
 
 @media (max-width: 860px) {
-  :is(#app, #bracket-city-app) .author-intro--align-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  :is(#app, #bracket-city-app) .author-intro--align-layout .author-intro-actions {
-    grid-column: 1;
-  }
-
-  :is(#app, #bracket-city-app) .author-top-region--with-loader {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.5rem;
-  }
-
   :is(#app, #bracket-city-app) .game-shell {
     width: 100vw;
     margin-right: 0;
@@ -2039,6 +2027,40 @@ body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
     padding-right: max(0.5rem, env(safe-area-inset-right));
     padding-left: max(0.5rem, env(safe-area-inset-left));
   }
+}
+
+@media (max-width: 600px) {
+  :is(#app, #bracket-city-app) .clue-button {
+    display: inline;
+  }
+}
+
+@media (min-width: 861px) {
+  :is(#app, #bracket-city-app) .game-shell {
+    width: min(calc(100vw - 2rem), 46rem);
+    margin-right: 0;
+    margin-left: 50%;
+    transform: translateX(calc(-50% + var(--nexo-viewport-center-offset, 0px)));
+  }
+
+  :is(#app, #bracket-city-app) .virtual-keyboard {
+    display: none;
+  }
+}
+
+@container author-shell (max-width: 60rem) {
+  :is(#app, #bracket-city-app) .author-intro--align-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  :is(#app, #bracket-city-app) .author-intro--align-layout .author-intro-actions {
+    grid-column: 1;
+  }
+
+  :is(#app, #bracket-city-app) .author-top-region--with-loader {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+  }
 
   :is(#app, #bracket-city-app) .author-layout {
     grid-template-columns: minmax(0, 1fr);
@@ -2049,16 +2071,12 @@ body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
     max-height: none;
     overflow: visible;
   }
+}
 
+@container author-shell (max-width: 40rem) {
   :is(#app, #bracket-city-app) .author-guided-inspector-heading {
     grid-template-columns: minmax(0, 1fr);
     gap: 0;
-  }
-}
-
-@media (max-width: 600px) {
-  :is(#app, #bracket-city-app) .clue-button {
-    display: inline;
   }
 
   :is(#app, #bracket-city-app) .author-guided-inspector .author-bracket-options {
@@ -2066,7 +2084,13 @@ body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
   }
 }
 
-@media (min-width: 861px) {
+@container author-shell (min-width: 48rem) {
+  :is(#app, #bracket-city-app) .author-guided-workspace {
+    grid-template-columns: minmax(14rem, 17rem) minmax(0, 1fr);
+  }
+}
+
+@container author-shell (min-width: 60.0625rem) {
   :is(#app, #bracket-city-app) .author-utilities {
     position: sticky;
     top: 1rem;
@@ -2091,23 +2115,6 @@ body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
 
   :is(#app, #bracket-city-app) .author-shell[data-panel-skin="lab"] .author-utilities .author-style-options {
     margin-right: 0.35rem;
-  }
-
-  :is(#app, #bracket-city-app) .game-shell {
-    width: min(calc(100vw - 2rem), 46rem);
-    margin-right: 0;
-    margin-left: 50%;
-    transform: translateX(calc(-50% + var(--nexo-viewport-center-offset, 0px)));
-  }
-
-  :is(#app, #bracket-city-app) .virtual-keyboard {
-    display: none;
-  }
-}
-
-@media (min-width: 1280px) {
-  :is(#app, #bracket-city-app) .author-guided-workspace {
-    grid-template-columns: minmax(14rem, 17rem) minmax(0, 1fr);
   }
 }
 
