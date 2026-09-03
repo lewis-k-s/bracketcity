@@ -33,7 +33,7 @@ import {
   readWordPressConfig
 } from "./puzzle-repository.ts";
 import { mergePublishedPuzzles, publishPuzzle, restorePublishedPuzzles } from "./published.ts";
-import { startAuthorApp } from "./author-view.ts";
+import type { AuthorAppHandle, AuthorPanelSkin } from "./author-view.ts";
 import {
   decodeLocalePack,
   decodePuzzleCatalog,
@@ -44,6 +44,7 @@ import type {
   CatalogEntry,
   CompiledPuzzle,
   ExistingPuzzle,
+  ExistingSuggestion,
   LocalePack,
   Progress,
   PuzzleDefinition,
@@ -386,7 +387,7 @@ export async function bootstrapApp({
   catalogUrl = new URL("puzzles/manifest.json", document.baseURI),
   localeUrl = new URL("locales/es-ES.json", document.baseURI),
   storage
-}: BootstrapOptions = {}): Promise<AppHandle | ReturnType<typeof startAuthorApp> | null> {
+}: BootstrapOptions = {}): Promise<AppHandle | AuthorAppHandle | null> {
   if (mount) {
     datedAppPopStateCleanups.get(mount)?.();
     datedAppPopStateCleanups.delete(mount);
@@ -400,12 +401,44 @@ export async function bootstrapApp({
   }
   const currentUrl = new URL(globalThis.location?.href ?? document.baseURI);
   const mode = currentUrl.searchParams.get("mode");
+  const authorFlow = currentUrl.searchParams.get("flow") === "inline" ? "inline" : "classic";
+  const requestedAuthorSkin = currentUrl.searchParams.get("skin");
+  const authorSkin: AuthorPanelSkin | undefined = requestedAuthorSkin === "plain"
+    || requestedAuthorSkin === "lab"
+    || requestedAuthorSkin === "blueprint"
+    || requestedAuthorSkin === "cards"
+    ? requestedAuthorSkin
+    : undefined;
   let browserStorage = storage;
   if (browserStorage === undefined) {
     try {
       browserStorage = globalThis.localStorage;
     } catch {
       browserStorage = null;
+    }
+  }
+  if (mode === "suggest") {
+    try {
+      if (!repository?.config.canSuggest) throw new Error("Este enlace de sugerencias no es válido.");
+      const [locale, { startAuthorApp }] = await Promise.all([
+        deployedLocale ?? loadLocale(localeUrl),
+        import("./author-view.ts")
+      ]);
+      return startAuthorApp({
+        mount,
+        locale,
+        storage: browserStorage,
+        variant: "suggestion",
+        flow: authorFlow,
+        skin: authorSkin,
+        pageUrl: repository.config.pageUrl,
+        acceptingNewPuzzles: repository.config.acceptingNewPuzzles,
+        puzzleLimit: repository.config.puzzleLimit,
+        onSubmitSuggestion: (definition) => repository.submitSuggestion(definition)
+      });
+    } catch (error: unknown) {
+      renderFatalError(mount, `No se pudo abrir el formulario de sugerencias. ${errorMessage(error)}`.trim());
+      return null;
     }
   }
   if (mode !== "author") {
@@ -470,26 +503,37 @@ export async function bootstrapApp({
     }
   }
   try {
+    if (repository && !repository.config.canAuthor) throw new Error("No tienes permiso para abrir el editor.");
+    const { startAuthorApp } = await import("./author-view.ts");
     if (repository) {
-      if (!repository.config.canAuthor) throw new Error("No tienes permiso para abrir el editor.");
-      const [locale, listing] = await Promise.all([deployedLocale ?? loadLocale(localeUrl), repository.listAdmin()]);
+      const [locale, listing, suggestionMetadata] = await Promise.all([
+        deployedLocale ?? loadLocale(localeUrl),
+        repository.listAdmin(),
+        repository.listSuggestions()
+      ]);
       const existingPuzzles: ExistingPuzzle[] = await Promise.all(listing.entries.map(async (entry) => ({
         date: entry.date,
         definition: await repository.loadAdmin(entry.date)
       })));
+      const suggestions: ExistingSuggestion[] = await Promise.all(suggestionMetadata.map(async (metadata) => ({
+        metadata,
+        definition: await repository.loadSuggestion(metadata.suggestionId)
+      })));
       const existingDates = new Set(existingPuzzles.map((item) => item.date));
       const onPublish = async (
         definition: PuzzleDefinition,
-        { overwrite = false }: { overwrite?: boolean } = {}
+        { overwrite = false, suggestionId }: { overwrite?: boolean; suggestionId?: number } = {}
       ): Promise<unknown> => {
         const priorDefinition = existingPuzzles.find((item) => item.date === definition.releaseDate)?.definition;
-        if (overwrite) {
+        if (overwrite && suggestionId === undefined) {
           assertValidCorrection(definition, priorDefinition, {
             idMismatch: locale.ui.authorCorrectionIdMismatch ?? "La corrección debe conservar el identificador del rompecabezas.",
             revisionRequired: locale.ui.authorCorrectionRevisionRequired ?? "La corrección debe usar una revisión superior."
           });
         }
-        const result = await repository.save(definition, { overwrite });
+        const result = suggestionId === undefined
+          ? await repository.save(definition, { overwrite })
+          : await repository.approveSuggestion(suggestionId, definition);
         for (const candidate of [priorDefinition, definition]) {
           if (!candidate || typeof browserStorage?.removeItem !== "function") continue;
           try { browserStorage.removeItem(progressStorageKey(compilePuzzle(candidate, locale))); } catch { /* fail closed */ }
@@ -507,9 +551,17 @@ export async function bootstrapApp({
         return results;
       };
       return startAuthorApp({
-        mount, locale, storage, existingPuzzles, onPublish, legacyPuzzles, onImportLegacy,
+        mount, locale, storage, existingPuzzles, suggestions, onPublish, legacyPuzzles, onImportLegacy,
+        flow: authorFlow,
+        skin: authorSkin,
+        onRejectSuggestion: (suggestionId) => repository.rejectSuggestion(suggestionId),
+        onDeletePuzzle: (date) => repository.trashPuzzle(date),
+        onRestorePuzzle: (date) => repository.restorePuzzle(date),
+        acceptingNewPuzzles: repository.config.acceptingNewPuzzles,
+        puzzleLimit: repository.config.puzzleLimit,
         currentDate: listing.currentDate,
-        pageUrl: repository.config.pageUrl
+        pageUrl: repository.config.pageUrl,
+        suggestionUrl: repository.config.suggestionUrl
       });
     }
     const [locale, manifest] = await Promise.all([
@@ -544,7 +596,7 @@ export async function bootstrapApp({
       }
       return result;
     };
-    return startAuthorApp({ mount, locale, storage, existingPuzzles, onPublish });
+    return startAuthorApp({ mount, locale, storage, existingPuzzles, onPublish, flow: authorFlow, skin: authorSkin });
   } catch (error: unknown) {
     renderFatalError(mount, `No se pudo cargar el editor. ${errorMessage(error)}`.trim());
     return null;

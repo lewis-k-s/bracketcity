@@ -48,6 +48,9 @@ test("classic Pages bundle runs on the WordPress origin and keeps progress there
 
   await page.goto(fixtureUrl);
   await expect(page.getByTestId("puzzle")).toBeVisible();
+  expect(await page.evaluate(() => performance.getEntriesByType("resource")
+    .map((entry) => entry.name)
+    .filter((name) => name.includes("/assets/author-view-")))).toEqual([]);
   await expect(page.getByTestId("date-selector")).toHaveValue(puzzle.releaseDate);
   await expect(page.locator("iframe")).toHaveCount(0);
   await expect(page.locator('script[src^="http://127.0.0.1:4175/assets/nexo-"]')).toHaveCount(1);
@@ -57,6 +60,21 @@ test("classic Pages bundle runs on the WordPress origin and keeps progress there
   }));
   expect(backgrounds.mount).toBe("rgba(0, 0, 0, 0)");
   expect(backgrounds.shell).toBe("rgb(255, 255, 255)");
+  const mountLayout = await page.evaluate(() => {
+    const mount = document.querySelector("#bracket-city-app")!;
+    const container = mount.parentElement!;
+    return {
+      mountWidth: mount.getBoundingClientRect().width,
+      containerWidth: container.getBoundingClientRect().width,
+      maxWidth: getComputedStyle(mount).maxWidth,
+      marginLeft: getComputedStyle(mount).marginLeft,
+      marginRight: getComputedStyle(mount).marginRight
+    };
+  });
+  expect(mountLayout.mountWidth).toBeCloseTo(mountLayout.containerWidth, 1);
+  expect(mountLayout.maxWidth).toBe("none");
+  expect(mountLayout.marginLeft).toBe("0px");
+  expect(mountLayout.marginRight).toBe("0px");
   const desktopTitleLayout = await page.evaluate(() => {
     const title = document.querySelector(".wp-block-post-title")!;
     const spacer = document.querySelector(".wp-block-spacer")!;
@@ -155,6 +173,9 @@ test("WordPress author publication sends the page nonce", async ({ page }) => {
     if (request.method() === "GET" && path.endsWith("/admin/puzzles")) {
       return json(route, { currentDate: "2026-09-01", timeZone: "Europe/Madrid", puzzles: [] });
     }
+    if (request.method() === "GET" && path.endsWith("/admin/suggestions")) {
+      return json(route, { suggestions: [] });
+    }
     if (request.method() === "POST" && path.endsWith("/puzzles")) {
       publishedRequest = {
         nonce: request.headers()["x-wp-nonce"],
@@ -167,6 +188,15 @@ test("WordPress author publication sends the page nonce", async ({ page }) => {
 
   await page.goto(`${fixtureUrl}?mode=author`);
   await expect(page.getByTestId("author-final-text")).toBeVisible();
+  expect(await page.evaluate(() => performance.getEntriesByType("resource")
+    .some((entry) => entry.name.includes("/assets/author-view-")))).toBe(true);
+  await expect(page.getByTestId("suggestion-page-link")).toHaveAttribute("href", /mode=suggest/u);
+  await expect(page.getByTestId("suggestion-page-link")).toHaveText("Abrir");
+  await expect(page.getByTestId("suggestion-page-link")).not.toHaveAttribute("target", "_blank");
+  await expect(page.getByTestId("suggestion-copy-link")).toBeVisible();
+  await page.getByTestId("suggestion-info-open").click();
+  await expect(page.getByRole("dialog", { name: "Modo de propuestas" })).toContainText("sin iniciar sesión en WordPress");
+  await page.getByTestId("suggestion-info-close").click();
   await page.getByTestId("author-final-text").fill("La gata.");
   await selectPreviewText(page, "gata");
   await page.getByTestId("c01-literal-0").fill("animal doméstico");
@@ -179,6 +209,82 @@ test("WordPress author publication sends the page nonce", async ({ page }) => {
   expect(publishedRequest!.nonce).toBe("rest-nonce");
   expect(publishedRequest!.body.id).toBe("gata-pages-es");
   await expect(page.getByTestId("author-publish-status")).toContainText("2026-09-01");
+});
+
+test("shared suggestion link submits an undated pending puzzle", async ({ page }) => {
+  let submittedRequest: { key: string | undefined; body: Record<string, unknown> } | null = null;
+  await page.route("**/wp-json/bracket-city/v1/**", async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    if (request.method() === "POST" && path.endsWith("/suggestions")) {
+      submittedRequest = {
+        key: request.headers()["x-nexo-suggestion-key"],
+        body: request.postDataJSON() as Record<string, unknown>
+      };
+      return json(route, { suggestionId: 17, status: "pending" }, 201);
+    }
+    return json(route, { message: "Not found" }, 404);
+  });
+
+  await page.goto(`${fixtureUrl}?mode=suggest&suggestion_key=fixture-suggestion-key`);
+  await expect(page.getByRole("heading", { name: "Proponer un Nexo" })).toBeVisible();
+  expect(await page.evaluate(() => performance.getEntriesByType("resource")
+    .some((entry) => entry.name.includes("/assets/author-view-")))).toBe(true);
+  await page.getByTestId("author-final-text").fill("La gata.");
+  await selectPreviewText(page, "gata");
+  await page.getByTestId("c01-literal-0").fill("animal doméstico");
+  await page.locator("#author-title-input").fill("La gata sugerida");
+  await page.getByTestId("suggestion-submit").click();
+
+  await expect.poll(() => submittedRequest).not.toBeNull();
+  expect(submittedRequest!.key).toBe("fixture-suggestion-key");
+  expect(submittedRequest!.body.id).toMatch(/^sugerencia-[a-z0-9]+$/u);
+  expect(submittedRequest!.body.releaseDate).toBeUndefined();
+  await expect(page.getByTestId("suggestion-submit-status")).toContainText("#17");
+});
+
+test("WordPress author review approves a pending suggestion in place", async ({ page }) => {
+  const suggestion = structuredClone(puzzle);
+  delete suggestion.releaseDate;
+  suggestion.revision = 1;
+  let approvedRequest: { nonce: string | undefined; body: Record<string, unknown> } | null = null;
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.route("**/wp-json/bracket-city/v1/**", async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    if (request.method() === "GET" && path.endsWith("/admin/puzzles")) {
+      return json(route, { currentDate: "2026-09-01", timeZone: "Europe/Madrid", puzzles: [] });
+    }
+    if (request.method() === "GET" && path.endsWith("/admin/suggestions")) {
+      return json(route, { suggestions: [{
+        suggestionId: 17,
+        id: suggestion.id,
+        title: suggestion.title,
+        submittedAt: "2026-09-02T08:00:00Z"
+      }] });
+    }
+    if (request.method() === "GET" && path.endsWith("/admin/suggestions/17")) return json(route, suggestion);
+    if (request.method() === "POST" && path.endsWith("/admin/suggestions/17/approve")) {
+      approvedRequest = {
+        nonce: request.headers()["x-wp-nonce"],
+        body: request.postDataJSON() as Record<string, unknown>
+      };
+      return json(route, { date: approvedRequest.body.releaseDate, revision: 1 });
+    }
+    return json(route, { message: "Not found" }, 404);
+  });
+
+  await page.goto(`${fixtureUrl}?mode=author`);
+  await page.getByTestId("author-existing-suggestion").selectOption("0");
+  await page.getByTestId("suggestion-load").click();
+  await page.locator("#author-release-date").fill("2026-09-04");
+  await page.getByTestId("author-publish").click();
+
+  await expect.poll(() => approvedRequest).not.toBeNull();
+  expect(approvedRequest!.nonce).toBe("rest-nonce");
+  expect(approvedRequest!.body.releaseDate).toBe("2026-09-04");
+  expect(approvedRequest!.body.revision).toBe(1);
+  await expect(page.getByTestId("suggestion-review")).toHaveCount(0);
 });
 
 test("WordPress correction increments its hidden revision and publishes without a second confirmation", async ({ page }) => {
@@ -198,6 +304,9 @@ test("WordPress correction increments its hidden revision and publishes without 
         puzzles: [{ date: puzzle.releaseDate, id: puzzle.id, revision: puzzle.revision }]
       });
     }
+    if (request.method() === "GET" && path.endsWith("/admin/suggestions")) {
+      return json(route, { suggestions: [] });
+    }
     if (request.method() === "GET" && path.endsWith(`/admin/puzzles/${puzzle.releaseDate}`)) {
       return json(route, puzzle);
     }
@@ -209,7 +318,7 @@ test("WordPress correction increments its hidden revision and publishes without 
   });
 
   await page.goto(`${fixtureUrl}?mode=author`);
-  await page.getByTestId("author-existing-puzzle").selectOption({ label: `${puzzle.releaseDate} · ${puzzle.title}` });
+  await page.getByTestId("author-existing-puzzle").selectOption("0");
   await page.getByTestId("author-load-existing").click();
   await expect(page.locator("#author-revision")).toHaveCount(0);
   await page.locator("#author-title-input").fill(`${puzzle.title} corregido`);
@@ -219,4 +328,50 @@ test("WordPress correction increments its hidden revision and publishes without 
   expect(correctionRequest!.method).toBe("PUT");
   expect(correctionRequest!.body.revision).toBe((puzzle.revision ?? 1) + 1);
   expect(dialogCount).toBe(1);
+});
+
+test("a loaded WordPress puzzle moves to Trash and can be restored", async ({ page }) => {
+  const writeRequests: Array<{ method: string; path: string; nonce: string | undefined }> = [];
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.route("**/wp-json/bracket-city/v1/**", async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    if (request.method() === "GET" && path.endsWith("/admin/puzzles")) {
+      return json(route, {
+        currentDate: "2026-09-01",
+        timeZone: "Europe/Madrid",
+        puzzles: [{ date: puzzle.releaseDate, id: puzzle.id, revision: puzzle.revision }]
+      });
+    }
+    if (request.method() === "GET" && path.endsWith("/admin/suggestions")) {
+      return json(route, { suggestions: [] });
+    }
+    if (request.method() === "GET" && path.endsWith(`/admin/puzzles/${puzzle.releaseDate}`)) {
+      return json(route, puzzle);
+    }
+    if (request.method() === "DELETE" && path.endsWith(`/puzzles/${puzzle.releaseDate}`)) {
+      writeRequests.push({ method: request.method(), path, nonce: request.headers()["x-wp-nonce"] });
+      return json(route, { date: puzzle.releaseDate, status: "trashed" });
+    }
+    if (request.method() === "POST" && path.endsWith(`/admin/puzzles/trash/${puzzle.releaseDate}`)) {
+      writeRequests.push({ method: request.method(), path, nonce: request.headers()["x-wp-nonce"] });
+      return json(route, { date: puzzle.releaseDate, status: "restored" });
+    }
+    return json(route, { message: "Not found" }, 404);
+  });
+
+  await page.goto(`${fixtureUrl}?mode=author`);
+  await page.getByTestId("author-existing-puzzle").selectOption("0");
+  await page.getByTestId("author-load-existing").click();
+  await page.getByTestId("author-delete-puzzle").click();
+
+  await expect(page.getByTestId("author-undo-delete")).toBeVisible();
+  await expect(page.getByTestId("author-delete-puzzle")).toHaveCount(0);
+  await page.getByTestId("author-undo-delete").click();
+  await expect(page.getByTestId("author-delete-puzzle")).toBeVisible();
+  await expect(page.getByTestId("author-puzzle-id")).toHaveValue(puzzle.id);
+  expect(writeRequests).toEqual([
+    { method: "DELETE", path: `/wp-json/bracket-city/v1/puzzles/${puzzle.releaseDate}`, nonce: "rest-nonce" },
+    { method: "POST", path: `/wp-json/bracket-city/v1/admin/puzzles/trash/${puzzle.releaseDate}`, nonce: "rest-nonce" }
+  ]);
 });

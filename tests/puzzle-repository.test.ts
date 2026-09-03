@@ -113,6 +113,67 @@ test("create and correction use POST and PUT with the exact definition", async (
   assert.deepEqual(JSON.parse(String(calls[1]!.options.body)), definition);
 });
 
+test("trash and undo use authenticated puzzle routes", async () => {
+  const calls: FetchCall[] = [];
+  const repository = createWordPressPuzzleRepository(config(), async (url, options) => {
+    calls.push({ url: String(url), options: options ?? {} });
+    return response({ ok: true });
+  });
+
+  await repository.trashPuzzle("2026-09-01");
+  await repository.restorePuzzle("2026-09-01");
+
+  assert.deepEqual(calls.map(({ url, options }) => [url, options.method]), [
+    ["https://example.test/wp-json/bracket-city/v1/puzzles/2026-09-01", "DELETE"],
+    ["https://example.test/wp-json/bracket-city/v1/admin/puzzles/trash/2026-09-01", "POST"]
+  ]);
+  for (const call of calls) {
+    assert.equal((call.options.headers as Record<string, string>)["X-WP-Nonce"], "rest-nonce");
+  }
+});
+
+test("shared-link submissions and admin review use separate authorization", async () => {
+  const calls: FetchCall[] = [];
+  const repository = createWordPressPuzzleRepository(config({
+    canSuggest: true,
+    suggestionKey: "shared-secret"
+  }), async (url, options) => {
+    const call = { url: String(url), options: options ?? {} };
+    calls.push(call);
+    if (call.url.endsWith("/admin/suggestions")) {
+      return response({ suggestions: [{ suggestionId: 17, id: "idea", title: "Idea" }] });
+    }
+    if (call.url.endsWith("/admin/suggestions/17") && call.options.method === "GET") {
+      const loaded = puzzle({ id: "idea" });
+      delete loaded.releaseDate;
+      return response(loaded);
+    }
+    return response({ suggestionId: 17, status: "pending" }, call.options.method === "POST" ? 201 : 200);
+  });
+  const definition = puzzle({ id: "idea" });
+  delete definition.releaseDate;
+  await repository.submitSuggestion(definition);
+  const suggestions = await repository.listSuggestions();
+  await repository.loadSuggestion(17);
+  await repository.approveSuggestion(17, { ...definition, releaseDate: "2026-09-04" });
+  await repository.rejectSuggestion(17);
+
+  assert.equal(suggestions[0]!.suggestionId, 17);
+  assert.deepEqual(calls.map(({ url, options }) => [url, options.method]), [
+    ["https://example.test/wp-json/bracket-city/v1/suggestions", "POST"],
+    ["https://example.test/wp-json/bracket-city/v1/admin/suggestions", "GET"],
+    ["https://example.test/wp-json/bracket-city/v1/admin/suggestions/17", "GET"],
+    ["https://example.test/wp-json/bracket-city/v1/admin/suggestions/17/approve", "POST"],
+    ["https://example.test/wp-json/bracket-city/v1/admin/suggestions/17", "DELETE"]
+  ]);
+  const submitHeaders = calls[0]!.options.headers as Record<string, string>;
+  assert.equal(submitHeaders["X-Nexo-Suggestion-Key"], "shared-secret");
+  assert.equal(submitHeaders["X-WP-Nonce"], undefined);
+  for (const call of calls.slice(1)) {
+    assert.equal((call.options.headers as Record<string, string>)["X-WP-Nonce"], "rest-nonce");
+  }
+});
+
 test("corrections keep the puzzle ID and strictly increase the revision before transport", () => {
   const existing = puzzle({ id: "daily", releaseDate: "2026-09-01", revision: 3 });
   assert.doesNotThrow(() => assertValidCorrection({ ...existing, revision: 4 }, existing));

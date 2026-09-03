@@ -9,6 +9,7 @@ import type {
   LocalePack,
   PuzzleDefinition,
   PuzzleListing,
+  SuggestionMetadata,
   StorageLike,
   WordPressConfig
 } from "./types.ts";
@@ -93,12 +94,14 @@ export function readWordPressConfig(doc: Document = globalThis.document): WordPr
     const config: unknown = JSON.parse(node.textContent || "{}");
     if (!isRecord(config)) throw new Error("Configuration must be an object.");
     if (!config.restBase) throw new Error("restBase is required.");
-    const normalized = {
+    const normalized: Record<string, unknown> = {
       ...config,
       restBase: trimSlash(config.restBase),
       canAuthor: config.canAuthor === true,
       nonce: typeof config.nonce === "string" ? config.nonce : ""
     };
+    if (Object.hasOwn(config, "canSuggest")) normalized.canSuggest = config.canSuggest === true;
+    if (typeof config.suggestionKey === "string") normalized.suggestionKey = config.suggestionKey;
     return Effect.runSync(decodeWordPressConfig("WordPress DOM configuration", normalized));
   } catch (error) {
     throw new PuzzleRepositoryError("INVALID_CONFIG", `Configuración de WordPress no válida: ${errorMessage(error)}`);
@@ -115,6 +118,17 @@ export interface WordPressPuzzleRepository {
     definition: PuzzleDefinition,
     options?: { overwrite?: boolean; signal?: AbortSignal }
   ) => Promise<unknown>;
+  readonly submitSuggestion: (definition: PuzzleDefinition, signal?: AbortSignal) => Promise<unknown>;
+  readonly listSuggestions: (signal?: AbortSignal) => Promise<SuggestionMetadata[]>;
+  readonly loadSuggestion: (suggestionId: number, signal?: AbortSignal) => Promise<PuzzleDefinition>;
+  readonly approveSuggestion: (
+    suggestionId: number,
+    definition: PuzzleDefinition,
+    signal?: AbortSignal
+  ) => Promise<unknown>;
+  readonly rejectSuggestion: (suggestionId: number, signal?: AbortSignal) => Promise<unknown>;
+  readonly trashPuzzle: (date: string, signal?: AbortSignal) => Promise<unknown>;
+  readonly restorePuzzle: (date: string, signal?: AbortSignal) => Promise<unknown>;
 }
 
 export interface EffectPuzzleRepository {
@@ -141,10 +155,11 @@ export function createWordPressPuzzleRepository(
   const base = trimSlash(config.restBase);
   const request = async (
     path: string,
-    { method = "GET", body, authenticated = false, signal }: {
+    { method = "GET", body, authenticated = false, suggestion = false, signal }: {
       method?: string;
       body?: unknown;
       authenticated?: boolean;
+      suggestion?: boolean;
       signal?: AbortSignal | undefined;
     } = {}
   ): Promise<unknown> => {
@@ -155,6 +170,12 @@ export function createWordPressPuzzleRepository(
         throw new PuzzleRepositoryError("AUTH_REQUIRED", "Inicia sesión como editor para guardar rompecabezas.", 403);
       }
       headers["X-WP-Nonce"] = config.nonce;
+    }
+    if (suggestion) {
+      if (!config.canSuggest || !config.suggestionKey) {
+        throw new PuzzleRepositoryError("SUGGESTION_LINK_REQUIRED", "Este enlace de sugerencias no es válido.", 403);
+      }
+      headers["X-Nexo-Suggestion-Key"] = config.suggestionKey;
     }
     let response: Response;
     try {
@@ -177,6 +198,13 @@ export function createWordPressPuzzleRepository(
       throw new PuzzleRepositoryError(code, responseMessage(parsed, response.status), response.status, parsed);
     }
     return parsed;
+  };
+
+  const suggestionIdPath = (suggestionId: number): string => {
+    if (!Number.isSafeInteger(suggestionId) || suggestionId < 1) {
+      throw new PuzzleRepositoryError("INVALID_SUGGESTION_ID", "La sugerencia no es válida.", 400);
+    }
+    return `/admin/suggestions/${suggestionId}`;
   };
 
   const list = async (admin = false, signal?: AbortSignal): Promise<PuzzleListing> => {
@@ -217,6 +245,50 @@ export function createWordPressPuzzleRepository(
         authenticated: true,
         signal
       });
+    },
+    submitSuggestion(definition, signal) {
+      return request("/suggestions", { method: "POST", body: definition, suggestion: true, signal });
+    },
+    async listSuggestions(signal) {
+      const result = await request("/admin/suggestions", { authenticated: true, signal });
+      if (!isRecord(result) || !Array.isArray(result.suggestions)) {
+        throw new PuzzleRepositoryError("INVALID_RESPONSE", "WordPress devolvió una lista de sugerencias no válida.");
+      }
+      return result.suggestions.map((item: unknown): SuggestionMetadata => {
+        if (!isRecord(item) || !Number.isSafeInteger(item.suggestionId) || typeof item.id !== "string" || typeof item.title !== "string") {
+          throw new PuzzleRepositoryError("INVALID_RESPONSE", "WordPress devolvió una sugerencia no válida.");
+        }
+        return {
+          suggestionId: item.suggestionId,
+          id: item.id,
+          title: item.title,
+          ...(typeof item.requestedDate === "string" ? { requestedDate: item.requestedDate } : {}),
+          ...(typeof item.submittedAt === "string" ? { submittedAt: item.submittedAt } : {})
+        };
+      });
+    },
+    async loadSuggestion(suggestionId, signal) {
+      return Effect.runPromise(decodePuzzleDefinition(
+        `WordPress suggestion ${suggestionId}`,
+        await request(suggestionIdPath(suggestionId), { authenticated: true, signal })
+      ));
+    },
+    approveSuggestion(suggestionId, definition, signal) {
+      return request(`${suggestionIdPath(suggestionId)}/approve`, {
+        method: "POST",
+        body: definition,
+        authenticated: true,
+        signal
+      });
+    },
+    rejectSuggestion(suggestionId, signal) {
+      return request(suggestionIdPath(suggestionId), { method: "DELETE", authenticated: true, signal });
+    },
+    trashPuzzle(date, signal) {
+      return request(`/puzzles/${encodeURIComponent(date)}`, { method: "DELETE", authenticated: true, signal });
+    },
+    restorePuzzle(date, signal) {
+      return request(`/admin/puzzles/trash/${encodeURIComponent(date)}`, { method: "POST", authenticated: true, signal });
     }
   };
 }

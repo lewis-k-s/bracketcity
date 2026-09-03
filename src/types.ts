@@ -169,6 +169,11 @@ export interface WordPressConfig {
   readonly assetBase?: string;
   readonly nonce?: string;
   readonly canAuthor: boolean;
+  readonly canSuggest?: boolean;
+  readonly suggestionKey?: string;
+  readonly suggestionUrl?: string;
+  readonly acceptingNewPuzzles?: boolean;
+  readonly puzzleLimit?: number;
   readonly pageUrl?: string;
   readonly localeUrl?: string;
   readonly currentDate?: string;
@@ -203,6 +208,19 @@ export interface AuthorDraft {
 
 export interface ExistingPuzzle {
   readonly date: string;
+  definition: PuzzleDefinition;
+}
+
+export interface SuggestionMetadata {
+  readonly suggestionId: number;
+  readonly id: string;
+  readonly title: string;
+  readonly requestedDate?: string;
+  readonly submittedAt?: string;
+}
+
+export interface ExistingSuggestion {
+  readonly metadata: SuggestionMetadata;
   definition: PuzzleDefinition;
 }
 

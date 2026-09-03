@@ -47,6 +47,13 @@ body:has(#bracket-city-app) #bracket-city-app {
   margin-block-start: 0 !important;
 }
 
+body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
+  width: 100% !important;
+  max-width: none !important;
+  margin-right: 0 !important;
+  margin-left: 0 !important;
+}
+
 #bracket-city-app {
   background: transparent;
 }
@@ -204,7 +211,7 @@ body:has(#bracket-city-app) #bracket-city-app {
 }
 
 :is(#app, #bracket-city-app) .clue-button {
-  display: inline;
+  display: inline-block;
   margin: 0;
   padding: 0.06em;
   border: 0;
@@ -428,11 +435,12 @@ body:has(#bracket-city-app) #bracket-city-app {
 }
 
 :is(#app, #bracket-city-app) .author-shell {
-  width: min(100%, 78rem);
+  width: min(100%, 84rem);
   min-height: 100vh;
   min-height: 100dvh;
   margin: 0 auto;
-  padding: 0 clamp(1rem, 3vw, 2.5rem) 4rem;
+  padding: 0 clamp(0.5rem, 1.5vw, 1.25rem) 4rem;
+  transition: background-color 160ms ease;
 }
 
 :is(#app, #bracket-city-app) .author-header {
@@ -446,8 +454,231 @@ body:has(#bracket-city-app) #bracket-city-app {
 
 :is(#app, #bracket-city-app) .author-intro {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: 0.65rem;
   margin: 0.75rem 0;
+}
+
+:is(#app, #bracket-city-app) .author-intro-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+:is(#app, #bracket-city-app) .author-intro--align-layout {
+  display: grid;
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 19rem);
+  gap: clamp(0.75rem, 1.5vw, 1rem);
+}
+
+:is(#app, #bracket-city-app) .author-intro--align-layout .author-intro-actions {
+  grid-column: 2;
+  justify-content: flex-start;
+}
+
+:is(#app, #bracket-city-app) .author-top-region--with-loader {
+  display: grid;
+  align-items: start;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 19rem);
+  gap: clamp(0.75rem, 1.5vw, 1rem);
+  margin: 0.7rem 0;
+}
+
+:is(#app, #bracket-city-app) .author-top-region--with-loader .author-intro,
+:is(#app, #bracket-city-app) .author-top-region--with-loader .author-load-panel {
+  margin: 0;
+}
+
+:is(#app, #bracket-city-app) .author-view-controls {
+  display: flex;
+  align-items: center;
+  margin: 0.7rem 0;
+}
+
+:is(#app, #bracket-city-app) .author-flow-mode,
+:is(#app, #bracket-city-app) .author-skin-picker,
+:is(#app, #bracket-city-app) .author-skin-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.4rem;
+}
+
+:is(#app, #bracket-city-app) .author-skin-picker {
+  display: grid;
+  justify-items: start;
+  gap: 0.3rem;
+}
+
+:is(#app, #bracket-city-app) .author-skin-options {
+  gap: 0.25rem 0.3rem;
+}
+
+:is(#app, #bracket-city-app) .author-style-options {
+  min-width: 0;
+  margin: 0 0 0.6rem;
+}
+
+:is(#app, #bracket-city-app) .author-style-toggle {
+  display: inline-flex;
+  width: 100%;
+  min-height: 2rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 0.25rem;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+:is(#app, #bracket-city-app) .author-style-toggle::after {
+  content: "+";
+  margin-left: 0.35rem;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+:is(#app, #bracket-city-app) .author-style-options[open] > .author-style-toggle::after {
+  content: "−";
+}
+
+:is(#app, #bracket-city-app) .author-style-toggle:hover,
+:is(#app, #bracket-city-app) .author-style-options[open] > .author-style-toggle {
+  border-color: var(--blue-dark);
+  background: rgba(82, 104, 174, 0.08);
+  color: var(--blue-dark);
+}
+
+:is(#app, #bracket-city-app) .author-style-options-content {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.45rem;
+  padding: 0.65rem;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+
+:is(#app, #bracket-city-app) .author-inline-style-picker {
+  display: grid;
+  justify-items: start;
+  gap: 0.3rem;
+}
+
+:is(#app, #bracket-city-app) .author-control-label,
+:is(#app, #bracket-city-app) .author-flow-mode > span {
+  margin-right: 0.15rem;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+:is(#app, #bracket-city-app) .author-flow-mode .mode-link,
+:is(#app, #bracket-city-app) .author-skin-option {
+  min-height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 0.25rem;
+  background: var(--paper);
+  color: var(--blue-dark);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+:is(#app, #bracket-city-app) .author-skin-option {
+  padding-inline: 0.4rem;
+}
+
+:is(#app, #bracket-city-app) .author-flow-mode .mode-link:hover,
+:is(#app, #bracket-city-app) .author-skin-option:hover {
+  border-color: var(--blue-dark);
+  background: rgba(82, 104, 174, 0.08);
+}
+
+:is(#app, #bracket-city-app) .author-flow-mode .mode-link.is-selected,
+:is(#app, #bracket-city-app) .author-skin-option.is-selected {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+
+:is(#app, #bracket-city-app) .author-intro > p {
+  margin: 0 auto 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+:is(#app, #bracket-city-app) .author-suggestion-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+:is(#app, #bracket-city-app) .author-suggestion-label {
+  flex: 1 0 100%;
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+:is(#app, #bracket-city-app) .author-suggestion-actions .author-button--compact {
+  min-height: 2rem;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.7rem;
+}
+
+:is(#app, #bracket-city-app) .author-suggestion-dialog {
+  width: min(calc(100% - 2rem), 32rem);
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border: 1px solid var(--ink);
+  border-radius: 0.3rem;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0.5rem 0.5rem 0 rgba(44, 42, 40, 0.2);
+}
+
+:is(#app, #bracket-city-app) .author-suggestion-dialog::backdrop {
+  background: rgba(26, 24, 22, 0.55);
+}
+
+:is(#app, #bracket-city-app) .author-suggestion-dialog-title {
+  margin: 0 0 0.8rem;
+  font-size: clamp(1.2rem, 4vw, 1.55rem);
+}
+
+:is(#app, #bracket-city-app) .author-suggestion-dialog p {
+  margin: 0 0 0.8rem;
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+:is(#app, #bracket-city-app) .author-suggestion-dialog .author-button {
+  margin-top: 0.25rem;
+}
+
+:is(#app, #bracket-city-app) .author-utilities-label {
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 :is(#app, #bracket-city-app) .author-lede {
@@ -483,27 +714,93 @@ body:has(#bracket-city-app) #bracket-city-app {
   margin: 0;
 }
 
+:is(#app, #bracket-city-app) .author-load-select {
+  position: relative;
+}
+
+:is(#app, #bracket-city-app) .author-load-select .author-input {
+  min-height: 3.85rem;
+  padding-right: 2.2rem;
+  appearance: none;
+  color: transparent;
+}
+
+:is(#app, #bracket-city-app) .author-load-select::after {
+  content: "⌄";
+  position: absolute;
+  top: 50%;
+  right: 0.7rem;
+  color: var(--ink);
+  font-size: 1rem;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+:is(#app, #bracket-city-app) .author-load-select option {
+  color: var(--ink);
+}
+
+:is(#app, #bracket-city-app) .author-load-selection {
+  position: absolute;
+  inset: 0.4rem 2rem 0.4rem 0.6rem;
+  display: grid;
+  align-content: center;
+  gap: 0.08rem;
+  min-width: 0;
+  color: var(--ink);
+  line-height: 1.15;
+  pointer-events: none;
+}
+
+:is(#app, #bracket-city-app) .author-load-selection.is-placeholder {
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+}
+
+:is(#app, #bracket-city-app) .author-load-date,
+:is(#app, #bracket-city-app) .author-load-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:is(#app, #bracket-city-app) .author-load-date {
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+:is(#app, #bracket-city-app) .author-load-title {
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
 :is(#app, #bracket-city-app) .author-layout {
   display: grid;
   align-items: start;
-  grid-template-columns: minmax(0, 1.3fr) minmax(19rem, 0.7fr);
-  gap: 0.9rem;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 19rem);
+  gap: clamp(0.75rem, 1.5vw, 1rem);
 }
 
 :is(#app, #bracket-city-app) .author-editor,
-:is(#app, #bracket-city-app) .author-output {
+:is(#app, #bracket-city-app) .author-output,
+:is(#app, #bracket-city-app) .author-utilities {
   min-width: 0;
 }
 
-:is(#app, #bracket-city-app) .author-output {
-  position: sticky;
-  top: 1rem;
+:is(#app, #bracket-city-app) .author-utilities-label {
+  display: block;
+  margin: 0 0 0.45rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--line);
 }
 
 :is(#app, #bracket-city-app) .author-panel {
   min-width: 0;
   margin: 0 0 0.8rem;
-  padding: clamp(0.75rem, 2vw, 1rem);
+  padding: clamp(0.6rem, 1.2vw, 0.8rem);
   border: 1px solid var(--line);
   background: var(--paper);
 }
@@ -576,8 +873,14 @@ body:has(#bracket-city-app) #bracket-city-app {
 :is(#app, #bracket-city-app) .author-input:focus-visible,
 :is(#app, #bracket-city-app) .author-button:focus-visible,
 :is(#app, #bracket-city-app) .author-icon-button:focus-visible,
+:is(#app, #bracket-city-app) .author-bracket-option:focus-visible,
 :is(#app, #bracket-city-app) .reference-chip:focus-visible,
 :is(#app, #bracket-city-app) .author-tree-button:focus-visible,
+:is(#app, #bracket-city-app) .author-inline-key:focus-visible,
+:is(#app, #bracket-city-app) .author-inline-style:focus-visible,
+:is(#app, #bracket-city-app) .author-inline-select:focus-visible,
+:is(#app, #bracket-city-app) .author-inline-remove:focus-visible,
+:is(#app, #bracket-city-app) .author-skin-option:focus-visible,
 :is(#app, #bracket-city-app) .mode-link:focus-visible {
   outline: 3px solid rgba(78, 100, 173, 0.38);
   outline-offset: 2px;
@@ -625,6 +928,68 @@ body:has(#bracket-city-app) #bracket-city-app {
 :is(#app, #bracket-city-app) .author-input:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+:is(#app, #bracket-city-app) .author-bracket-guide,
+:is(#app, #bracket-city-app) .author-bracket-format {
+  margin: 0.8rem 0 0;
+  padding: 0.65rem;
+  border: 1px solid var(--line);
+  background: #faf9f7;
+}
+
+:is(#app, #bracket-city-app) .author-bracket-guide h3,
+:is(#app, #bracket-city-app) .author-bracket-format legend {
+  padding: 0;
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+:is(#app, #bracket-city-app) .author-bracket-guide p,
+:is(#app, #bracket-city-app) .author-bracket-format-help {
+  margin: 0.3rem 0 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+:is(#app, #bracket-city-app) .author-bracket-examples,
+:is(#app, #bracket-city-app) .author-bracket-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.55rem;
+}
+
+:is(#app, #bracket-city-app) .author-bracket-example {
+  padding: 0.18rem 0.3rem;
+  border: 1px solid rgba(82, 104, 174, 0.32);
+  background: #fff;
+  color: var(--blue-dark);
+  font-size: 0.68rem;
+  overflow-wrap: anywhere;
+}
+
+:is(#app, #bracket-city-app) .author-bracket-option {
+  min-height: 2.3rem;
+  flex: 1 1 12rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 0.25rem;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  font: 700 0.7rem/1.3 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-align: left;
+}
+
+:is(#app, #bracket-city-app) .author-bracket-option:hover,
+:is(#app, #bracket-city-app) .author-bracket-option.is-selected {
+  border-color: var(--blue-dark);
+  background: rgba(82, 104, 174, 0.1);
+  color: var(--blue-dark);
 }
 
 :is(#app, #bracket-city-app) .author-segments {
@@ -682,6 +1047,13 @@ body:has(#bracket-city-app) #bracket-city-app {
   font-size: 0.9rem;
 }
 
+:is(#app, #bracket-city-app) .author-submit-help {
+  margin: 0.2rem 0 0.8rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
 :is(#app, #bracket-city-app) .author-button--compact {
   min-height: 2.25rem;
   padding: 0.25rem 0.55rem;
@@ -733,6 +1105,129 @@ body:has(#bracket-city-app) #bracket-city-app {
   border-color: var(--blue-dark);
   background: rgba(82, 104, 174, 0.1);
   color: var(--blue-dark);
+}
+
+:is(#app, #bracket-city-app) .author-guided-workspace {
+  display: grid;
+  align-items: start;
+  gap: 0.8rem;
+}
+
+:is(#app, #bracket-city-app) .author-tree-help {
+  margin: -0.3rem 0 0.65rem;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+:is(#app, #bracket-city-app) .author-bracket-syntax {
+  color: inherit;
+  font: 700 0.72rem/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+
+:is(#app, #bracket-city-app) .author-syntax-edge {
+  color: var(--muted);
+  font-weight: 900;
+}
+
+:is(#app, #bracket-city-app) .author-syntax-clue {
+  color: var(--ink);
+}
+
+:is(#app, #bracket-city-app) .author-syntax-answer {
+  padding: 0.04rem 0.18rem;
+  border-radius: 0.18rem;
+  background: rgba(82, 104, 174, 0.14);
+  color: var(--blue-dark);
+  font-weight: 900;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+:is(#app, #bracket-city-app) .author-tree .author-tree {
+  padding-left: 0.65rem;
+}
+
+:is(#app, #bracket-city-app) .author-tree-item + .author-tree-item {
+  margin-top: 0.25rem;
+}
+
+:is(#app, #bracket-city-app) .author-tree-button {
+  min-height: 0;
+  padding: 0.42rem 0.5rem;
+  line-height: 1.4;
+}
+
+:is(#app, #bracket-city-app) .author-tree-button.is-selected .author-syntax-answer {
+  background: var(--blue-dark);
+  color: #fff;
+}
+
+:is(#app, #bracket-city-app) .reference-chip-syntax {
+  display: block;
+}
+
+:is(#app, #bracket-city-app) .author-guided-inspector-heading {
+  display: grid;
+  align-items: end;
+  grid-template-columns: auto minmax(12rem, 18rem);
+  gap: 0.75rem;
+}
+
+:is(#app, #bracket-city-app) .author-guided-inspector-heading .author-panel-title {
+  margin-bottom: 0.65rem;
+}
+
+:is(#app, #bracket-city-app) .author-guided-inspector-heading .author-field {
+  margin-bottom: 0.55rem;
+}
+
+:is(#app, #bracket-city-app) .author-guided-inspector-heading .author-field-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+:is(#app, #bracket-city-app) .author-guided-inspector .author-bracket-format {
+  margin-top: 0.15rem;
+}
+
+:is(#app, #bracket-city-app) .author-guided-inspector .author-bracket-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.35fr);
+  gap: 0.3rem;
+}
+
+:is(#app, #bracket-city-app) .author-guided-inspector .author-bracket-option {
+  min-height: 3.55rem;
+  display: grid;
+  align-content: center;
+  gap: 0.2rem;
+  padding: 0.35rem;
+  text-align: center;
+}
+
+:is(#app, #bracket-city-app) .author-bracket-option-label {
+  display: block;
+  color: var(--muted);
+  font: 800 0.56rem/1.2 system-ui, sans-serif;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+:is(#app, #bracket-city-app) .author-bracket-option-syntax {
+  display: block;
+  font-size: 0.62rem;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+:is(#app, #bracket-city-app) .author-bracket-option.is-selected .author-bracket-option-label {
+  color: var(--blue-dark);
+}
+
+:is(#app, #bracket-city-app) .author-bracket-option.is-selected .author-syntax-answer {
+  background: var(--blue-dark);
+  color: #fff;
 }
 
 :is(#app, #bracket-city-app) .validation-state {
@@ -838,14 +1333,542 @@ body:has(#bracket-city-app) #bracket-city-app {
   font-weight: 700;
 }
 
+:is(#app, #bracket-city-app) .author-shell--inline {
+  --inline-coral: #9e3f31;
+  --inline-gold: #805600;
+  --inline-green: #216653;
+  --inline-violet: #55458f;
+}
+
+:is(#app, #bracket-city-app) .mode-nav {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem 1rem;
+}
+
+:is(#app, #bracket-city-app) .author-inline-composer {
+  overflow: hidden;
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="lab"] {
+  background-color: #f5efe4;
+  background-image: radial-gradient(rgba(158, 63, 49, 0.13) 0.7px, transparent 0.7px);
+  background-size: 14px 14px;
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="lab"] .author-header {
+  border-color: rgba(44, 40, 37, 0.72);
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="lab"] .author-panel {
+  margin-right: 0.35rem;
+  margin-bottom: 1.15rem;
+  border-color: rgba(44, 40, 37, 0.8);
+  border-radius: 0.7rem;
+  background: #fbf8f0;
+  box-shadow: 0.35rem 0.35rem 0 #2c2825;
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="lab"] .author-panel-title::before {
+  content: "";
+  width: 0.55rem;
+  height: 0.55rem;
+  display: inline-block;
+  margin-right: 0.45rem;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: #d87563;
+  box-shadow: inset 0 0 0 2px #fbf8f0;
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="blueprint"] {
+  background-color: #edf6f8;
+  background-image:
+    linear-gradient(rgba(55, 103, 135, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(55, 103, 135, 0.09) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="blueprint"] .author-panel {
+  border: 1px solid #376787;
+  border-radius: 0.2rem;
+  background-color: rgba(248, 253, 253, 0.94);
+  box-shadow: 0.25rem 0.25rem 0 rgba(55, 103, 135, 0.2);
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="blueprint"] .author-panel-title {
+  padding-bottom: 0.4rem;
+  border-bottom: 1px dashed rgba(55, 103, 135, 0.5);
+  color: #244e6a;
+  text-transform: uppercase;
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="cards"] {
+  background: #f4f0ed;
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="cards"] .author-panel {
+  --card-accent: #d97868;
+  overflow: hidden;
+  border: 0;
+  border-top: 0.32rem solid var(--card-accent);
+  border-radius: 0.85rem;
+  background: #fff;
+  box-shadow: 0 0.7rem 1.65rem rgba(65, 48, 40, 0.14);
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="cards"] .author-editor .author-panel:nth-child(3n + 2),
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="cards"] .author-utilities .author-panel:nth-child(3n + 2) {
+  --card-accent: #d0a345;
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="cards"] .author-editor .author-panel:nth-child(3n),
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="cards"] .author-utilities .author-panel:nth-child(3n) {
+  --card-accent: #5b9c8b;
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="lab"] .author-output .author-button {
+  border-color: #2c2825;
+  border-radius: 0.45rem;
+  background: #fffdf8;
+  color: #2c2825;
+  box-shadow: 0 0.16rem 0 #2c2825;
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="lab"] .author-output .author-button--accent {
+  border-color: #6d2c23;
+  background: #9e3f31;
+  color: #fffaf2;
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="lab"] .author-output .author-button--danger {
+  border-color: #9e3f31;
+  color: #9e3f31;
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="lab"] .author-output .author-button:hover {
+  background: #f4e8d5;
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="lab"] .author-output .author-button--accent:hover {
+  background: #6d2c23;
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="blueprint"] .author-output .author-button {
+  border-color: #376787;
+  border-radius: 0.15rem;
+  background: #f8fdfd;
+  color: #244e6a;
+  box-shadow: 0.16rem 0.16rem 0 rgba(36, 78, 106, 0.35);
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="blueprint"] .author-output .author-button--accent {
+  border-color: #244e6a;
+  background: #376787;
+  color: #fff;
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="blueprint"] .author-output .author-button--danger {
+  border-color: #8c4d4d;
+  color: #8c4d4d;
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="blueprint"] .author-output .author-button:hover {
+  background: #e5f1f4;
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="blueprint"] .author-output .author-button--accent:hover {
+  background: #244e6a;
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="cards"] .author-output .author-button {
+  border: 0;
+  border-radius: 0.55rem;
+  background: #fff;
+  color: #4b403a;
+  box-shadow: 0 0.22rem 0.65rem rgba(65, 48, 40, 0.24);
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="cards"] .author-output .author-button--accent {
+  background: #d97868;
+  color: #fff;
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="cards"] .author-output .author-button--danger {
+  color: #b5574c;
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="cards"] .author-output .author-button:hover {
+  filter: brightness(0.97);
+}
+
+:is(#app, #bracket-city-app) .author-experiment-label {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--inline-coral, var(--blue-dark));
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+:is(#app, #bracket-city-app) .author-inline-title {
+  margin-bottom: 0.55rem;
+  font-size: clamp(1.15rem, 3vw, 1.45rem);
+}
+
+:is(#app, #bracket-city-app) .author-inline-lede {
+  max-width: 48rem;
+  margin: 0 0 0.8rem;
+  color: #595048;
+  font-family: ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+:is(#app, #bracket-city-app) .author-inline-source {
+  min-height: 8.5rem;
+  padding: 0.75rem 0.8rem;
+  border: 0;
+  border-radius: 0.55rem;
+  background: #202027;
+  color: #fffaf0;
+  caret-color: #f4ba55;
+  font-size: clamp(0.92rem, 2vw, 1.05rem);
+  line-height: 1.65;
+  overflow-y: hidden;
+  resize: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.13);
+}
+
+:is(#app, #bracket-city-app) .author-inline-source::selection {
+  background: #f4ba55;
+  color: #202027;
+}
+
+:is(#app, #bracket-city-app) .author-inline-help {
+  margin-top: 0.4rem;
+}
+
+:is(#app, #bracket-city-app) .author-inline-keyboard {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.7rem 0 1rem;
+}
+
+:is(#app, #bracket-city-app) .author-inline-key {
+  min-width: 2.8rem;
+  min-height: 2.6rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid #2c2825;
+  border-radius: 0.4rem;
+  background: #fffdf8;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 800;
+  box-shadow: 0 0.16rem 0 #2c2825;
+}
+
+:is(#app, #bracket-city-app) .author-inline-key:active {
+  transform: translateY(0.12rem);
+  box-shadow: 0 0.04rem 0 #2c2825;
+}
+
+:is(#app, #bracket-city-app) .author-inline-key--wide {
+  margin-left: 0.25rem;
+  background: #f4ba55;
+  font-size: 0.75rem;
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="plain"] .author-inline-key--wide {
+  border-color: var(--blue-dark);
+  border-radius: 0.25rem;
+  background: var(--blue);
+  color: #fff;
+  box-shadow: none;
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="plain"] .author-inline-key--wide:hover {
+  background: var(--blue-dark);
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="lab"] .author-inline-key--wide {
+  border-color: #6d2c23;
+  border-radius: 999px;
+  background: #9e3f31;
+  color: #fffaf2;
+  box-shadow: 0 0.16rem 0 #6d2c23;
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="blueprint"] .author-inline-key--wide {
+  border-color: #244e6a;
+  border-radius: 0.15rem;
+  background: #376787;
+  color: #fff;
+  box-shadow: 0.16rem 0.16rem 0 rgba(36, 78, 106, 0.35);
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="cards"] .author-inline-key--wide {
+  border: 0;
+  border-radius: 999px;
+  background: #d97868;
+  color: #fff;
+  box-shadow: 0 0.22rem 0.65rem rgba(65, 48, 40, 0.24);
+}
+
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="lab"] .author-inline-key--wide:active,
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="blueprint"] .author-inline-key--wide:active,
+:is(#app, #bracket-city-app) .author-shell[data-panel-skin="cards"] .author-inline-key--wide:active {
+  box-shadow: none;
+}
+
+:is(#app, #bracket-city-app) .author-inline-map-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+:is(#app, #bracket-city-app) .author-inline-map-header .author-preview-title {
+  margin: 0;
+}
+
+:is(#app, #bracket-city-app) .author-inline-status {
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+:is(#app, #bracket-city-app) .author-inline-status.is-invalid {
+  color: var(--error);
+  font-weight: 700;
+}
+
+:is(#app, #bracket-city-app) .author-inline-styles {
+  display: flex;
+  padding: 0.18rem;
+  border: 1px solid rgba(44, 40, 37, 0.35);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+:is(#app, #bracket-city-app) .author-inline-style {
+  min-height: 1.85rem;
+  padding: 0.2rem 0.55rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.64rem;
+  font-weight: 700;
+}
+
+:is(#app, #bracket-city-app) .author-inline-style.is-selected {
+  background: #2c2825;
+  color: #fff;
+}
+
+:is(#app, #bracket-city-app) .author-inline-map {
+  min-height: 6.5rem;
+  margin-top: 0.55rem;
+  padding: 0.95rem 0.65rem 0.8rem;
+  overflow-wrap: anywhere;
+  border: 1px solid rgba(44, 40, 37, 0.28);
+  border-radius: 0.55rem;
+  background-color: #fff;
+  color: var(--ink);
+  font-family: ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
+  font-size: clamp(1rem, 2.6vw, 1.25rem);
+  line-height: 2.35;
+}
+
+:is(#app, #bracket-city-app) .author-inline-placeholder {
+  color: #85817d;
+  font-size: 0.82rem;
+}
+
+:is(#app, #bracket-city-app) .author-inline-group {
+  --group-color: var(--inline-coral);
+  position: relative;
+  display: inline-block;
+  margin: 0.45em 0.1em 0.2em;
+  padding: 0.02em 0.38em;
+  border-color: var(--group-color);
+  border-style: solid;
+  border-width: calc(1px + var(--group-depth) * 0.45px);
+  border-radius: 0.48em;
+  background: color-mix(in srgb, var(--group-color) 10%, white);
+  cursor: pointer;
+  line-height: 1.75;
+  touch-action: manipulation;
+  vertical-align: middle;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+:is(#app, #bracket-city-app) .author-inline-group:hover {
+  background: color-mix(in srgb, var(--group-color) 16%, white);
+}
+
+:is(#app, #bracket-city-app) .author-inline-group[data-tone="1"] {
+  --group-color: var(--inline-gold);
+}
+
+:is(#app, #bracket-city-app) .author-inline-group[data-tone="2"] {
+  --group-color: var(--inline-green);
+}
+
+:is(#app, #bracket-city-app) .author-inline-group[data-tone="3"] {
+  --group-color: var(--inline-violet);
+}
+
+:is(#app, #bracket-city-app) .author-inline-group.is-selected {
+  z-index: 1;
+  transform: translateY(-0.06em);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--group-color) 22%, transparent);
+}
+
+:is(#app, #bracket-city-app) .author-inline-select {
+  position: absolute;
+  z-index: 2;
+  top: -0.72rem;
+  left: -0.55rem;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.2rem;
+  border: 1px solid var(--group-color);
+  border-radius: 999px;
+  background: var(--group-color);
+  color: #fff;
+  cursor: pointer;
+  font: 800 0.62rem/1 ui-rounded, system-ui, sans-serif;
+  opacity: 0.82;
+}
+
+:is(#app, #bracket-city-app) .author-inline-select:hover,
+:is(#app, #bracket-city-app) .author-inline-select:focus-visible {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+:is(#app, #bracket-city-app) .author-inline-group.is-selected {
+  background: color-mix(in srgb, var(--group-color) 20%, white);
+}
+
+:is(#app, #bracket-city-app) .author-inline-edge {
+  color: var(--group-color);
+  font-weight: 900;
+  user-select: none;
+}
+
+:is(#app, #bracket-city-app) .author-inline-arrow {
+  display: inline-block;
+  margin: 0 0.12em;
+  color: var(--group-color);
+  font-weight: 900;
+}
+
+:is(#app, #bracket-city-app) .author-inline-answer-slot {
+  display: inline-block;
+  min-width: 2.15em;
+  margin: 0 0.12em;
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+
+:is(#app, #bracket-city-app) .author-inline-remove {
+  position: absolute;
+  z-index: 2;
+  top: -0.72rem;
+  right: -0.55rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  padding: 0;
+  border: 1px solid var(--group-color);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--group-color);
+  cursor: pointer;
+  font: 800 0.82rem/1 ui-rounded, system-ui, sans-serif;
+  opacity: 0.78;
+}
+
+:is(#app, #bracket-city-app) .author-inline-remove:hover,
+:is(#app, #bracket-city-app) .author-inline-remove:focus-visible {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+:is(#app, #bracket-city-app) .author-inline-map--marker {
+  background-image: repeating-linear-gradient(#fff 0 2.25rem, #e8e2d8 2.25rem calc(2.25rem + 1px));
+}
+
+:is(#app, #bracket-city-app) .author-inline-map--marker .author-inline-group {
+  margin-inline: 0.04em;
+  padding-inline: 0.22em;
+  border: 0;
+  border-radius: 0.12em;
+  background: linear-gradient(transparent 48%, color-mix(in srgb, var(--group-color) 34%, white) 48% 90%, transparent 90%);
+  box-shadow: inset 0 -2px 0 var(--group-color);
+}
+
+:is(#app, #bracket-city-app) .author-inline-map--blueprint {
+  background-image:
+    linear-gradient(rgba(63, 82, 143, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(63, 82, 143, 0.08) 1px, transparent 1px);
+  background-size: 1.25rem 1.25rem;
+}
+
+:is(#app, #bracket-city-app) .author-inline-inspector {
+  border-left: 0.35rem solid var(--inline-coral);
+}
+
+:is(#app, #bracket-city-app) .author-inline-inspector-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+:is(#app, #bracket-city-app) .author-inline-direction {
+  flex: 0 0 auto;
+  padding: 0.25rem 0.45rem;
+  border-radius: 999px;
+  background: #f0ede8;
+  color: #5b5651;
+  font-size: 0.64rem;
+  font-weight: 700;
+}
+
 :is(#app, #bracket-city-app) .author-aliases[open] .author-input {
   margin: 0.25rem 0 0.55rem;
 }
 
 :is(#app, #bracket-city-app) .author-json {
-  margin-bottom: 0.75rem;
+  max-height: 17rem;
+  margin-top: 0.55rem;
   font-size: 0.72rem;
   white-space: pre;
+}
+
+:is(#app, #bracket-city-app) .author-json-details {
+  margin: 0 0 0.7rem;
+  padding: 0.1rem 0;
+  border-top: 1px dashed var(--line);
+  border-bottom: 1px dashed var(--line);
+}
+
+:is(#app, #bracket-city-app) .author-json-toggle {
+  padding: 0.55rem 0;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
 :is(#app, #bracket-city-app) [hidden] {
@@ -926,16 +1949,29 @@ body:has(#bracket-city-app) #bracket-city-app {
   }
 
   :is(#app, #bracket-city-app) .author-shell {
-    padding-right: 0.75rem;
-    padding-left: 0.75rem;
+    padding-right: max(0.5rem, env(safe-area-inset-right));
+    padding-left: max(0.5rem, env(safe-area-inset-left));
   }
 
   :is(#app, #bracket-city-app) .author-header {
     min-height: 4.25rem;
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 0.75rem 0;
+  }
+
+  :is(#app, #bracket-city-app) .author-header .mode-nav {
+    justify-content: flex-start;
   }
 
   :is(#app, #bracket-city-app) .author-intro {
+    align-items: stretch;
+    flex-direction: column;
     margin: 0.5rem 0;
+  }
+
+  :is(#app, #bracket-city-app) .author-intro > p {
+    margin-right: 0;
   }
 
   :is(#app, #bracket-city-app) .author-steps,
@@ -944,7 +1980,7 @@ body:has(#bracket-city-app) #bracket-city-app {
   }
 
   :is(#app, #bracket-city-app) .author-panel {
-    padding: 0.7rem;
+    padding: 0.6rem;
   }
 
   :is(#app, #bracket-city-app) .author-load-controls {
@@ -965,11 +2001,33 @@ body:has(#bracket-city-app) #bracket-city-app {
     align-items: stretch;
     flex-direction: column;
   }
+
+  :is(#app, #bracket-city-app) .author-inline-map-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  :is(#app, #bracket-city-app) .author-inline-styles {
+    align-self: flex-start;
+  }
 }
 
 @media (max-width: 860px) {
+  :is(#app, #bracket-city-app) .author-intro--align-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  :is(#app, #bracket-city-app) .author-intro--align-layout .author-intro-actions {
+    grid-column: 1;
+  }
+
+  :is(#app, #bracket-city-app) .author-top-region--with-loader {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+
   :is(#app, #bracket-city-app) .game-shell {
-    width: 100vw;
+    width: var(--nexo-viewport-width, 100vw);
     margin-right: 0;
     margin-left: 50%;
     padding-right: max(0.5rem, env(safe-area-inset-right));
@@ -986,12 +2044,55 @@ body:has(#bracket-city-app) #bracket-city-app {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  :is(#app, #bracket-city-app) .author-output {
+  :is(#app, #bracket-city-app) .author-utilities {
     position: static;
+    max-height: none;
+    overflow: visible;
+  }
+
+  :is(#app, #bracket-city-app) .author-guided-inspector-heading {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  :is(#app, #bracket-city-app) .clue-button {
+    display: inline;
+  }
+
+  :is(#app, #bracket-city-app) .author-guided-inspector .author-bracket-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 861px) {
+  :is(#app, #bracket-city-app) .author-utilities {
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100dvh - 2rem);
+    padding: 0 0.55rem 0.5rem 0;
+    overflow: auto;
+    scrollbar-gutter: stable;
+  }
+
+  :is(#app, #bracket-city-app) .author-utilities .author-field-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  :is(#app, #bracket-city-app) .author-utilities .author-load-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  :is(#app, #bracket-city-app) .author-utilities .author-panel {
+    padding: 0.8rem;
+  }
+
+  :is(#app, #bracket-city-app) .author-shell[data-panel-skin="lab"] .author-utilities .author-style-options {
+    margin-right: 0.35rem;
+  }
+
   :is(#app, #bracket-city-app) .game-shell {
     width: min(calc(100vw - 2rem), 46rem);
     margin-right: 0;
@@ -1001,6 +2102,12 @@ body:has(#bracket-city-app) #bracket-city-app {
 
   :is(#app, #bracket-city-app) .virtual-keyboard {
     display: none;
+  }
+}
+
+@media (min-width: 1280px) {
+  :is(#app, #bracket-city-app) .author-guided-workspace {
+    grid-template-columns: minmax(14rem, 17rem) minmax(0, 1fr);
   }
 }
 

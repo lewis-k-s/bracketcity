@@ -333,9 +333,18 @@ export function replaceLiteralSelection(currentDraft: AuthorDraft, {
   const segments = ownerSegments(draft, owner);
   const answer = literal.slice(start, end);
   const clueId = nextClueId(draft.clues);
-  const replacement = [literal.slice(0, start), { ref: clueId }, literal.slice(end)].filter(
-    (segment) => typeof segment !== "string" || segment.length > 0
+  const before = literal.slice(0, start);
+  const after = literal.slice(end);
+  const isPrompt = owner !== "root";
+  const keepBefore = before.length > 0 && !(isPrompt && segmentIndex === 0 && before.trim().length === 0);
+  const keepAfter = after.length > 0 && !(
+    isPrompt && segmentIndex === sourceSegments.length - 1 && after.trim().length === 0
   );
+  const replacement: Segment[] = [
+    ...(keepBefore ? [before] : []),
+    { ref: clueId },
+    ...(keepAfter ? [after] : [])
+  ];
   segments.splice(segmentIndex, 1, ...replacement);
   draft.clues[clueId] = { answer, prompt: [""] };
   draft.selectedClueId = clueId;

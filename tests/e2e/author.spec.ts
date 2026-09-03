@@ -82,10 +82,99 @@ test.beforeEach(async ({ page }) => {
   await freshAuthorPage(page);
 });
 
+test("classic skin uses the blue Agrupar accent", async ({ page }) => {
+  await page.goto("/?mode=author&flow=inline&skin=plain");
+
+  const groupButton = page.getByTestId("author-inline-key-wrap");
+  await expect(groupButton).toHaveCSS("background-color", "rgb(82, 104, 174)");
+  await expect(groupButton).toHaveCSS("border-color", "rgb(63, 82, 143)");
+  await expect(groupButton).toHaveCSS("border-radius", "4px");
+});
+
+test("the direct flow parses bracket syntax, exposes direction keys, and undoes groups", async ({ page }) => {
+  await page.goto("/?mode=author&flow=inline");
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+
+  const source = page.getByTestId("author-inline-source");
+  await source.fill("La [animal [de casa→doméstico]=gata].");
+  await expect(page.getByTestId("author-inline-group")).toHaveCount(2);
+  await expect(page.getByTestId("author-inline-group-count")).toHaveText("2");
+  await expect(page.getByTestId("author-inline-group-depth")).toHaveText("2");
+  await expect(page.getByTestId("author-inline-answer-slot")).toHaveCount(1);
+  await expect(page.locator(".author-inline-group-contents").nth(1)).toHaveText("de casa→___");
+  await expect(source).toHaveValue("La [animal [de casa→doméstico]=gata].");
+  await expect(page.getByRole("group", { name: "Teclado de estructura" })).toContainText("←");
+  await expect(page.getByRole("group", { name: "Teclado de estructura" })).toContainText("→");
+  await expect(page.getByRole("group", { name: "Teclado de estructura" })).toContainText("=");
+  await expect(page.getByTestId("author-answer")).toHaveCount(0);
+
+  await page.locator('[data-clue-id="c02"] > .author-inline-group-contents').click();
+  await expect(page.getByTestId("author-inline-inspector")).toContainText("doméstico");
+  await expect(page.getByTestId("author-validation-state")).toContainText("válido");
+
+  await page.getByTestId("author-style-toggle").click();
+  await page.getByRole("button", { name: "Plano", exact: true }).click();
+  await expect(page.getByTestId("author-inline-map")).toHaveClass(/author-inline-map--blueprint/u);
+  await expect(page.getByTestId("author-inline-group").first()).toHaveCSS("border-style", "solid");
+  const dimensions = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth
+  }));
+  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
+  const accessibility = await new AxeBuilder({ page }).analyze();
+  expect(accessibility.violations.filter((violation) => ["serious", "critical"].includes(violation.impact ?? ""))).toEqual([]);
+  await page.getByRole("button", { name: "Quitar grupo 1", exact: true }).click();
+  await expect(source).toHaveValue("La gata.");
+  await expect(page.getByTestId("author-inline-group")).toHaveCount(0);
+});
+
+test("desktop keeps support panels in a compact rail and applies skins independently", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/?mode=author&flow=inline");
+
+  const shell = page.locator(".author-shell");
+  const composer = page.locator(".author-inline-composer");
+  const utilities = page.getByTestId("author-utilities");
+  await expect(shell).toHaveAttribute("data-panel-skin", "lab");
+  const styleOptions = page.getByTestId("author-style-options");
+  await expect(styleOptions).not.toHaveAttribute("open", "");
+  const composerBeforeStyleChange = await composer.boundingBox();
+  await styleOptions.getByTestId("author-style-toggle").click();
+  await expect(page.getByRole("group", { name: "Apariencia" })).toBeVisible();
+  await expect(utilities.getByTestId("author-style-options")).toBeVisible();
+  const composerAfterStyleChange = await composer.boundingBox();
+  expect(composerBeforeStyleChange).not.toBeNull();
+  expect(composerAfterStyleChange).not.toBeNull();
+  expect(composerAfterStyleChange!.y).toBeCloseTo(composerBeforeStyleChange!.y, 1);
+  await expect(page.getByTestId("author-load-panel").getByTestId("author-existing-puzzle")).toBeVisible();
+  await expect(utilities.getByTestId("author-existing-puzzle")).toHaveCount(0);
+  await expect(utilities.getByTestId("author-puzzle-id")).toBeVisible();
+  await expect(utilities.locator(".author-output")).toBeVisible();
+  await expect(page.getByTestId("author-json-details")).not.toHaveAttribute("open", "");
+
+  const [composerBox, utilityBox] = await Promise.all([composer.boundingBox(), utilities.boundingBox()]);
+  expect(composerBox).not.toBeNull();
+  expect(utilityBox).not.toBeNull();
+  expect(Math.abs(composerBox!.y - utilityBox!.y)).toBeLessThan(40);
+  expect(composerBox!.width).toBeGreaterThan(utilityBox!.width);
+
+  await Promise.all([
+    page.waitForURL(/skin=blueprint/u),
+    page.getByRole("link", { name: "Plano técnico", exact: true }).click()
+  ]);
+  await expect(shell).toHaveAttribute("data-panel-skin", "blueprint");
+  await expect(styleOptions).toHaveAttribute("open", "");
+  await expect(page.locator(".author-flow-mode a")).toHaveCount(2);
+  await expect(page.locator(".author-flow-mode a").nth(0)).toHaveAttribute("href", /skin=blueprint/u);
+  await expect(page.locator(".author-flow-mode a").nth(1)).toHaveAttribute("href", /skin=blueprint/u);
+});
+
 test("creates a playable nested draft with an internal answer slot and direction-preserving JSON", async ({ page }) => {
   await createNestedDraft(page);
-  await page.getByTestId("author-direction").selectOption("right");
+  await page.getByTestId("author-bracket-format-right").click();
 
+  await expect(page.locator('.author-tree-button[data-clue-id="c02"]')).toHaveText("[última letra→X]");
   await expect(page.getByTestId("author-validation-state")).toContainText("válido");
   await expect(page.getByTestId("author-download")).toBeEnabled();
 
@@ -114,9 +203,30 @@ test("creates a playable nested draft with an internal answer slot and direction
   ]);
 });
 
+test("guided mode pairs the syntax tree with a compact direction editor", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await createNestedDraft(page);
+  await page.getByTestId("author-bracket-format-right").click();
+
+  const workspace = page.getByTestId("author-guided-workspace");
+  const tree = page.getByTestId("author-tree-panel");
+  const inspector = page.getByTestId("clue-inspector");
+  await expect(workspace).toBeVisible();
+  await expect(tree).toContainText("[AX=AX]");
+  await expect(tree).toContainText("[última letra→X]");
+  await expect(inspector.getByTestId("author-bracket-format-right")).toHaveAttribute("aria-pressed", "true");
+  await expect(inspector.getByTestId("author-bracket-format-right").locator(".author-syntax-answer")).toHaveText("respuesta");
+
+  const [treeBox, inspectorBox] = await Promise.all([tree.boundingBox(), inspector.boundingBox()]);
+  expect(treeBox).not.toBeNull();
+  expect(inspectorBox).not.toBeNull();
+  expect(Math.abs(treeBox!.y - inspectorBox!.y)).toBeLessThan(8);
+  expect(treeBox!.x).toBeLessThan(inspectorBox!.x);
+});
+
 test("allows a directed hint to contain a nested clue", async ({ page }) => {
   await createNestedDraft(page);
-  await page.getByTestId("author-direction").selectOption("right");
+  await page.getByTestId("author-bracket-format-right").click();
 
   await convertPreviewText(page, "c02", 0, "última");
   await expect(page.locator('[data-clue-id="c03"]')).toBeVisible();
@@ -131,10 +241,10 @@ test("authors two independent hints and nests from the right-side preview", asyn
   await convertPreviewText(page, "root", 0, "light");
 
   await page.getByTestId("c01-literal-0").fill("sun");
-  await page.getByTestId("author-right-prompt-toggle").click();
+  await page.getByTestId("author-bracket-format-both").click();
   await page.getByTestId("c01:right-literal-0").fill("house");
 
-  await expect(page.getByTestId("author-direction")).toHaveCount(0);
+  await expect(page.getByTestId("author-bracket-format-both")).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("author-structure-preview")).toHaveText("[sun→___←house]");
   const definition = JSON.parse(await page.getByTestId("author-json").inputValue());
   expect(definition.clues.c01.rightPrompt).toEqual(["house"]);
@@ -212,7 +322,7 @@ test("loads an existing dated puzzle for direct editing", async ({ page }) => {
   page.on("dialog", (dialog) => dialog.accept());
   const select = page.getByTestId("author-existing-puzzle");
   await expect(select).toBeVisible();
-  await select.selectOption({ label: "2026-08-31 · Un solo huevo" });
+  await select.selectOption("0");
   await page.getByTestId("author-load-existing").click();
 
   await expect(page.getByTestId("author-final-text")).toHaveValue(
@@ -225,8 +335,9 @@ test("loads an existing dated puzzle for direct editing", async ({ page }) => {
   expect(definition.scoring).toBeDefined();
 
   await page.locator('button.author-tree-button[data-clue-id="c03"]').click();
-  await expect(page.getByTestId("author-aliases-disclosure")).not.toHaveAttribute("open", "");
-  await expect(page.getByTestId("author-aliases")).toHaveValue("arte");
+  await expect(page.getByTestId("author-aliases-disclosure")).toHaveCount(0);
+  await expect(page.getByTestId("author-aliases")).toHaveCount(0);
+  expect(JSON.parse(await page.getByTestId("author-json").inputValue()).clues.c03.accept).toEqual(["arte"]);
   await expect(page.locator("#author-peek")).toHaveCount(0);
   await expect(page.getByTestId("author-convert-selection")).toHaveCount(1);
 });
@@ -261,8 +372,18 @@ test("does not publish an invalid creator draft", async ({ page }) => {
   await expect.poll(async () => page.evaluate(() => localStorage.getItem("nested-clue:published:v1"))).toBeNull();
 });
 
-test("author mode has no horizontal overflow at 320 pixels", async ({ page }) => {
+test("author mode has no horizontal overflow at 320 pixels and grows the source field", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
+  const source = page.getByTestId("author-inline-source");
+  await page.goto("/?mode=author&flow=inline");
+  const initialHeight = await source.evaluate((node) => node.clientHeight);
+  await source.fill(Array.from(
+    { length: 24 },
+    (_, index) => `Línea ${index + 1}: una pista que ocupa espacio.`
+  ).join("\n"));
+  await expect.poll(() => source.evaluate((node) => node.scrollHeight <= node.clientHeight)).toBe(true);
+  expect(await source.evaluate((node) => node.clientHeight)).toBeGreaterThan(initialHeight);
+  await expect(source).toHaveCSS("overflow-y", "hidden");
   const dimensions = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
     scrollWidth: document.documentElement.scrollWidth

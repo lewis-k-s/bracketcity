@@ -489,6 +489,7 @@ export function createGameShell(
     const mountRect = mount.getBoundingClientRect();
     const viewportWidth = document.documentElement.clientWidth || globalThis.innerWidth || mountRect.width;
     const mountCenter = mountRect.left + (mountRect.width / 2);
+    shell.style.setProperty("--nexo-viewport-width", `${viewportWidth}px`);
     shell.style.setProperty("--nexo-viewport-center-offset", `${viewportWidth / 2 - mountCenter}px`);
   };
   const layoutObserver = typeof ResizeObserver === "function" ? new ResizeObserver(syncShellCenter) : null;

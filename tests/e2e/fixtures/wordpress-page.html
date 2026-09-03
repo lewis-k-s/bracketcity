@@ -26,6 +26,12 @@
         min-width: 0;
       }
 
+      .is-layout-constrained > #bracket-city-app {
+        max-width: 40rem;
+        margin-right: auto !important;
+        margin-left: auto !important;
+      }
+
       .entry-content > #bracket-city-app {
         margin-block-start: 24px;
       }
@@ -52,7 +58,7 @@
       <div class="wp-block-column" style="flex-basis: 10%"></div>
     </div>
     <div class="wp-block-columns" data-testid="wordpress-content-row" style="padding-top: var(--wp--preset--spacing--50)">
-      <div class="wp-block-column entry-content" style="flex-basis: 100%">
+      <div class="wp-block-column entry-content is-layout-constrained" style="flex-basis: 100%">
         <script id="bracket-city-config" type="application/json">
           {
             "restBase": "http://127.0.0.1:4174/wp-json/bracket-city/v1",
@@ -61,6 +67,11 @@
             "pageUrl": "http://127.0.0.1:4174/tests/e2e/fixtures/wordpress-page.html",
             "assetBase": "http://127.0.0.1:4175",
             "canAuthor": true,
+            "canSuggest": true,
+            "acceptingNewPuzzles": true,
+            "puzzleLimit": 1000,
+            "suggestionKey": "fixture-suggestion-key",
+            "suggestionUrl": "http://127.0.0.1:4174/tests/e2e/fixtures/wordpress-page.html?mode=suggest&suggestion_key=fixture-suggestion-key",
             "nonce": "rest-nonce"
           }
         </script>

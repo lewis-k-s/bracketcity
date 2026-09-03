@@ -3,7 +3,11 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { JSDOM } from "jsdom";
 import { AUTHOR_STORAGE_KEY } from "../src/author.ts";
-import { startAuthorApp } from "../src/author-view.ts";
+import {
+  AUTHOR_INLINE_STORAGE_KEY,
+  SUGGESTION_STORAGE_KEY,
+  startAuthorApp
+} from "../src/author-view.ts";
 import type { LocalePack, PuzzleDefinition, StorageLike } from "../src/types.ts";
 import { installDomWindow, q, qa, type TestElement } from "./test-dom.ts";
 
@@ -95,9 +99,7 @@ function buildDirectedDraft(storage: StorageLike) {
   const leafPrompt = q('[data-testid="c02-literal-0"]');
   inputValue(leafPrompt, "número después de uno");
 
-  const direction = q('[data-testid="author-direction"]');
-  direction.value = "right";
-  direction.dispatchEvent(new window.Event("change", { bubbles: true }));
+  q('[data-testid="author-bracket-format-right"]').click();
   return app;
 }
 
@@ -112,6 +114,149 @@ test("author mode starts with a stored draft, labelled fields, and validation fe
   assert.match(q('[data-testid="author-validation-state"]').textContent, /todavía no es válido/u);
   assert.equal(q('[data-testid="author-download"]').disabled, true);
   assert.ok(storage.value(AUTHOR_STORAGE_KEY));
+  assert.match(q('[data-testid="author-bracket-guide"]').textContent, /pista=respuesta/u);
+});
+
+test("author mode opens the suggestion page in place, explains access, and copies its URL", async () => {
+  installDom();
+  const suggestionUrl = "https://example.test/sugerir";
+  const copied: string[] = [];
+  const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: { clipboard: { writeText: async (value: string) => { copied.push(value); } } }
+  });
+  try {
+    startAuthorApp({ mount: q("#app"), locale, storage: memoryStorage(), suggestionUrl });
+
+    const link = q('[data-testid="suggestion-page-link"]');
+    assert.equal(link.getAttribute("href"), suggestionUrl);
+    assert.equal(link.getAttribute("target"), null);
+    assert.equal(link.textContent, locale.ui.suggestionShareLink);
+
+    const dialog = q('[data-testid="suggestion-info-dialog"]');
+    assert.equal(dialog.hasAttribute("open"), false);
+    q('[data-testid="suggestion-info-open"]').click();
+    assert.equal(dialog.hasAttribute("open"), true);
+    assert.match(dialog.textContent, /sin iniciar sesión en WordPress/u);
+    assert.match(dialog.textContent, /administrador/u);
+    q('[data-testid="suggestion-info-close"]').click();
+    assert.equal(dialog.hasAttribute("open"), false);
+
+    q('[data-testid="suggestion-copy-link"]').click();
+    await Promise.resolve();
+
+    assert.deepEqual(copied, [suggestionUrl]);
+    assert.equal(q('[data-testid="author-live"]').textContent, locale.ui.suggestionLinkCopied);
+  } finally {
+    if (originalNavigator) Object.defineProperty(globalThis, "navigator", originalNavigator);
+    else delete (globalThis as { navigator?: Navigator }).navigator;
+  }
+});
+
+test("guided bracket formats explain directional forms without rendering internal IDs", () => {
+  installDom();
+  const app = buildDirectedDraft(memoryStorage());
+
+  const workspace = q('[data-testid="author-guided-workspace"]');
+  assert.ok(workspace.contains(q('[data-testid="author-tree-panel"]')));
+  assert.ok(workspace.contains(q('[data-testid="clue-inspector"]')));
+  assert.doesNotMatch(q(".author-tree").textContent, /c\d+/u);
+  assert.match(q(".author-tree").textContent, /\[cubierta formada por dos=dosel\]/u);
+  assert.match(q(".author-tree").textContent, /\[número después de uno→dos\]/u);
+  assert.equal(q('[data-testid="author-bracket-format-right"]').getAttribute("aria-pressed"), "true");
+  assert.match(q('[data-testid="author-bracket-format"]').textContent, /pista→respuesta/u);
+  assert.equal(q('[data-testid="author-bracket-format-right"] .author-syntax-answer').textContent, "respuesta");
+
+  q('[data-testid="author-bracket-format-both"]').click();
+  assert.deepEqual(app.getDraft().clues.c02!.rightPrompt, [""]);
+  assert.equal(q('[data-testid="author-bracket-format-both"]').getAttribute("aria-pressed"), "true");
+
+  q('[data-testid="author-bracket-format-left"]').click();
+  assert.equal(app.getDraft().clues.c02!.rightPrompt, undefined);
+  assert.deepEqual(app.getDraft().clues.c01!.prompt.at(-1), { ref: "c02", direction: "left" });
+
+  q('button.author-tree-button[data-clue-id="c01"]').click();
+  assert.doesNotMatch(q(".reference-chip").textContent, /c\d+/u);
+  assert.match(q(".reference-chip").textContent, /\[dos←número después de uno\]/u);
+});
+
+test("the editor flow and whole-page panel skin stay independent", () => {
+  installDom();
+  startAuthorApp({
+    mount: q("#app"),
+    locale,
+    storage: memoryStorage(),
+    flow: "inline",
+    skin: "blueprint",
+    existingPuzzles: [{ date: "2026-08-31", definition: readPuzzle("2026-08-31-es.json") }]
+  });
+
+  const shell = q(".author-shell");
+  const utilities = q('[data-testid="author-utilities"]');
+  assert.equal(shell.getAttribute("data-panel-skin"), "blueprint");
+  const topLoader = q('[data-testid="author-load-panel"]');
+  assert.ok(topLoader.contains(q('[data-testid="author-existing-puzzle"]')));
+  assert.equal(utilities.querySelector('[data-testid="author-existing-puzzle"]'), null);
+  assert.ok(utilities.contains(q('[data-testid="author-puzzle-id"]')));
+  assert.ok(utilities.contains(q(".author-output")));
+  assert.equal(q('[data-testid="author-json-details"]').hasAttribute("open"), false);
+  assert.equal(q('[data-testid="author-style-options"]').hasAttribute("open"), false);
+  assert.ok(q('[data-testid="author-inline-styles"]'));
+
+  const skinLinks = Array.from(qa('[data-panel-skin-option]'));
+  assert.equal(skinLinks.length, 4);
+  assert.ok(skinLinks.some((link) => /skin=cards/u.test(link.getAttribute("href") ?? "")));
+  assert.ok(skinLinks.every((link) => /flow=inline/u.test(link.getAttribute("href") ?? "")));
+  const flowLinks = Array.from(qa('.author-flow-mode a'));
+  assert.equal(flowLinks.length, 2);
+  for (const link of flowLinks) assert.match(link.getAttribute("href") ?? "", /skin=blueprint/u);
+  assert.ok(flowLinks.some((link) => /flow=inline/u.test(link.getAttribute("href") ?? "")));
+});
+
+test("the direct editor parses nested groups, inserts syntax keys, and undoes a group", () => {
+  installDom();
+  const storage = memoryStorage();
+  const app = startAuthorApp({ mount: q("#app"), locale, storage, flow: "inline" });
+  assert.ok(app);
+  assert.ok(q('[data-testid="author-inline-composer"]'));
+  assert.equal(q('[data-testid="author-final-text"]'), null);
+
+  inputValue(q('[data-testid="author-inline-source"]'), "La [animal [de casa→doméstico]=gata].");
+  assert.deepEqual(app.getDraft().root, ["La ", { ref: "c01" }, "."]);
+  assert.deepEqual(app.getDraft().clues.c01!.prompt, ["animal ", { ref: "c02", direction: "right" }]);
+  assert.equal(app.getDraft().clues.c01!.answer, "gata");
+  assert.equal(app.getDraft().clues.c02!.answer, "doméstico");
+  assert.equal(app.getDraft().finalText, "La gata.");
+  assert.equal(q('[data-testid="author-inline-group-count"]').textContent, "2");
+  assert.equal(q('[data-testid="author-inline-group-depth"]').textContent, "2");
+  assert.equal(qa('[data-testid="author-inline-remove"]').length, 2);
+  assert.equal(storage.value(AUTHOR_INLINE_STORAGE_KEY), "La [animal [de casa→doméstico]=gata].");
+  assert.equal(q('[data-testid="author-answer"]'), null);
+  assert.ok(q('[data-testid="author-inline-key-answer"]'));
+
+  q('[data-clue-id="c02"] > .author-inline-group-contents').click();
+  assert.match(q('[data-testid="author-inline-inspector"]').textContent, /doméstico/u);
+
+  q('[data-clue-id="c01"] > [data-testid="author-inline-remove"]').click();
+  assert.equal(q('[data-testid="author-inline-source"]').value, "La gata.");
+  assert.deepEqual(app.getDraft().clues, {});
+
+  const source = q('[data-testid="author-inline-source"]');
+  source.focus();
+  source.setSelectionRange(3, 7);
+  q('[data-testid="author-inline-key-wrap"]').click();
+  assert.equal(q('[data-testid="author-inline-source"]').value, "La [=gata].");
+});
+
+test("the direct editor keeps malformed syntax visible and blocks export", () => {
+  installDom();
+  startAuthorApp({ mount: q("#app"), locale, storage: memoryStorage(), flow: "inline" });
+  inputValue(q('[data-testid="author-inline-source"]'), "Una [pista");
+
+  assert.match(q('[data-testid="author-inline-parse-error"]').textContent, /Falta \]/u);
+  assert.equal(q('[data-testid="author-download"]').disabled, true);
+  assert.equal(q('[data-testid="author-inline-source"]').value, "Una [pista");
 });
 
 test("author mode falls back to an in-memory draft when storage reads fail", () => {
@@ -130,6 +275,25 @@ test("author mode falls back to an in-memory draft when storage reads fail", () 
   assert.equal(app.getDraft().finalText, "Texto sin guardar");
   assert.match(q(".author-error").textContent, /No se pudo guardar/u);
   assert.equal(q('[data-testid="author-live"]').textContent, locale.ui.authorStorageError);
+});
+
+test("typing in a prompt keeps the text control selection intact", () => {
+  installDom();
+  buildDirectedDraft(memoryStorage());
+  const prompt = q('[data-testid="c02-literal-0"]');
+  const selection = document.getSelection()!;
+  const originalRemoveAllRanges = selection.removeAllRanges.bind(selection);
+  let removedRanges = 0;
+  selection.removeAllRanges = () => {
+    removedRanges += 1;
+    originalRemoveAllRanges();
+  };
+
+  prompt.focus();
+  inputValue(prompt, "una pista escrita sin perder el foco");
+
+  assert.equal(document.activeElement, prompt);
+  assert.equal(removedRanges, 0);
 });
 
 test("an initial phrase selection enables conversion when the browser uses preview boundaries", () => {
@@ -217,6 +381,22 @@ test("a directed hint can contain a deeper nested clue", () => {
   assert.equal(q('[data-testid="author-download"]').disabled, true);
 });
 
+test("a directional clue does not show a spare field for trailing prompt whitespace", () => {
+  installDom();
+  const app = startAuthorApp({ mount: q("#app"), locale, storage: memoryStorage() });
+  inputValue(q('[data-testid="author-final-text"]'), "era");
+  convertPreviewSelection("root", 0, "era");
+  inputValue(q('[data-testid="c01-literal-0"]'), "cuando ");
+  q('[data-testid="author-bracket-format-both"]').click();
+
+  convertPreviewSelection("c01", 0, "ando");
+
+  assert.deepEqual(app.getDraft().clues.c01!.prompt, ["cu", { ref: "c02" }]);
+  q('button.author-tree-button[data-clue-id="c01"]').click();
+  assert.equal(q('[data-testid="c01-literal-2"]'), null);
+  assert.ok(q('[data-testid="c01:right-literal-0"]'));
+});
+
 test("the editor adds two independent hints and supports preview selection on the right", () => {
   installDom();
   const app = startAuthorApp({ mount: q("#app"), locale, storage: memoryStorage() });
@@ -226,11 +406,11 @@ test("the editor adds two independent hints and supports preview selection on th
 
   const left = q('[data-testid="c01-literal-0"]');
   inputValue(left, "sun");
-  q('[data-testid="author-right-prompt-toggle"]').click();
+  q('[data-testid="author-bracket-format-both"]').click();
   const right = q('[data-testid="c01:right-literal-0"]');
   inputValue(right, "house");
 
-  assert.equal(q('[data-testid="author-direction"]'), null);
+  assert.equal(q('[data-testid="author-bracket-format-both"]').getAttribute("aria-pressed"), "true");
   assert.equal(q('[data-testid="author-structure-preview"]').textContent, "[sun→___←house]");
   const definition = JSON.parse(q('[data-testid="author-json"]').value);
   assert.deepEqual(definition.clues.c01!.rightPrompt, ["house"]);
@@ -290,11 +470,64 @@ test("existing dated puzzles load into the creator without rebuilding them by ha
   assert.equal(q('[data-testid="author-puzzle-id"]').value, existingPuzzles[1]!.definition.id);
 
   q('button.author-tree-button[data-clue-id="c03"]').click();
-  const aliases = q('[data-testid="author-aliases-disclosure"]');
-  assert.equal(aliases.open, false);
-  assert.equal(q('[data-testid="author-aliases"]').value, "arte");
+  assert.equal(q('[data-testid="author-aliases-disclosure"]'), null);
+  assert.deepEqual(app.getDraft().clues.c03!.accept, ["arte"]);
   assert.equal(q("#author-peek"), null);
   assert.equal(document.body.textContent.includes(locale.ui.authorPeek ?? ""), false);
+});
+
+test("a loaded puzzle can move to Trash and be restored immediately", async () => {
+  installDom();
+  const definition = readPuzzle("2026-08-31-es.json");
+  const existingPuzzles = [{ date: definition.releaseDate!, definition }];
+  const deleted: string[] = [];
+  const restored: string[] = [];
+  const app = startAuthorApp({
+    mount: q("#app"),
+    locale,
+    storage: memoryStorage(),
+    existingPuzzles,
+    onPublish() {},
+    async onDeletePuzzle(date) { deleted.push(date); },
+    async onRestorePuzzle(date) { restored.push(date); }
+  });
+  const select = q('[data-testid="author-existing-puzzle"]');
+  select.value = "0";
+  select.dispatchEvent(new window.Event("change", { bubbles: true }));
+  q('[data-testid="author-load-existing"]').click();
+
+  q('[data-testid="author-delete-puzzle"]').click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.deepEqual(deleted, [definition.releaseDate]);
+  assert.equal(existingPuzzles.length, 0);
+  assert.equal(q('[data-testid="author-delete-puzzle"]'), null);
+
+  q('[data-testid="author-undo-delete"]').click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.deepEqual(restored, [definition.releaseDate]);
+  assert.equal(existingPuzzles.length, 1);
+  assert.equal(app.getDraft().metadata.id, definition.id);
+  assert.ok(q('[data-testid="author-delete-puzzle"]'));
+});
+
+test("the release limit pauses new suggestions but keeps the draft editable", () => {
+  installDom();
+  let submissions = 0;
+  startAuthorApp({
+    mount: q("#app"),
+    locale,
+    storage: memoryStorage(),
+    variant: "suggestion",
+    acceptingNewPuzzles: false,
+    puzzleLimit: 1000,
+    onSubmitSuggestion() { submissions += 1; }
+  });
+
+  assert.equal(q('[data-testid="suggestion-submit"]').disabled, true);
+  assert.match(q('[data-testid="puzzle-limit-message"]').textContent, /1000/u);
+  inputValue(q("#author-title-input"), "Un borrador que se conserva");
+  assert.equal(q("#author-title-input").value, "Un borrador que se conserva");
+  assert.equal(submissions, 0);
 });
 
 test("field edits update the draft before copy and download", async () => {
@@ -379,7 +612,7 @@ test("a valid dated draft publishes for play and updates the Jugar link", () => 
   assert.equal(published.length, 1);
   assert.equal(published[0]!.definition.releaseDate, "2026-09-01");
   assert.equal(published[0]!.options.overwrite, false);
-  assert.equal(q('[data-testid="author-publish-status"]').textContent, "Guardado para jugar el 2026-09-01.");
+  assert.equal(q('[data-testid="author-publish-status"]').textContent, "Guardado para 2026-09-01.");
   assert.equal(q(".mode-link").getAttribute("href"), "?date=2026-09-01");
 });
 
@@ -422,6 +655,67 @@ test("a valid draft asks for a date instead of publishing without one", () => {
   publish.click();
   assert.equal(calls, 0);
   assert.equal(q(".author-error").textContent, locale.ui.authorPublishDateRequired);
+});
+
+test("suggestion mode submits a valid undated draft without exposing JSON controls", async () => {
+  installDom();
+  const storage = memoryStorage();
+  buildDirectedDraft(storage);
+  storage.setItem(SUGGESTION_STORAGE_KEY, storage.value(AUTHOR_STORAGE_KEY)!);
+  const submitted: PuzzleDefinition[] = [];
+  startAuthorApp({
+    mount: q("#app"),
+    locale,
+    storage,
+    variant: "suggestion",
+    async onSubmitSuggestion(definition) {
+      submitted.push(definition);
+      return { suggestionId: 17, status: "pending" };
+    }
+  });
+
+  assert.equal(q("h1").textContent, locale.ui.suggestionTitle);
+  assert.equal(q("#author-release-date").value, "");
+  assert.equal(q('[data-testid="author-json"]'), null);
+  assert.equal(q('[data-testid="author-download"]'), null);
+  q('[data-testid="suggestion-info-open"]').click();
+  assert.match(q('[data-testid="suggestion-info-dialog"]').textContent, /queda pendiente/u);
+  q('[data-testid="suggestion-submit"]').click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(submitted.length, 1);
+  assert.equal(submitted[0]!.releaseDate, undefined);
+  assert.match(q('[data-testid="suggestion-submit-status"]').textContent, /#17/u);
+  assert.equal(q('[data-testid="suggestion-submit"]').disabled, true);
+});
+
+test("an admin can load a pending suggestion and approve it with a date", () => {
+  installDom();
+  const definition = readPuzzle("2026-08-31-es.json");
+  delete definition.releaseDate;
+  const storage = memoryStorage();
+  const published: Array<{ definition: PuzzleDefinition; suggestionId?: number }> = [];
+  const suggestions = [{
+    metadata: { suggestionId: 17, id: definition.id, title: definition.title ?? definition.id },
+    definition
+  }];
+  const onPublish = (next: PuzzleDefinition, options: { readonly suggestionId?: number }) => {
+      published.push({
+        definition: next,
+        ...(options.suggestionId === undefined ? {} : { suggestionId: options.suggestionId })
+      });
+  };
+  startAuthorApp({ mount: q("#app"), locale, storage, suggestions, onPublish });
+  const select = q('[data-testid="author-existing-suggestion"]');
+  select.value = "0";
+  select.dispatchEvent(new window.Event("change", { bubbles: true }));
+  q('[data-testid="suggestion-load"]').click();
+  startAuthorApp({ mount: q("#app"), locale, storage, suggestions, onPublish });
+  inputValue(q("#author-release-date"), "2026-09-04");
+  q('[data-testid="author-publish"]').click();
+  assert.equal(published.length, 1);
+  assert.equal(published[0]!.suggestionId, 17);
+  assert.equal(published[0]!.definition.releaseDate, "2026-09-04");
+  assert.equal(published[0]!.definition.revision, 1);
 });
 
 test("an invalid creator draft cannot publish", () => {
@@ -484,7 +778,7 @@ test("an asynchronous correction succeeds and keeps the WordPress page permalink
   q('[data-testid="author-publish"]').click();
   await new Promise((resolve) => setTimeout(resolve, 0));
   assert.equal(calls[0]!.options.overwrite, true);
-  assert.equal(q('[data-testid="author-publish-status"]').textContent, "Guardado para jugar el 2026-09-01.");
+  assert.equal(q('[data-testid="author-publish-status"]').textContent, "Guardado para 2026-09-01.");
   assert.equal(q(".mode-link").href, "https://example.test/juegos/nexo/?ref=menu&date=2026-09-01");
 });
 
