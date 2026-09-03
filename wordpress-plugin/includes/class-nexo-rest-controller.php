@@ -16,6 +16,7 @@ final class Nexo_REST_Controller {
 			array( 'methods' => 'PUT', 'callback' => array( self::class, 'update' ), 'permission_callback' => array( self::class, 'can_publish' ) ),
 			array( 'methods' => 'DELETE', 'callback' => array( self::class, 'trash' ), 'permission_callback' => array( self::class, 'can_publish' ) ),
 		) );
+		register_rest_route( self::NS, '/suggestions', array( 'methods' => WP_REST_Server::CREATABLE, 'callback' => array( self::class, 'submit_suggestion' ), 'permission_callback' => array( self::class, 'can_submit_suggestion' ) ) );
 		register_rest_route( self::NS, '/admin/puzzles', array( 'methods' => WP_REST_Server::READABLE, 'callback' => array( self::class, 'admin_list' ), 'permission_callback' => array( self::class, 'can_publish' ) ) );
 		register_rest_route( self::NS, '/admin/puzzles/(?P<date>\d{4}-\d{2}-\d{2})', array( 'methods' => WP_REST_Server::READABLE, 'callback' => array( self::class, 'admin_get' ), 'permission_callback' => array( self::class, 'can_publish' ) ) );
 		register_rest_route( self::NS, '/admin/puzzles/trash', array( 'methods' => WP_REST_Server::READABLE, 'callback' => array( self::class, 'admin_list_trashed' ), 'permission_callback' => array( self::class, 'can_publish' ) ) );
@@ -23,9 +24,18 @@ final class Nexo_REST_Controller {
 			array( 'methods' => WP_REST_Server::READABLE, 'callback' => array( self::class, 'admin_get_trashed' ), 'permission_callback' => array( self::class, 'can_publish' ) ),
 			array( 'methods' => WP_REST_Server::CREATABLE, 'callback' => array( self::class, 'restore' ), 'permission_callback' => array( self::class, 'can_publish' ) ),
 		) );
+		register_rest_route( self::NS, '/admin/suggestions', array( 'methods' => WP_REST_Server::READABLE, 'callback' => array( self::class, 'admin_list_suggestions' ), 'permission_callback' => array( self::class, 'can_publish' ) ) );
+		register_rest_route( self::NS, '/admin/suggestions/(?P<suggestion_id>\d+)', array(
+			array( 'methods' => WP_REST_Server::READABLE, 'callback' => array( self::class, 'admin_get_suggestion' ), 'permission_callback' => array( self::class, 'can_publish' ) ),
+			array( 'methods' => WP_REST_Server::DELETABLE, 'callback' => array( self::class, 'reject_suggestion' ), 'permission_callback' => array( self::class, 'can_publish' ) ),
+		) );
+		register_rest_route( self::NS, '/admin/suggestions/(?P<suggestion_id>\d+)/approve', array( 'methods' => WP_REST_Server::CREATABLE, 'callback' => array( self::class, 'approve_suggestion' ), 'permission_callback' => array( self::class, 'can_publish' ) ) );
 	}
 
 	public static function can_publish(): bool { return current_user_can( Nexo_Capabilities::MANAGE_PUZZLES ); }
+	public static function can_submit_suggestion( WP_REST_Request $request ): bool {
+		return Nexo_Suggestions::valid_key( (string) $request->get_header( 'X-Nexo-Suggestion-Key' ) );
+	}
 
 	public static function public_list(): WP_REST_Response {
 		return rest_ensure_response( array( 'schemaVersion' => 1, 'currentDate' => Nexo_Puzzles::current_date(), 'timeZone' => NEXO_TIME_ZONE, 'puzzles' => Nexo_Puzzles::list_metadata( false ) ) );
@@ -33,6 +43,48 @@ final class Nexo_REST_Controller {
 
 	public static function admin_list(): WP_REST_Response {
 		return rest_ensure_response( array( 'schemaVersion' => 1, 'currentDate' => Nexo_Puzzles::current_date(), 'timeZone' => NEXO_TIME_ZONE, 'puzzles' => Nexo_Puzzles::list_metadata( true ) ) );
+	}
+
+	public static function submit_suggestion( WP_REST_Request $request ) {
+		$definition = self::body( $request, false );
+		if ( is_wp_error( $definition ) ) return $definition;
+		$definition['revision'] = 1;
+		$post_id = Nexo_Suggestions::insert( $definition );
+		if ( is_wp_error( $post_id ) ) return $post_id;
+		return new WP_REST_Response( array( 'suggestionId' => $post_id, 'status' => 'pending' ), 201 );
+	}
+
+	public static function admin_list_suggestions(): WP_REST_Response {
+		return rest_ensure_response( array( 'suggestions' => Nexo_Suggestions::list_metadata() ) );
+	}
+
+	public static function admin_get_suggestion( WP_REST_Request $request ) {
+		$post = self::suggestion( $request );
+		if ( is_wp_error( $post ) ) return $post;
+		$definition = Nexo_Suggestions::definition( $post );
+		$validation = is_array( $definition ) ? Nexo_Validator::validate( $definition ) : array( 'valid' => false );
+		return is_array( $definition ) && $validation['valid']
+			? rest_ensure_response( $definition )
+			: self::error( 'nexo_invalid_stored_suggestion', 'Stored suggestion is invalid.', 500 );
+	}
+
+	public static function approve_suggestion( WP_REST_Request $request ) {
+		$post = self::suggestion( $request );
+		if ( is_wp_error( $post ) ) return $post;
+		$definition = self::body( $request, true );
+		if ( is_wp_error( $definition ) ) return $definition;
+		$date = $definition['releaseDate'];
+		if ( null !== Nexo_Puzzles::find( $date ) ) return self::error( 'nexo_conflict', 'A puzzle already exists for this date.', 409 );
+		$definition['revision'] = 1;
+		$result = Nexo_Suggestions::approve( $post, $definition );
+		return is_wp_error( $result ) ? $result : rest_ensure_response( self::saved( $definition, $post->ID ) );
+	}
+
+	public static function reject_suggestion( WP_REST_Request $request ) {
+		$post = self::suggestion( $request );
+		if ( is_wp_error( $post ) ) return $post;
+		$result = Nexo_Suggestions::reject( $post );
+		return is_wp_error( $result ) ? $result : rest_ensure_response( array( 'suggestionId' => $post->ID, 'status' => 'rejected' ) );
 	}
 
 	public static function public_get( WP_REST_Request $request ) {
@@ -120,15 +172,22 @@ final class Nexo_REST_Controller {
 		return rest_ensure_response( $definition );
 	}
 
-	private static function body( WP_REST_Request $request ) {
+	private static function body( WP_REST_Request $request, bool $require_date = true ) {
 		$runtime_errors = Nexo_Validator::runtime_errors();
 		if ( array() !== $runtime_errors ) return new WP_Error( 'nexo_server_requirements', 'The server cannot safely normalize puzzle answers.', array( 'status' => 500, 'errors' => $runtime_errors ) );
 		$definition = $request->get_json_params();
 		if ( ! is_array( $definition ) || array_is_list( $definition ) ) return self::error( 'nexo_malformed_json', 'Request body must be a puzzle object.', 400 );
 		$result = Nexo_Validator::validate( $definition );
 		if ( ! $result['valid'] ) return new WP_Error( 'nexo_invalid_puzzle', 'Puzzle validation failed.', array( 'status' => 422, 'errors' => $result['errors'] ) );
-		if ( ! isset( $definition['releaseDate'] ) ) return self::error( 'nexo_missing_release_date', 'releaseDate is required for publishing.', 422 );
+		if ( $require_date && ! isset( $definition['releaseDate'] ) ) return self::error( 'nexo_missing_release_date', 'releaseDate is required for publishing.', 422 );
 		return $definition;
+	}
+
+	private static function suggestion( WP_REST_Request $request ) {
+		$suggestion_id = filter_var( $request['suggestion_id'], FILTER_VALIDATE_INT, array( 'options' => array( 'min_range' => 1 ) ) );
+		if ( false === $suggestion_id ) return self::error( 'nexo_invalid_suggestion_id', 'Suggestion ID must be a positive integer.', 400 );
+		$post = Nexo_Suggestions::find( $suggestion_id );
+		return null === $post ? self::error( 'nexo_not_found', 'Suggestion not found.', 404 ) : $post;
 	}
 
 	private static function date( WP_REST_Request $request ) {

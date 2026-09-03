@@ -4,6 +4,7 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 final class Nexo_Puzzles {
+	public const PURGE_HOOK = 'nexo_purge_old_puzzle_trash';
 	public const POST_TYPE = 'bc_puzzle';
 	public const META_DATE = '_bc_release_date';
 	public const META_ID = '_bc_puzzle_id';
@@ -30,6 +31,32 @@ final class Nexo_Puzzles {
 
 	public static function current_date(): string {
 		return ( new DateTimeImmutable( 'now', new DateTimeZone( NEXO_TIME_ZONE ) ) )->format( 'Y-m-d' );
+	}
+
+	public static function max_puzzles(): int {
+		$default = defined( 'NEXO_MAX_PUZZLES' ) ? (int) NEXO_MAX_PUZZLES : 1000;
+		$limit = function_exists( 'apply_filters' ) ? (int) apply_filters( 'nexo_max_puzzles', $default ) : $default;
+		return max( 1, $limit );
+	}
+
+	/** Count published and pending puzzles. Trashed posts do not consume capacity. */
+	public static function stored_count(): int {
+		$counts = wp_count_posts( self::POST_TYPE );
+		return (int) ( $counts->private ?? 0 ) + (int) ( $counts->pending ?? 0 );
+	}
+
+	public static function has_capacity(): bool {
+		return self::stored_count() < self::max_puzzles();
+	}
+
+	/** @return true|WP_Error */
+	public static function ensure_capacity() {
+		if ( self::has_capacity() ) return true;
+		return new WP_Error(
+			'nexo_puzzle_limit',
+			'Nexo has reached its puzzle limit. Delete a puzzle or reject a pending suggestion before adding another.',
+			array( 'status' => 507, 'limit' => self::max_puzzles() )
+		);
 	}
 
 	public static function find( string $date ): ?WP_Post {
@@ -120,6 +147,8 @@ final class Nexo_Puzzles {
 
 	/** @return int|WP_Error */
 	public static function insert( array $definition ) {
+		$capacity = self::ensure_capacity();
+		if ( is_wp_error( $capacity ) ) return $capacity;
 		$date = $definition['releaseDate'];
 		$post_id = wp_insert_post(
 			array(
@@ -165,11 +194,53 @@ final class Nexo_Puzzles {
 
 	/** Restore a puzzle that was moved to WordPress Trash. */
 	public static function restore( WP_Post $post ) {
+		$capacity = self::ensure_capacity();
+		if ( is_wp_error( $capacity ) ) return $capacity;
 		$result = wp_untrash_post( $post->ID );
 		if ( false === $result ) {
 			return new WP_Error( 'nexo_restore_failed', 'Puzzle could not be restored from Trash.' );
 		}
 		return wp_update_post( array( 'ID' => $post->ID, 'post_status' => 'private' ), true );
+	}
+
+	public static function schedule_cleanup(): void {
+		if ( ! wp_next_scheduled( self::PURGE_HOOK ) ) {
+			wp_schedule_event( time() + 3600, 'daily', self::PURGE_HOOK );
+		}
+	}
+
+	public static function unschedule_cleanup(): void {
+		wp_clear_scheduled_hook( self::PURGE_HOOK );
+	}
+
+	/** Permanently remove Nexo trash after the configured retention period. */
+	public static function purge_old_trash(): int {
+		$default = defined( 'NEXO_TRASH_RETENTION_DAYS' ) ? (int) NEXO_TRASH_RETENTION_DAYS : 30;
+		$retention_days = function_exists( 'apply_filters' )
+			? (int) apply_filters( 'nexo_trash_retention_days', $default )
+			: $default;
+		$retention_days = max( 1, $retention_days );
+		$post_ids = get_posts(
+			array(
+				'post_type' => self::POST_TYPE,
+				'post_status' => 'trash',
+				'fields' => 'ids',
+				'numberposts' => -1,
+				'date_query' => array(
+					array(
+						'column' => 'post_modified_gmt',
+						'before' => gmdate( 'Y-m-d H:i:s', time() - ( $retention_days * 86400 ) ),
+						'inclusive' => true,
+					),
+				),
+				'suppress_filters' => true,
+			)
+		);
+		$deleted = 0;
+		foreach ( $post_ids as $post_id ) {
+			if ( false !== wp_delete_post( (int) $post_id, true ) ) $deleted++;
+		}
+		return $deleted;
 	}
 
 	private static function write_meta( int $post_id, array $definition ): bool {

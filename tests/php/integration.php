@@ -5,8 +5,9 @@ function nexo_check( bool $condition, string $message ): void {
 	if ( ! $condition ) throw new RuntimeException( $message );
 }
 
-function nexo_request( string $method, string $route, ?array $body = null ): WP_REST_Response {
+function nexo_request( string $method, string $route, ?array $body = null, array $headers = array() ): WP_REST_Response {
 	$request = new WP_REST_Request( $method, $route );
+	foreach ( $headers as $name => $value ) $request->set_header( $name, $value );
 	if ( null !== $body ) {
 		$request->set_header( 'Content-Type', 'application/json' );
 		$request->set_body( wp_json_encode( $body ) );
@@ -38,6 +39,7 @@ nexo_check( Nexo_Validator::validate( $unicode )['valid'], 'NFC-equivalent decom
 nexo_check( $type instanceof WP_Post_Type, 'bc_puzzle must be registered.' );
 nexo_check( ! $type->public && ! $type->publicly_queryable && ! $type->show_ui && ! $type->show_in_rest, 'bc_puzzle must be private and hidden.' );
 nexo_check( post_type_supports( 'bc_puzzle', 'revisions' ), 'bc_puzzle must support revisions.' );
+nexo_check( false !== wp_next_scheduled( Nexo_Puzzles::PURGE_HOOK ), 'Activation must schedule old Nexo Trash cleanup.' );
 
 $seed_metadata = Nexo_Puzzles::list_metadata( false );
 nexo_check( array() !== $seed_metadata, 'Activation must import at least one released bundled seed.' );
@@ -70,6 +72,14 @@ $seed_get = nexo_request( 'GET', '/bracket-city/v1/puzzles/' . $seed_date );
 nexo_check( 200 === $seed_get->get_status() && $seed_puzzle_id === $seed_get->get_data()['id'], 'Anonymous users must read a released seed.' );
 $admin_denied = nexo_request( 'GET', '/bracket-city/v1/admin/puzzles' );
 nexo_check( in_array( $admin_denied->get_status(), array( 401, 403 ), true ), 'Anonymous users must not read the admin archive.' );
+$suggestion = nexo_puzzle( '2098-12-30', 'suggested-puzzle-es' );
+unset( $suggestion['releaseDate'] );
+nexo_check( in_array( nexo_request( 'POST', '/bracket-city/v1/suggestions', $suggestion )->get_status(), array( 401, 403 ), true ), 'A missing suggestion key must be rejected.' );
+$suggestion_key = Nexo_Suggestions::ensure_key();
+$suggested = nexo_request( 'POST', '/bracket-city/v1/suggestions', $suggestion, array( 'X-Nexo-Suggestion-Key' => $suggestion_key ) );
+nexo_check( 201 === $suggested->get_status() && 'pending' === $suggested->get_data()['status'], 'A shared-link visitor must be able to submit an undated suggestion.' );
+$suggestion_id = $suggested->get_data()['suggestionId'];
+nexo_check( 'pending' === get_post_status( $suggestion_id ), 'A suggestion must remain pending before review.' );
 
 $roles = array();
 Nexo_Capabilities::register();
@@ -111,6 +121,41 @@ foreach ( array( 'editor', 'author', 'subscriber' ) as $role ) {
 }
 
 wp_set_current_user( $roles['nexo_puzzle_manager'] );
+$suggestion_list = nexo_request( 'GET', '/bracket-city/v1/admin/suggestions' );
+nexo_check( 200 === $suggestion_list->get_status() && $suggestion_id === $suggestion_list->get_data()['suggestions'][0]['suggestionId'], 'Puzzle Manager must list pending suggestions.' );
+nexo_check( 200 === nexo_request( 'GET', '/bracket-city/v1/admin/suggestions/' . $suggestion_id )->get_status(), 'Puzzle Manager must load a pending suggestion.' );
+$suggestion['releaseDate'] = '2098-12-30';
+$approved = nexo_request( 'POST', '/bracket-city/v1/admin/suggestions/' . $suggestion_id . '/approve', $suggestion );
+nexo_check( 200 === $approved->get_status(), 'Puzzle Manager must approve a suggestion after assigning a date.' );
+nexo_check( 'private' === get_post_status( $suggestion_id ) && $suggestion_id === Nexo_Puzzles::find( '2098-12-30' )->ID, 'Approval must convert the pending post in place.' );
+nexo_check( 1 === $approved->get_data()['revision'], 'An approved suggestion must start at revision one.' );
+$rejected_suggestion = $suggestion;
+unset( $rejected_suggestion['releaseDate'] );
+$rejected_suggestion['id'] = 'rejected-suggestion-es';
+$rejected = nexo_request( 'POST', '/bracket-city/v1/suggestions', $rejected_suggestion, array( 'X-Nexo-Suggestion-Key' => $suggestion_key ) );
+$rejected_id = $rejected->get_data()['suggestionId'];
+nexo_check( 200 === nexo_request( 'DELETE', '/bracket-city/v1/admin/suggestions/' . $rejected_id )->get_status(), 'Puzzle Manager must reject a pending suggestion.' );
+nexo_check( 'trash' === get_post_status( $rejected_id ), 'A rejected suggestion must move to Trash.' );
+
+$capacity_limit = Nexo_Puzzles::stored_count();
+$capacity_filter = static function () use ( $capacity_limit ) { return $capacity_limit; };
+add_filter( 'nexo_max_puzzles', $capacity_filter );
+$blocked_suggestion = $rejected_suggestion;
+$blocked_suggestion['id'] = 'capacity-suggestion-es';
+$blocked_suggestion_response = nexo_request( 'POST', '/bracket-city/v1/suggestions', $blocked_suggestion, array( 'X-Nexo-Suggestion-Key' => $suggestion_key ) );
+nexo_check( 507 === $blocked_suggestion_response->get_status() && 'nexo_puzzle_limit' === $blocked_suggestion_response->get_data()['code'], 'The shared link must stop accepting suggestions at capacity.' );
+$blocked_puzzle_response = nexo_request( 'POST', '/bracket-city/v1/puzzles', nexo_puzzle( '2099-01-02', 'capacity-puzzle-es' ) );
+nexo_check( 507 === $blocked_puzzle_response->get_status() && 'nexo_puzzle_limit' === $blocked_puzzle_response->get_data()['code'], 'The admin create route must stop accepting puzzles at capacity.' );
+remove_filter( 'nexo_max_puzzles', $capacity_filter );
+
+global $wpdb;
+$wpdb->update(
+	$wpdb->posts,
+	array( 'post_modified' => '2000-01-01 00:00:00', 'post_modified_gmt' => '2000-01-01 00:00:00' ),
+	array( 'ID' => $rejected_id )
+);
+nexo_check( Nexo_Puzzles::purge_old_trash() >= 1 && null === get_post( $rejected_id ), 'Expired Nexo Trash must be deleted permanently.' );
+
 $future = nexo_puzzle( '2099-01-01', 'future-puzzle-es' );
 $created = nexo_request( 'POST', '/bracket-city/v1/puzzles', $future );
 nexo_check( 201 === $created->get_status(), 'Puzzle Manager must create a puzzle.' );
@@ -139,6 +184,12 @@ $trash_list = nexo_request( 'GET', '/bracket-city/v1/admin/puzzles/trash' );
 nexo_check( 200 === $trash_list->get_status() && '2099-01-01' === $trash_list->get_data()['puzzles'][0]['date'], 'Puzzle Manager must be able to list removed puzzles.' );
 nexo_check( ! array_key_exists( 'title', $trash_list->get_data()['puzzles'][0] ), 'Removed puzzle listings must not disclose titles.' );
 nexo_check( 200 === nexo_request( 'GET', '/bracket-city/v1/admin/puzzles/trash/2099-01-01' )->get_status(), 'Puzzle Manager must be able to preview a removed puzzle.' );
+$restore_limit = Nexo_Puzzles::stored_count();
+$restore_capacity_filter = static function () use ( $restore_limit ) { return $restore_limit; };
+add_filter( 'nexo_max_puzzles', $restore_capacity_filter );
+$blocked_restore = nexo_request( 'POST', '/bracket-city/v1/admin/puzzles/trash/2099-01-01' );
+nexo_check( 507 === $blocked_restore->get_status() && 'trash' === get_post_status( $future_post->ID ), 'Undo must not exceed the puzzle capacity.' );
+remove_filter( 'nexo_max_puzzles', $restore_capacity_filter );
 $restored = nexo_request( 'POST', '/bracket-city/v1/admin/puzzles/trash/2099-01-01' );
 nexo_check( 200 === $restored->get_status() && 'restored' === $restored->get_data()['status'], 'Puzzle Manager must be able to restore a removed puzzle.' );
 nexo_check( $future_post->ID === Nexo_Puzzles::find( '2099-01-01' )->ID, 'Restoring a puzzle must preserve its post identity.' );
