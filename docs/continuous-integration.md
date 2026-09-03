@@ -4,6 +4,9 @@ GitHub Actions tests every pull request and push to `main`. A successful
 `main` run deploys `dist-pages/` to GitHub Pages and retains the installable
 WordPress bridge ZIP for 30 days.
 
+Before you push a release, run `npm run deploy:prepare`. It builds the same
+Pages files and creates a checked bridge ZIP locally, but does not publish.
+
 ## Repository setup
 
 1. Push this project to a public GitHub repository.

@@ -51,12 +51,15 @@ function runWithLocalPhp(): void {
   for (const path of phpFiles(join(projectRoot, "tests", "php"))) {
     run("php", ["-l", path]);
   }
+  for (const path of phpFiles(join(projectRoot, "scripts"))) {
+    run("php", ["-l", path]);
+  }
   run("sh", ["tests/php/run.sh"]);
 }
 
 function runWithDocker(): void {
   const checks = [
-    "find wordpress-plugin tests/php -type f -name '*.php' -exec php -l {} \\;",
+    "find wordpress-plugin tests/php scripts -type f -name '*.php' -exec php -l {} \\;",
     "sh tests/php/run.sh"
   ].join(" && ");
   run("docker", [

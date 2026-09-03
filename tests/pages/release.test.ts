@@ -8,6 +8,7 @@ import {
   renderPagesLoader,
   renderPagesRelease
 } from "../../scripts/build-pages.ts";
+import { renderWordPressDevLoader } from "../../scripts/local-wordpress-loader.ts";
 
 const projectRoot = resolve(import.meta.dirname, "../..");
 const pagesDirectory = resolve(projectRoot, "dist-pages");
@@ -46,7 +47,16 @@ test("loader resolves release.js from its own URL and reports a failure", () => 
   assert.match(dom.window.document.getElementById("bracket-city-app")!.textContent, /versión publicada/);
 });
 
-test("release injects hashed CSS, locale, and classic application scripts", () => {
+test("local WordPress loader starts the Vite module from its own origin", () => {
+  const dom = browserDocument("http://127.0.0.1:4176/loader.js");
+  dom.window.eval(renderWordPressDevLoader({ id: "es-ES" }));
+  const application = dom.window.document.head.querySelector<HTMLScriptElement>('script[type="module"]');
+  assert.ok(application);
+  assert.equal(application.src, "http://127.0.0.1:4176/src/pages-entry.ts");
+  assert.equal(JSON.stringify(dom.window.__NEXO_LOCALE_PACK__), '{"id":"es-ES"}');
+});
+
+test("release injects hashed CSS, locale, and module application scripts", () => {
   const dom = browserDocument("https://owner.github.io/bracketcity/release.js?cache=1");
   dom.window.eval(renderPagesRelease({
     appPath: "assets/nexo-abc123.js",
@@ -63,6 +73,7 @@ test("release injects hashed CSS, locale, and classic application scripts", () =
   locale.dispatchEvent(new dom.window.Event("load"));
   const app = dom.window.document.body.querySelector<HTMLScriptElement>('script[src*="nexo-abc123.js"]');
   assert.ok(app);
+  assert.equal(app.type, "module");
   assert.equal(app.async, false);
   app.dispatchEvent(new dom.window.Event("error"));
   assert.match(dom.window.document.getElementById("bracket-city-app")!.textContent, /aplicación Nexo/);
@@ -89,11 +100,16 @@ test("Pages artifact contains only stable entry files and hashed runtime assets"
   assert.ok(files.includes("loader.js"));
   assert.ok(files.includes("release.js"));
   assert.equal(files.filter((name) => /^assets\/nexo-[\w-]+\.js$/.test(name)).length, 1);
+  assert.equal(files.filter((name) => /^assets\/author-view-[\w-]+\.js$/.test(name)).length, 1);
   assert.equal(files.filter((name) => /^assets\/nexo-[\w-]+\.css$/.test(name)).length, 1);
   assert.equal(files.filter((name) => /^assets\/es-ES-[a-f0-9]+\.js$/.test(name)).length, 1);
   assert.ok(!files.some((name) => /puzzles?|\.json$|manifest/i.test(name)));
 
   const appName = files.find((name) => /^assets\/nexo-[\w-]+\.js$/.test(name));
   const app = await readFile(resolve(pagesDirectory, appName!), "utf8");
-  assert.doesNotMatch(app, /\bimport\s*\(/);
+  assert.match(app, /\bimport\s*\(/);
+  assert.doesNotMatch(app, /author-publish/u);
+  const authorName = files.find((name) => /^assets\/author-view-[\w-]+\.js$/.test(name));
+  const author = await readFile(resolve(pagesDirectory, authorName!), "utf8");
+  assert.match(author, /author-publish/u);
 });

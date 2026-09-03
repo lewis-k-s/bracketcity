@@ -11,10 +11,9 @@ export default defineConfig({
     rollupOptions: {
       input: resolve("src/pages-entry.ts"),
       output: {
-        format: "iife",
-        name: "NexoApplication",
-        inlineDynamicImports: true,
+        format: "es",
         entryFileNames: "assets/nexo-[hash].js",
+        chunkFileNames: "assets/[name]-[hash].js",
         assetFileNames: "assets/nexo-[hash][extname]"
       }
     }

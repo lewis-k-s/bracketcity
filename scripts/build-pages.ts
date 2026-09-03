@@ -95,6 +95,7 @@ ${errorPanelSource('"No se pudo cargar el idioma de Nexo."')}
   };
   locale.onload = function () {
     var app = document.createElement("script");
+    app.type = "module";
     app.src = new URL(${JSON.stringify(appPath)}, root).href;
     app.async = false;
     app.onerror = function () {

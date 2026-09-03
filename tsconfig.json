@@ -29,6 +29,7 @@
     "tests/**/*",
     "vite.config.ts",
     "vite.pages.config.ts",
+    "vite.wordpress.config.ts",
     "playwright.config.ts"
   ],
   "exclude": ["dist", "dist-pages", "release", "node_modules", "wordpress-plugin"]
