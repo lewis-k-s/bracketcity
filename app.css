@@ -2027,7 +2027,7 @@ body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
   }
 
   :is(#app, #bracket-city-app) .game-shell {
-    width: var(--nexo-viewport-width, 100vw);
+    width: 100vw;
     margin-right: 0;
     margin-left: 50%;
     padding-right: max(0.5rem, env(safe-area-inset-right));
