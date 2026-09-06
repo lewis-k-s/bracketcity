@@ -58,6 +58,16 @@ test("date selector lists catalog dates and reports a selected date change", () 
   assert.deepEqual(selected, ["2026-08-30"]);
 });
 
+test("rated puzzles show a translated difficulty label and unrated puzzles omit it", () => {
+  installDom();
+  const rated = compilePuzzle({ ...branchPuzzle, difficulty: "medium" }, esLocale);
+  shell(rated, { entries: [{ date: "2026-08-28", file: "today.json" }] });
+  assert.equal(q('[data-testid="puzzle-difficulty"]').textContent, "Dificultad: Media");
+
+  shell(compilePuzzle(branchPuzzle, esLocale));
+  assert.equal(q('[data-testid="puzzle-difficulty"]'), null);
+});
+
 test("play shell hides answer-bearing titles and uses only the visible virtual keyboard", () => {
   installDom();
   const puzzle = compilePuzzle(branchPuzzle, esLocale);

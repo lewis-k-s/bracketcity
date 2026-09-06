@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) && ! defined( 'NEXO_TESTING' ) ) {
 final class Nexo_Validator {
 	private const SLUG = '/^[a-z0-9]+(?:-[a-z0-9]+)*$/D';
 	private const HTML = '/(?:<!--|-->|<![^>]*(?:>|$)|<\?[^>]*(?:\?>|$)|<\/?[a-z][^<]*(?:>|$)|&(?:lt|gt|#0*(?:60|62)|#x0*3[ce]);)/iu';
-	private const TOP_KEYS = array( 'schemaVersion', 'id', 'revision', 'locale', 'title', 'releaseDate', 'factDate', 'finalText', 'root', 'clues', 'source', 'scoring' );
+	private const TOP_KEYS = array( 'schemaVersion', 'id', 'revision', 'locale', 'title', 'releaseDate', 'factDate', 'difficulty', 'finalText', 'root', 'clues', 'source', 'scoring' );
 	private const CLUE_KEYS = array( 'answer', 'prompt', 'rightPrompt', 'accept', 'peek', 'match' );
 	private const MATCH_KEYS = array( 'locale', 'foldCase', 'trim', 'collapseWhitespace', 'canonicalizeQuotes', 'canonicalizeHyphens', 'optionalAcuteVowels', 'ignorePunctuation' );
 	private const MAX_SAFE_INTEGER = 9007199254740991;
@@ -37,6 +37,9 @@ final class Nexo_Validator {
 			$errors[] = self::issue( 'INVALID_LOCALE', '$.locale', 'Locale is not supported by this plugin build.' );
 		}
 		self::validate_text( $puzzle['finalText'] ?? null, '$.finalText', 'EMPTY_FINAL_TEXT', $errors );
+		if ( array_key_exists( 'difficulty', $puzzle ) && ! in_array( $puzzle['difficulty'], array( 'easy', 'medium', 'hard' ), true ) ) {
+			$errors[] = self::issue( 'INVALID_DIFFICULTY', '$.difficulty', 'Difficulty must be easy, medium, or hard.' );
+		}
 		if ( isset( $puzzle['title'] ) ) {
 			self::validate_text( $puzzle['title'], '$.title', 'INVALID_TEXT', $errors );
 		}

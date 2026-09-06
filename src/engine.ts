@@ -50,6 +50,7 @@ const TOP_LEVEL_KEYS = new Set([
   "title",
   "releaseDate",
   "factDate",
+  "difficulty",
   "finalText",
   "root",
   "clues",
@@ -293,6 +294,9 @@ export function validatePuzzle(definition: unknown, localePack: LocalePack | nul
     addIssue(errors, "EMPTY_FINAL_TEXT", "$.finalText", "Final text must not be empty.");
   } else if (hasRawHtml(definition.finalText)) {
     addIssue(errors, "RAW_HTML", "$.finalText", "Raw HTML is not allowed.");
+  }
+  if ("difficulty" in definition && !["easy", "medium", "hard"].includes(definition.difficulty)) {
+    addIssue(errors, "INVALID_DIFFICULTY", "$.difficulty", "Difficulty must be easy, medium, or hard.");
   }
   for (const key of ["title"]) {
     if (key in definition && (!isNonEmptyString(definition[key]) || hasRawHtml(definition[key]))) {

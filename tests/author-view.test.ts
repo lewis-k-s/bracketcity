@@ -117,6 +117,21 @@ test("author mode starts with a stored draft, labelled fields, and validation fe
   assert.match(q('[data-testid="author-bracket-guide"]').textContent, /pista=respuesta/u);
 });
 
+test("the shared metadata form stores and clears an optional difficulty", () => {
+  installDom();
+  const app = startAuthorApp({ mount: q("#app"), locale, storage: memoryStorage() });
+  const difficulty = q('[data-testid="author-difficulty"]') as unknown as HTMLSelectElement;
+  assert.deepEqual([...difficulty.options].map((option) => option.value), ["", "easy", "medium", "hard"]);
+
+  difficulty.value = "hard";
+  difficulty.dispatchEvent(new window.Event("change", { bubbles: true }));
+  assert.equal(app.getDraft().metadata.difficulty, "hard");
+
+  difficulty.value = "";
+  difficulty.dispatchEvent(new window.Event("change", { bubbles: true }));
+  assert.equal(Object.hasOwn(app.getDraft().metadata, "difficulty"), false);
+});
+
 test("author mode opens the suggestion page in place, explains access, and copies its URL", async () => {
   installDom();
   const suggestionUrl = "https://example.test/sugerir";

@@ -112,6 +112,7 @@ final class Nexo_Suggestions {
 	}
 
 	private static function write_meta( int $post_id, array $definition ): bool {
+		if ( ! Nexo_Puzzles::write_difficulty_meta( $post_id, $definition ) ) return false;
 		$values = array(
 			Nexo_Puzzles::META_ID => $definition['id'],
 			Nexo_Puzzles::META_SCHEMA => $definition['schemaVersion'],

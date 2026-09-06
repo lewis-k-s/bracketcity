@@ -404,6 +404,14 @@ export function createGameShell(
     picker.append(dateLabel, dateSelect);
     card.append(picker);
   }
+  if (puzzle.definition.difficulty) {
+    const difficulty = element("span", {
+      className: "puzzle-difficulty",
+      text: `${locale.ui.difficulty}: ${locale.ui[`difficulty_${puzzle.definition.difficulty}`]}`,
+      attributes: { "data-testid": "puzzle-difficulty" }
+    });
+    (card.querySelector(".date-picker") ?? card).append(difficulty);
+  }
   const puzzleText = element("p", {
     className: "puzzle-text",
     attributes: { "data-testid": "puzzle", "aria-label": locale.ui.puzzleLabel }

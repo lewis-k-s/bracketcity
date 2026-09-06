@@ -9,6 +9,7 @@ final class Nexo_Puzzles {
 	public const META_DATE = '_bc_release_date';
 	public const META_ID = '_bc_puzzle_id';
 	public const META_SCHEMA = '_bc_schema_version';
+	public const META_DIFFICULTY = '_bc_difficulty';
 	public const META_REVISION = '_bc_revision';
 
 	public static function register_post_type(): void {
@@ -243,7 +244,17 @@ final class Nexo_Puzzles {
 		return $deleted;
 	}
 
+	public static function write_difficulty_meta( int $post_id, array $definition ): bool {
+		if ( isset( $definition['difficulty'] ) ) {
+			update_post_meta( $post_id, self::META_DIFFICULTY, $definition['difficulty'] );
+			return get_post_meta( $post_id, self::META_DIFFICULTY, true ) === $definition['difficulty'];
+		}
+		delete_post_meta( $post_id, self::META_DIFFICULTY );
+		return ! metadata_exists( 'post', $post_id, self::META_DIFFICULTY );
+	}
+
 	private static function write_meta( int $post_id, array $definition ): bool {
+		if ( ! Nexo_Puzzles::write_difficulty_meta( $post_id, $definition ) ) return false;
 		$values = array(
 			self::META_DATE => $definition['releaseDate'],
 			self::META_ID => $definition['id'],

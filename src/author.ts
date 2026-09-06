@@ -9,6 +9,7 @@ import type {
   Direction,
   LocalePack,
   PuzzleDefinition,
+  PuzzleDifficulty,
   ReferenceSegment,
   Segment,
   ValidationResult
@@ -194,6 +195,7 @@ function draftIsStructurallySafe(draft: unknown): draft is AuthorDraft {
     typeof draft.metadata.title !== "string" ||
     typeof draft.metadata.locale !== "string" ||
     typeof draft.metadata.releaseDate !== "string" ||
+    (Object.hasOwn(draft.metadata, "difficulty") && !["easy", "medium", "hard"].includes(draft.metadata.difficulty as string)) ||
     (Object.hasOwn(draft.metadata, "factDate") && typeof draft.metadata.factDate !== "string") ||
     typeof draft.metadata.revision !== "number" ||
     !Number.isFinite(draft.metadata.revision) ||
@@ -282,6 +284,7 @@ export function authorDraftFromDefinition(definition: PuzzleDefinition, localePa
     clues: clone(definition.clues),
     selectedClueId: null
   };
+  if (definition.difficulty) draft.metadata.difficulty = definition.difficulty;
   if (definition.factDate) draft.metadata.factDate = definition.factDate;
   if (definition.source) draft.source = clone(definition.source);
   if (definition.scoring) draft.scoring = clone(definition.scoring);
@@ -301,6 +304,13 @@ export function setFinalText(currentDraft: AuthorDraft, finalText: string): Auth
 export function updateMetadata(currentDraft: AuthorDraft, changes: Partial<AuthorDraft["metadata"]>): AuthorDraft {
   const draft = clone(currentDraft);
   draft.metadata = { ...draft.metadata, ...changes };
+  return draft;
+}
+
+export function setDifficulty(currentDraft: AuthorDraft, difficulty?: PuzzleDifficulty): AuthorDraft {
+  const draft = clone(currentDraft);
+  if (difficulty) draft.metadata.difficulty = difficulty;
+  else delete draft.metadata.difficulty;
   return draft;
 }
 
@@ -472,6 +482,7 @@ export function definitionFromDraft(draft: AuthorDraft): PuzzleDefinition {
   };
   if (draft.metadata.title) definition.title = draft.metadata.title;
   if (draft.metadata.releaseDate) definition.releaseDate = draft.metadata.releaseDate;
+  if (draft.metadata.difficulty) definition.difficulty = draft.metadata.difficulty;
   if (draft.metadata.factDate) definition.factDate = draft.metadata.factDate;
   if (draft.source) definition.source = clone(draft.source);
   if (draft.scoring) definition.scoring = clone(draft.scoring);

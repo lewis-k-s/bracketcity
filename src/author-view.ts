@@ -9,6 +9,7 @@ import {
   selectClue,
   serializeAuthorDraft,
   serializeAuthorPuzzle,
+  setDifficulty,
   setFinalText,
   setReferenceDirection,
   setRightPrompt,
@@ -34,6 +35,7 @@ import type {
   ImportResult,
   LocalePack,
   PuzzleDefinition,
+  PuzzleDifficulty,
   ReferenceSegment,
   Segment,
   StorageLike,
@@ -424,10 +426,12 @@ export function startAuthorApp({
     const title = mount.querySelector<HTMLInputElement>("#author-title-input")?.value;
     const releaseDate = mount.querySelector<HTMLInputElement>("#author-release-date")?.value;
     const metadata: Partial<AuthorDraft["metadata"]> = {};
+    const difficulty = mount.querySelector<HTMLSelectElement>("#author-difficulty")?.value;
     if (id !== undefined) metadata.id = id;
     if (title !== undefined) metadata.title = title;
     if (releaseDate !== undefined) metadata.releaseDate = releaseDate;
     if (Object.keys(metadata).length > 0) next = updateMetadata(next, metadata);
+    if (difficulty !== undefined) next = setDifficulty(next, difficulty ? difficulty as PuzzleDifficulty : undefined);
 
     const finalInput = mount.querySelector<HTMLTextAreaElement>('[data-testid="author-final-text"]');
     const finalChanged = Object.keys(next.clues).length === 0 && finalInput && finalInput.value !== next.finalText;
@@ -687,6 +691,18 @@ export function startAuthorApp({
       attributes: { id: "author-release-date", type: "date" }
     });
     releaseInput.value = draft.metadata.releaseDate;
+    const difficultyInput = element("select", {
+      className: "author-input",
+      attributes: { id: "author-difficulty", "data-testid": "author-difficulty" }
+    });
+    for (const value of ["", "easy", "medium", "hard"]) {
+      difficultyInput.append(element("option", {
+        text: locale.ui[value ? `difficulty_${value}` : "difficultyUnset"],
+        attributes: { value }
+      }));
+    }
+    difficultyInput.value = draft.metadata.difficulty ?? "";
+    grid.append(field(locale.ui.difficulty, difficultyInput));
     if (variant === "author") grid.append(field(locale.ui.authorPuzzleId, idInput));
     grid.append(
       field(locale.ui.authorPuzzleTitle, titleInput),
@@ -698,9 +714,11 @@ export function startAuthorApp({
         title: titleInput.value,
         releaseDate: releaseInput.value
       });
+      draft = setDifficulty(draft, difficultyInput.value ? difficultyInput.value as PuzzleDifficulty : undefined);
       persistInput();
       refreshDerivedPanels();
     };
+    difficultyInput.addEventListener("change", syncMetadata);
     idInput.addEventListener("input", syncMetadata);
     titleInput.addEventListener("input", syncMetadata);
     releaseInput.addEventListener("input", syncMetadata);

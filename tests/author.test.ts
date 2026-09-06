@@ -14,6 +14,7 @@ import {
   restoreAuthorDraft,
   serializeAuthorDraft,
   serializeAuthorPuzzle,
+  setDifficulty,
   setFinalText,
   setReferenceDirection,
   setRightPrompt,
@@ -206,6 +207,16 @@ test("definition export omits editor state and empty optional fields", () => {
   assert.equal(Object.hasOwn(definition.clues.c01!, "accept"), false);
   assert.equal(Object.hasOwn(definition.clues.c01!, "peek"), false);
   assert.equal(Object.hasOwn(definition.clues.c01!, "rightPrompt"), false);
+});
+
+test("difficulty round-trips through author drafts and can be cleared", () => {
+  let { draft } = minimalDraft();
+  draft = setDifficulty(draft, "hard");
+  const restored = restoreAuthorDraft(serializeAuthorDraft(draft));
+  assert.equal(definitionFromDraft(restored).difficulty, "hard");
+
+  const cleared = setDifficulty(restored);
+  assert.equal(Object.hasOwn(definitionFromDraft(cleared), "difficulty"), false);
 });
 
 test("definition export preserves a right prompt exactly", () => {

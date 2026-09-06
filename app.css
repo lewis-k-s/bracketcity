@@ -156,6 +156,7 @@ body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
 
 :is(#app, #bracket-city-app) .date-picker {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
@@ -2151,4 +2152,11 @@ body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+:is(#app, #bracket-city-app) .puzzle-difficulty {
+  display: inline-block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-block: 0.4rem;
 }

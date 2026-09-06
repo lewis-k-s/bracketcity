@@ -4,6 +4,10 @@ export const esLocale: LocalePack = {
   id: "es-ES",
   dir: "ltr",
   ui: {
+    difficulty: "Dificultad",
+    difficulty_easy: "Fácil",
+    difficulty_medium: "Media",
+    difficulty_hard: "Difícil",
     gameName: "Nexo",
     gameLabel: "Pistas anidadas",
     modeNavigation: "Modo de la aplicación",

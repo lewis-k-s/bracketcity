@@ -73,6 +73,7 @@ nexo_check( 200 === $seed_get->get_status() && $seed_puzzle_id === $seed_get->ge
 $admin_denied = nexo_request( 'GET', '/bracket-city/v1/admin/puzzles' );
 nexo_check( in_array( $admin_denied->get_status(), array( 401, 403 ), true ), 'Anonymous users must not read the admin archive.' );
 $suggestion = nexo_puzzle( '2098-12-30', 'suggested-puzzle-es' );
+$suggestion['difficulty'] = 'easy';
 unset( $suggestion['releaseDate'] );
 nexo_check( in_array( nexo_request( 'POST', '/bracket-city/v1/suggestions', $suggestion )->get_status(), array( 401, 403 ), true ), 'A missing suggestion key must be rejected.' );
 $suggestion_key = Nexo_Suggestions::ensure_key();
@@ -80,6 +81,7 @@ $suggested = nexo_request( 'POST', '/bracket-city/v1/suggestions', $suggestion, 
 nexo_check( 201 === $suggested->get_status() && 'pending' === $suggested->get_data()['status'], 'A shared-link visitor must be able to submit an undated suggestion.' );
 $suggestion_id = $suggested->get_data()['suggestionId'];
 nexo_check( 'pending' === get_post_status( $suggestion_id ), 'A suggestion must remain pending before review.' );
+nexo_check( 'easy' === get_post_meta( $suggestion_id, Nexo_Puzzles::META_DIFFICULTY, true ), 'A suggestion difficulty must be stored as post metadata.' );
 
 $roles = array();
 Nexo_Capabilities::register();
@@ -129,6 +131,7 @@ $approved = nexo_request( 'POST', '/bracket-city/v1/admin/suggestions/' . $sugge
 nexo_check( 200 === $approved->get_status(), 'Puzzle Manager must approve a suggestion after assigning a date.' );
 nexo_check( 'private' === get_post_status( $suggestion_id ) && $suggestion_id === Nexo_Puzzles::find( '2098-12-30' )->ID, 'Approval must convert the pending post in place.' );
 nexo_check( 1 === $approved->get_data()['revision'], 'An approved suggestion must start at revision one.' );
+nexo_check( 'easy' === get_post_meta( $suggestion_id, Nexo_Puzzles::META_DIFFICULTY, true ), 'Suggestion approval must preserve difficulty metadata.' );
 $rejected_suggestion = $suggestion;
 unset( $rejected_suggestion['releaseDate'] );
 $rejected_suggestion['id'] = 'rejected-suggestion-es';
@@ -157,8 +160,10 @@ $wpdb->update(
 nexo_check( Nexo_Puzzles::purge_old_trash() >= 1 && null === get_post( $rejected_id ), 'Expired Nexo Trash must be deleted permanently.' );
 
 $future = nexo_puzzle( '2099-01-01', 'future-puzzle-es' );
+$future['difficulty'] = 'medium';
 $created = nexo_request( 'POST', '/bracket-city/v1/puzzles', $future );
 nexo_check( 201 === $created->get_status(), 'Puzzle Manager must create a puzzle.' );
+nexo_check( 'medium' === get_post_meta( $created->get_data()['postId'], Nexo_Puzzles::META_DIFFICULTY, true ), 'Puzzle difficulty must be stored as post metadata.' );
 nexo_check( 409 === nexo_request( 'POST', '/bracket-city/v1/puzzles', $future )->get_status(), 'Duplicate date creation must return 409.' );
 nexo_check( 200 === nexo_request( 'GET', '/bracket-city/v1/admin/puzzles/2099-01-01' )->get_status(), 'Puzzle Manager must preview a future puzzle.' );
 
@@ -171,8 +176,10 @@ $wrong_id = nexo_puzzle( '2099-01-01', 'changed-id-es', 2 );
 nexo_check( 422 === nexo_request( 'PUT', '/bracket-city/v1/puzzles/2099-01-01', $wrong_id )->get_status(), 'Puzzle ID must not change.' );
 $corrected = nexo_puzzle( '2099-01-01', 'future-puzzle-es', 2 );
 $corrected['title'] = 'Corrected';
+$corrected['difficulty'] = 'hard';
 nexo_check( 200 === nexo_request( 'PUT', '/bracket-city/v1/puzzles/2099-01-01', $corrected )->get_status(), 'A same-ID higher revision correction must succeed.' );
 $future_post = Nexo_Puzzles::find( '2099-01-01' );
+nexo_check( 'hard' === get_post_meta( $future_post->ID, Nexo_Puzzles::META_DIFFICULTY, true ), 'Puzzle correction must update difficulty metadata.' );
 nexo_check( count( wp_get_post_revisions( $future_post->ID ) ) >= 1, 'Correction must create a WordPress revision.' );
 $trashed = nexo_request( 'DELETE', '/bracket-city/v1/puzzles/2099-01-01' );
 nexo_check( 200 === $trashed->get_status(), 'Puzzle Manager must be able to remove a puzzle.' );
@@ -194,6 +201,10 @@ $restored = nexo_request( 'POST', '/bracket-city/v1/admin/puzzles/trash/2099-01-
 nexo_check( 200 === $restored->get_status() && 'restored' === $restored->get_data()['status'], 'Puzzle Manager must be able to restore a removed puzzle.' );
 nexo_check( $future_post->ID === Nexo_Puzzles::find( '2099-01-01' )->ID, 'Restoring a puzzle must preserve its post identity.' );
 nexo_check( 'private' === get_post_status( $future_post->ID ), 'Puzzle restore must return the puzzle to the active catalog.' );
+$cleared = nexo_puzzle( '2099-01-01', 'future-puzzle-es', 3 );
+$cleared['title'] = 'Corrected';
+nexo_check( 200 === nexo_request( 'PUT', '/bracket-city/v1/puzzles/2099-01-01', $cleared )->get_status(), 'A difficulty may be cleared during a correction.' );
+nexo_check( ! metadata_exists( 'post', $future_post->ID, Nexo_Puzzles::META_DIFFICULTY ), 'Clearing a puzzle difficulty must remove its post metadata.' );
 
 $page_id = wp_insert_post( array( 'post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'Nexo', 'post_content' => '[bracket_city asset_base="https://owner.github.io/bracketcity/"][bracket_city asset_base="https://owner.github.io/bracketcity/"]' ) );
 $GLOBALS['wp_query'] = new WP_Query( array( 'page_id' => $page_id ) );

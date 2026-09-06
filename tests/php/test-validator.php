@@ -21,6 +21,13 @@ $unsafe_revision = $fixture;
 $unsafe_revision['revision'] = 9007199254740992;
 check( in_array( 'INVALID_REVISION', codes( Nexo_Validator::validate( $unsafe_revision ) ), true ), 'Revisions above the JavaScript safe integer must fail.' );
 
+$rated = $fixture;
+$rated['difficulty'] = 'hard';
+check( Nexo_Validator::validate( $rated )['valid'], 'A supported difficulty must validate.' );
+$bad_difficulty = $fixture;
+$bad_difficulty['difficulty'] = 'expert';
+check( in_array( 'INVALID_DIFFICULTY', codes( Nexo_Validator::validate( $bad_difficulty ) ), true ), 'Unsupported difficulty must fail.' );
+
 $source_html = $fixture;
 $source_html['source']['label'] = '<b>unsafe</b>';
 check( in_array( 'RAW_HTML', codes( Nexo_Validator::validate( $source_html ) ), true ), 'Raw HTML in source labels must fail.' );

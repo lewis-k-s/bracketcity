@@ -56,6 +56,7 @@ export const PuzzleDefinitionSchema = Schema.Struct({
   locale: Schema.String,
   title: Schema.optionalKey(Schema.String),
   releaseDate: Schema.optionalKey(Schema.String),
+  difficulty: Schema.optionalKey(Schema.Literals(["easy", "medium", "hard"])),
   factDate: Schema.optionalKey(Schema.String),
   finalText: Schema.String,
   root: SegmentsSchema,
@@ -129,6 +130,7 @@ export const AuthorDraftSchema = Schema.Struct({
     locale: Schema.String,
     title: Schema.String,
     releaseDate: Schema.String,
+    difficulty: Schema.optionalKey(Schema.Literals(["easy", "medium", "hard"])),
     factDate: Schema.optionalKey(Schema.String)
   }),
   finalText: Schema.String,

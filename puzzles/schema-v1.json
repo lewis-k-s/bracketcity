@@ -12,6 +12,7 @@
     "locale": { "type": "string", "minLength": 1 },
     "title": { "type": "string", "minLength": 1 },
     "releaseDate": { "$ref": "#/$defs/date" },
+    "difficulty": { "enum": ["easy", "medium", "hard"] },
     "factDate": { "$ref": "#/$defs/date" },
     "finalText": { "type": "string", "minLength": 1 },
     "root": { "$ref": "#/$defs/segments" },

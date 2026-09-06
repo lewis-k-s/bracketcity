@@ -294,6 +294,14 @@ test("NFC-equivalent final text passes exact expansion validation", () => {
   assert.equal(validatePuzzle(definition, esLocale).valid, true);
 });
 
+test("difficulty accepts the three editorial levels and rejects other values", () => {
+  for (const difficulty of ["easy", "medium", "hard"] as const) {
+    assert.equal(validatePuzzle({ ...freshBranch(), difficulty }, esLocale).valid, true);
+  }
+  assert.equal(errorCodes({ ...freshBranch(), difficulty: "expert" }).includes("INVALID_DIFFICULTY"), true);
+  assert.equal(errorCodes({ ...freshBranch(), difficulty: null }).includes("INVALID_DIFFICULTY"), true);
+});
+
 test("old one-sided directed references remain compatible", () => {
   const definition = freshBranch();
   definition.clues.book!.prompt[0] = { ref: "lib", direction: "left" };

@@ -1,3 +1,5 @@
+export type PuzzleDifficulty = "easy" | "medium" | "hard";
+
 export type Direction = "left" | "right";
 
 export interface ReferenceSegment {
@@ -52,6 +54,7 @@ export interface PuzzleDefinition {
   title?: string;
   releaseDate?: string;
   factDate?: string;
+  difficulty?: PuzzleDifficulty;
   finalText: string;
   root: Segment[];
   clues: Record<string, ClueDefinition>;
@@ -193,6 +196,7 @@ export interface AuthorMetadata {
   title: string;
   releaseDate: string;
   factDate?: string;
+  difficulty?: PuzzleDifficulty;
 }
 
 export interface AuthorDraft {
