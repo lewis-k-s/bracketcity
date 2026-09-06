@@ -71,6 +71,22 @@ test("leaf-first global guesses unlock all branches and complete the sentence", 
   await expect(page.getByTestId("completion")).toBeVisible();
   await expect(page.getByTestId("completion")).toContainText("El telescopio James Webb envió su primera imagen científica en 2022.");
   await expect(page.getByTestId("score")).toHaveText("100");
+
+  await page.evaluate(() => {
+    (window as typeof window & { copiedShare?: string }).copiedShare = "";
+    Object.defineProperty(navigator, "share", { configurable: true, value: undefined });
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (value: string) => { (window as typeof window & { copiedShare?: string }).copiedShare = value; } }
+    });
+  });
+  await page.getByTestId("share-result").click();
+  await expect(page.getByTestId("share-status")).toHaveText("Resultado copiado.");
+  const copiedShare = await page.evaluate(() => (window as typeof window & { copiedShare?: string }).copiedShare);
+  expect(copiedShare).toContain("Nexo · Primera luz");
+  expect(copiedShare).toContain("100/100 puntos");
+  expect(copiedShare).toContain("?date=2026-08-28");
+  expect(copiedShare).not.toContain("El telescopio James Webb envió su primera imagen científica en 2022.");
 });
 
 test("locked answers are wrong and the input stays selected for correction", async ({ page }) => {

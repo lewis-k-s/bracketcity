@@ -33,6 +33,7 @@ import {
   readWordPressConfig
 } from "./puzzle-repository.ts";
 import { mergePublishedPuzzles, publishPuzzle, restorePublishedPuzzles } from "./published.ts";
+import { createCompletionShare } from "./share.ts";
 import type { AuthorAppHandle, AuthorPanelSkin } from "./author-view.ts";
 import {
   decodeLocalePack,
@@ -355,10 +356,46 @@ export async function startApp({
       persist();
     };
 
+    const handleShare = (): void => {
+      const score = calculateScore(progress, puzzle.definition.scoring);
+      const result = createCompletionShare(puzzle, score, locale, globalThis.location.href);
+      const shareFailed = locale.ui.shareFailed ?? "No se pudo abrir el menú para compartir.";
+      const shareCopied = locale.ui.shareCopied ?? "Resultado copiado.";
+      const shareCopyFailed = locale.ui.shareCopyFailed ?? "No se pudo copiar el resultado.";
+      const browser = globalThis.navigator as Navigator & {
+        share?: (data: ShareData) => Promise<void>;
+        clipboard?: Clipboard;
+      };
+      const share = async () => {
+        if (typeof browser.share === "function") {
+          try {
+            await browser.share({ title: result.title, text: result.text, url: result.url });
+            return;
+          } catch (error) {
+            if (error instanceof Error && error.name === "AbortError") return;
+            view.shareStatus.textContent = shareFailed;
+            announce(view, shareFailed);
+            return;
+          }
+        }
+        try {
+          if (typeof browser.clipboard?.writeText !== "function") throw new Error("Clipboard access is unavailable.");
+          await browser.clipboard.writeText(result.text);
+          view.shareStatus.textContent = shareCopied;
+          announce(view, shareCopied);
+        } catch {
+          view.shareStatus.textContent = shareCopyFailed;
+          announce(view, shareCopyFailed);
+        }
+      };
+      void share();
+    };
+
     view = createGameShell(mount, puzzle, locale, {
       onSubmit: handleSubmit,
       onHint: handleHint,
-      onVirtualInput: handleInput
+      onVirtualInput: handleInput,
+      onShare: handleShare
     }, dateNavigation ?? {});
     document.documentElement.lang = locale.id;
     document.documentElement.dir = locale.dir;

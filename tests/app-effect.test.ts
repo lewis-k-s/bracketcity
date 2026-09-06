@@ -8,7 +8,7 @@ import { installDomWindow } from "./test-dom.ts";
 
 globalThis.__NEXO_DISABLE_AUTO_START__ = true;
 installAppDom();
-const { startDatedApp } = await import("../src/app.ts");
+const { startApp, startDatedApp } = await import("../src/app.ts");
 
 function definitionFor(date: string): PuzzleDefinition {
   return { ...structuredClone(branchPuzzle), id: `puzzle-${date}`, releaseDate: date };
@@ -112,4 +112,106 @@ test("a newer date load interrupts a stale request before it can replace the puz
   assert.equal(slowAborted, true);
   assert.equal(new URL(location.href).searchParams.get("date"), newest.releaseDate);
   app.destroy();
+});
+
+test("a completed puzzle uses native sharing when it is available", async () => {
+  const { dom } = installAppDom();
+  const shared: ShareData[] = [];
+  const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: { share: async (value: ShareData) => { shared.push(value); } }
+  });
+  try {
+    const app = await startApp({ mount: document.querySelector<HTMLElement>("#app")!, definition: branchPuzzle, localePack: esLocale });
+    assert.ok(app);
+    for (const answer of ["lib", "libro", "cielo", "azul", "libro azul"]) {
+      app.view.input.value = answer;
+      app.view.form.dispatchEvent(new dom.window.Event("submit", { bubbles: true, cancelable: true }));
+    }
+    app.view.shareButton.click();
+    await Promise.resolve();
+
+    assert.equal(shared.length, 1);
+    assert.match(shared[0]!.text ?? "", /100\/100 puntos/u);
+    assert.match(shared[0]!.text ?? "", /\?date=2026-08-28/u);
+    assert.doesNotMatch(shared[0]!.text ?? "", /El libro azul/u);
+  } finally {
+    if (originalNavigator) Object.defineProperty(globalThis, "navigator", originalNavigator);
+    else delete (globalThis as { navigator?: Navigator }).navigator;
+  }
+});
+
+test("a completed puzzle copies the share card when native sharing is unavailable", async () => {
+  const { dom } = installAppDom();
+  const copied: string[] = [];
+  const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: { clipboard: { writeText: async (value: string) => { copied.push(value); } } }
+  });
+  try {
+    const app = await startApp({ mount: document.querySelector<HTMLElement>("#app")!, definition: branchPuzzle, localePack: esLocale });
+    assert.ok(app);
+    for (const answer of ["lib", "libro", "cielo", "azul", "libro azul"]) {
+      app.view.input.value = answer;
+      app.view.form.dispatchEvent(new dom.window.Event("submit", { bubbles: true, cancelable: true }));
+    }
+    app.view.shareButton.click();
+    await Promise.resolve();
+
+    assert.equal(copied.length, 1);
+    assert.equal(app.view.shareStatus.textContent, esLocale.ui.shareCopied);
+  } finally {
+    if (originalNavigator) Object.defineProperty(globalThis, "navigator", originalNavigator);
+    else delete (globalThis as { navigator?: Navigator }).navigator;
+  }
+});
+
+test("a cancelled native share does not show an error", async () => {
+  const { dom } = installAppDom();
+  const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: { share: async () => { throw new DOMException("Cancelled", "AbortError"); } }
+  });
+  try {
+    const app = await startApp({ mount: document.querySelector<HTMLElement>("#app")!, definition: branchPuzzle, localePack: esLocale });
+    assert.ok(app);
+    for (const answer of ["lib", "libro", "cielo", "azul", "libro azul"]) {
+      app.view.input.value = answer;
+      app.view.form.dispatchEvent(new dom.window.Event("submit", { bubbles: true, cancelable: true }));
+    }
+    app.view.shareButton.click();
+    await Promise.resolve();
+
+    assert.equal(app.view.shareStatus.textContent, "");
+  } finally {
+    if (originalNavigator) Object.defineProperty(globalThis, "navigator", originalNavigator);
+    else delete (globalThis as { navigator?: Navigator }).navigator;
+  }
+});
+
+test("a clipboard failure gives accessible share feedback", async () => {
+  const { dom } = installAppDom();
+  const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: { clipboard: { writeText: async () => { throw new Error("Denied"); } } }
+  });
+  try {
+    const app = await startApp({ mount: document.querySelector<HTMLElement>("#app")!, definition: branchPuzzle, localePack: esLocale });
+    assert.ok(app);
+    for (const answer of ["lib", "libro", "cielo", "azul", "libro azul"]) {
+      app.view.input.value = answer;
+      app.view.form.dispatchEvent(new dom.window.Event("submit", { bubbles: true, cancelable: true }));
+    }
+    app.view.shareButton.click();
+    await Promise.resolve();
+
+    assert.equal(app.view.shareStatus.textContent, esLocale.ui.shareCopyFailed);
+  } finally {
+    if (originalNavigator) Object.defineProperty(globalThis, "navigator", originalNavigator);
+    else delete (globalThis as { navigator?: Navigator }).navigator;
+  }
 });

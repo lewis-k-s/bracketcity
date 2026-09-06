@@ -31,6 +31,11 @@ export const esLocale: LocalePack = {
     scoreValue: "Puntuación: {score}.",
     completionTitle: "Nexo resuelto",
     result: "{score} puntos · {rank}",
+    shareResult: "Compartir resultado",
+    sharePoints: "puntos",
+    shareCopied: "Resultado copiado.",
+    shareCopyFailed: "No se pudo copiar el resultado.",
+    shareFailed: "No se pudo abrir el menú para compartir.",
     rankPerfect: "Precisión total",
     rankSharp: "Mente aguda",
     rankSteady: "Paso firme"

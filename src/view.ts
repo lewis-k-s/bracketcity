@@ -20,6 +20,8 @@ export interface GameView {
   completionHeading: HTMLHeadingElement;
   finalText: HTMLParagraphElement;
   resultText: HTMLParagraphElement;
+  shareButton: HTMLButtonElement;
+  shareStatus: HTMLParagraphElement;
   composer: HTMLDivElement;
   form: HTMLFormElement;
   input: HTMLInputElement;
@@ -49,6 +51,7 @@ export interface GameHandlers {
   onSubmit: (value: string) => void;
   onHint: (clueId: string) => void;
   onVirtualInput: () => void;
+  onShare?: () => void;
 }
 
 type RenderTarget = HTMLElement | DocumentFragment;
@@ -418,7 +421,17 @@ export function createGameShell(
   });
   const finalText = element("p", { className: "final-text" });
   const resultText = element("p", { className: "result-text" });
-  completion.append(completionHeading, finalText, resultText);
+  const shareButton = element("button", {
+    className: "share-button",
+    text: locale.ui.shareResult,
+    attributes: { type: "button", "data-testid": "share-result" }
+  });
+  const shareStatus = element("p", {
+    className: "share-status",
+    attributes: { "aria-live": "polite", "data-testid": "share-status" }
+  });
+  shareButton.addEventListener("click", () => handlers.onShare?.());
+  completion.append(completionHeading, finalText, resultText, shareButton, shareStatus);
   card.append(completion);
   shell.append(header, card);
 
@@ -521,6 +534,8 @@ export function createGameShell(
     completionHeading,
     finalText,
     resultText,
+    shareButton,
+    shareStatus,
     composer,
     form,
     input,

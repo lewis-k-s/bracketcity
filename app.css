@@ -308,6 +308,28 @@ body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
   font-weight: 700;
 }
 
+:is(#app, #bracket-city-app) .share-button {
+  min-height: 2.75rem;
+  margin-top: 1.35rem;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--blue-dark);
+  border-radius: 0.25rem;
+  background: var(--blue-dark);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+:is(#app, #bracket-city-app) .share-button:hover {
+  background: var(--blue);
+}
+
+:is(#app, #bracket-city-app) .share-status {
+  min-height: 1.25rem;
+  margin: 0.65rem 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
 :is(#app, #bracket-city-app) .composer {
   position: fixed;
   z-index: 10;
