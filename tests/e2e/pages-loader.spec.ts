@@ -113,6 +113,8 @@ test("classic Pages bundle runs on the WordPress origin and keeps progress there
   expect(mobileTitleLayout.contentTop - mobileTitleLayout.titleBottom).toBeLessThanOrEqual(24);
   expect(mobileTitleLayout.gameTop - mobileTitleLayout.titleBottom).toBeLessThanOrEqual(32);
 
+  await page.getByTestId("instructions-start").click();
+
   const input = page.getByTestId("guess-input");
   const keyboard = page.getByRole("group", { name: "Teclado español" });
   if (await keyboard.isVisible()) await page.getByRole("button", { name: "a", exact: true }).click();
