@@ -26,7 +26,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
-      - run: npx playwright install --with-deps chromium webkit
+      - name: Install Playwright browsers
+        run: |
+          sudo rm -f /etc/apt/sources.list.d/google-chrome.list
+          npx playwright install --with-deps chromium webkit
       - run: npm run test:all
       - run: npm run package:plugin
       - name: Upload the installable bridge
