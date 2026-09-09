@@ -595,6 +595,8 @@ export function createProgress(puzzle: CompiledPuzzle): Progress {
     puzzleRevision: puzzleRevision(puzzle),
     solved: {},
     peeked: [],
+    revealed: [],
+    freePeekVersion: 1,
     wrongGuesses: 0,
     keystrokes: 0
   };
@@ -604,7 +606,9 @@ function cloneProgress(progress: Progress): Progress {
   return {
     ...progress,
     solved: { ...progress.solved },
-    peeked: [...progress.peeked]
+    peeked: [...progress.peeked],
+    revealed: [...(progress.revealed ?? [])],
+    freePeekVersion: progress.freePeekVersion ?? 1
   };
 }
 
@@ -643,7 +647,7 @@ function transitionResult(
   puzzle: CompiledPuzzle,
   before: Progress,
   progress: Progress,
-  extra: Pick<Transition, "clueId" | "peek"> | {} = {}
+  extra: Pick<Transition, "clueId" | "peek" | "answer"> | {} = {}
 ): Transition {
   const beforeAvailable = new Set(getAvailableClues(puzzle, before).map((clue) => clue.id));
   const newlyAvailable = getAvailableClues(puzzle, progress)
@@ -695,11 +699,15 @@ export function peekClue(
   if (!available || isComplete(puzzle, currentProgress)) {
     return transitionResult("noop", puzzle, currentProgress, currentProgress, { clueId });
   }
-  if (currentProgress.peeked.includes(clueId)) {
+  if (currentProgress.revealed.includes(clueId)) {
     return transitionResult("noop", puzzle, currentProgress, currentProgress, { clueId });
   }
   const before = currentProgress;
   const progress = withStartTime(cloneProgress(currentProgress), now);
+  if (currentProgress.peeked.includes(clueId)) {
+    progress.revealed.push(clueId);
+    return transitionResult("reveal", puzzle, before, progress, { clueId, answer: available.answer });
+  }
   progress.peeked.push(clueId);
   return transitionResult("peek", puzzle, before, progress, { clueId, peek: available.peek });
 }
@@ -724,7 +732,7 @@ export function calculateScore(progress: Progress, scoring: Scoring = {}): Score
   const rawScore =
     config.base +
     progress.wrongGuesses * config.wrongGuess +
-    new Set(progress.peeked).size * config.peek;
+    new Set(progress.freePeekVersion === 1 ? progress.revealed : progress.peeked).size * config.peek;
   const score = Math.max(0, rawScore);
   const ranks = [...config.ranks].sort((left, right) => right.minScore - left.minScore);
   const rank = ranks.find((candidate) => score >= candidate.minScore) ?? ranks.at(-1) ?? null;
@@ -735,7 +743,7 @@ export function calculateScore(progress: Progress, scoring: Scoring = {}): Score
     breakdown: {
       base: config.base,
       wrongGuesses: progress.wrongGuesses,
-      peeked: new Set(progress.peeked).size
+      peeked: new Set(progress.freePeekVersion === 1 ? progress.revealed : progress.peeked).size
     }
   };
 }
@@ -747,6 +755,8 @@ export function serializeProgress(progress: Progress): string {
     puzzleRevision: progress.puzzleRevision,
     solved: progress.solved,
     peeked: [...new Set(progress.peeked)],
+    revealed: [...new Set(progress.revealed)],
+    freePeekVersion: progress.freePeekVersion,
     wrongGuesses: progress.wrongGuesses,
     keystrokes: progress.keystrokes
   };
@@ -767,7 +777,8 @@ function progressIsValid(puzzle: CompiledPuzzle, progress: unknown): progress is
     progress.puzzleRevision !== puzzleRevision(puzzle) ||
     !isRecord(progress.solved) ||
     !Array.isArray(progress.peeked) ||
-    Object.hasOwn(progress, "revealed") ||
+    (Object.hasOwn(progress, "revealed") && !Array.isArray(progress.revealed)) ||
+    (Object.hasOwn(progress, "freePeekVersion") && progress.freePeekVersion !== 1) ||
     !Number.isSafeInteger(progress.wrongGuesses) ||
     progress.wrongGuesses < 0 ||
     !Number.isSafeInteger(progress.keystrokes) ||
@@ -781,6 +792,12 @@ function progressIsValid(puzzle: CompiledPuzzle, progress: unknown): progress is
   }
   const peeked = new Set(progress.peeked);
   if (peeked.size !== progress.peeked.length || [...peeked].some((id) => !puzzle.nodes.has(id))) return false;
+  const revealed = new Set(progress.revealed ?? []);
+  if (
+    revealed.size !== (progress.revealed ?? []).length ||
+    [...revealed].some((id) => !peeked.has(id)) ||
+    (progress.freePeekVersion !== 1 && revealed.size > 0)
+  ) return false;
   const candidate = progress as unknown as Progress;
   const available = new Set(getAvailableClues(puzzle, candidate).map((clue) => clue.id));
   for (const id of peeked) {

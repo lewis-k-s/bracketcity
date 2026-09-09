@@ -6,6 +6,8 @@ async function freshPage(page: Page): Promise<void> {
   await page.goto("/?date=2026-08-28");
   await page.evaluate(() => localStorage.clear());
   await page.reload();
+  const instructions = page.getByTestId("instructions-dialog");
+  if (await instructions.isVisible()) await page.getByTestId("instructions-start").click();
   await expect(page.getByTestId("guess-input")).toBeVisible();
 }
 
@@ -47,6 +49,32 @@ async function expectAnswerAbsentFromRenderedClue(page: Page, answer: string): P
 
 test.beforeEach(async ({ page }) => {
   await freshPage(page);
+});
+
+test("the first visit shows the Spanish rules and remembers dismissal", async ({ page }) => {
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+
+  const dialog = page.getByTestId("instructions-dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("heading", { name: "Cómo jugar a Nexo" })).toBeVisible();
+  await expect(dialog.getByText("Empieza por las pistas resaltadas")).toBeVisible();
+  await expect(dialog.getByText("Una respuesta puede formar parte de la siguiente pista")).toBeVisible();
+  await expect(dialog.locator(".instructions-example")).toHaveCount(3);
+  await expect(dialog.getByText("El planeta ____ tiene anillos")).toBeVisible();
+  await expect(dialog.getByText("En el calor del")).toBeVisible();
+  await expect(dialog.getByText("Respuesta: momento")).toBeVisible();
+  const bracketExample = dialog.locator(".instructions-clue").first();
+  await expect.poll(() => bracketExample.evaluate((node) => ({
+    before: getComputedStyle(node, "::before").content,
+    after: getComputedStyle(node, "::after").content
+  }))).toEqual({ before: '"["', after: '"]"' });
+
+  await page.getByTestId("instructions-start").click();
+  await expect(dialog).toBeHidden();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("nested-clue:instructions:v1"))).toBe("seen");
+  await page.reload();
+  await expect(dialog).toBeHidden();
 });
 
 test("leaf-first global guesses unlock all branches and complete the sentence", async ({ page }) => {
@@ -110,22 +138,23 @@ test("a first-letter peek does not expose the canonical answer", async ({ page }
   await expectAnswerAbsentFromRenderedClue(page, canonicalLeafAnswer);
 });
 
-test("repeated clue taps never expose an untyped canonical answer", async ({ page }) => {
+test("the second clue tap reveals its answer without solving it", async ({ page }) => {
   const clue = canonicalLeaf(page);
   await clue.click();
   await clue.click();
 
-  await expectAnswerAbsentFromRenderedClue(page, canonicalLeafAnswer);
+  await expect(clue).toContainText(canonicalLeafAnswer);
+  await expect(clue).toHaveAttribute("data-hint-state", "revealed");
   await expect(page.locator('[data-clue-state="solved"]').filter({ hasText: canonicalLeafAnswer })).toHaveCount(0);
 });
 
-test("reload does not expose an answer after clue taps", async ({ page }) => {
+test("reload preserves a revealed answer without solving it", async ({ page }) => {
   const clue = canonicalLeaf(page);
   await clue.click();
   await clue.click();
   await page.reload();
 
-  await expectAnswerAbsentFromRenderedClue(page, canonicalLeafAnswer);
+  await expect(canonicalLeaf(page)).toContainText(canonicalLeafAnswer);
   await expect(page.locator('[data-clue-state="solved"]').filter({ hasText: canonicalLeafAnswer })).toHaveCount(0);
 });
 

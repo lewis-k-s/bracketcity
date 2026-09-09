@@ -137,19 +137,22 @@ test("first-letter peeks use complete grapheme clusters", () => {
   assert.equal(firstGrapheme("👩🏽‍🔬 ciencia", "es-ES"), "👩🏽‍🔬");
 });
 
-test("peeks are idempotent and never solve or unlock a clue", () => {
+test("the first tap peeks, the second reveals for five points, and neither solves", () => {
   const puzzle = compilePuzzle(branchPuzzle, esLocale);
   const initial = createProgress(puzzle);
   const peek = peekClue(puzzle, initial, "lib", "2026-08-28T10:00:00Z");
   assert.equal(peek.type, "peek");
   assert.deepEqual(peek.progress.peeked, ["lib"]);
+  assert.deepEqual(peek.progress.revealed, []);
   assert.equal(peek.progress.solved.lib, undefined);
   const repeatedPeek = peekClue(puzzle, peek.progress, "lib", "2026-08-28T10:01:00Z");
-  assert.equal(repeatedPeek.type, "noop");
-  assert.strictEqual(repeatedPeek.progress, peek.progress);
+  assert.equal(repeatedPeek.type, "reveal");
+  assert.deepEqual(repeatedPeek.progress.revealed, ["lib"]);
   assert.deepEqual(repeatedPeek.progress.solved, {});
   assert.deepEqual(repeatedPeek.newlyAvailable, []);
   assert.equal(ids(getAvailableClues(puzzle, repeatedPeek.progress)).includes("book"), false);
+  const thirdTap = peekClue(puzzle, repeatedPeek.progress, "lib", "2026-08-28T10:01:30Z");
+  assert.equal(thirdTap.type, "noop");
 
   const submitted = submitGuess(puzzle, repeatedPeek.progress, "lib", "2026-08-28T10:02:00Z");
   assert.equal(submitted.progress.solved.lib, "guess");
@@ -165,6 +168,7 @@ test("tap-only play cannot solve, unlock, or complete any branch", () => {
   }
   assert.deepEqual(progress.solved, {});
   assert.deepEqual(progress.peeked, ["lib", "sky"]);
+  assert.deepEqual(progress.revealed, ["lib", "sky"]);
   assert.deepEqual(ids(getAvailableClues(puzzle, progress)), ["lib", "sky"]);
   assert.equal(isComplete(puzzle, progress), false);
 });
@@ -226,6 +230,7 @@ test("peeked hints round-trip without becoming solved progress", () => {
   progress = peekClue(puzzle, progress, "lib", "2026-08-28T10:00:00Z").progress;
   const restored = restoreProgress(puzzle, serializeProgress(progress));
   assert.deepEqual(restored.peeked, ["lib"]);
+  assert.deepEqual(restored.revealed, []);
   assert.deepEqual(restored.solved, {});
   assert.equal(ids(getAvailableClues(puzzle, restored)).includes("book"), false);
 });
@@ -248,13 +253,14 @@ test("malformed, foreign, and dependency-inconsistent progress fail closed", () 
   assert.deepEqual(restoreProgress(puzzle, JSON.stringify(invalid)), createProgress(puzzle));
 });
 
-test("restore rejects legacy reveal, inconsistent peek, completion, and timestamp records", () => {
+test("restore rejects inconsistent reveal, peek, completion, and timestamp records", () => {
   const puzzle = compilePuzzle(branchPuzzle, esLocale);
   const fresh = createProgress(puzzle);
   const invalidRecords = [
     { ...fresh, version: 2 },
     { ...fresh, solved: { lib: "reveal" }, startedAt: "2026-08-28T10:00:00Z" },
-    { ...fresh, revealed: ["lib"], startedAt: "2026-08-28T10:00:00Z" },
+    { ...fresh, revealed: ["lib"], peeked: [], startedAt: "2026-08-28T10:00:00Z" },
+    { ...fresh, revealed: ["lib"], freePeekVersion: 2, startedAt: "2026-08-28T10:00:00Z" },
     { ...fresh, peeked: ["lib", "lib"], startedAt: "2026-08-28T10:00:00Z" },
     { ...fresh, peeked: ["object"], startedAt: "2026-08-28T10:00:00Z" },
     { ...fresh, completedAt: "2026-08-28T10:01:00Z", startedAt: "2026-08-28T10:00:00Z" }

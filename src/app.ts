@@ -93,7 +93,25 @@ export class AppError extends Data.TaggedError("AppError")<{
   readonly cause: unknown;
 }> {}
 
+export const INSTRUCTIONS_STORAGE_KEY = "nested-clue:instructions:v1";
+
 const datedAppPopStateCleanups = new WeakMap<HTMLElement, () => void>();
+
+function hasSeenInstructions(storage: StorageLike | null | undefined): boolean {
+  try {
+    return storage?.getItem(INSTRUCTIONS_STORAGE_KEY) === "seen";
+  } catch {
+    return false;
+  }
+}
+
+function recordInstructionsSeen(storage: StorageLike | null | undefined): void {
+  try {
+    storage?.setItem(INSTRUCTIONS_STORAGE_KEY, "seen");
+  } catch {
+    // Playing must still work when browser storage is unavailable.
+  }
+}
 
 function loadJsonEffect(url: URL, signal?: AbortSignal): Effect.Effect<unknown, AppError> {
   return makeHttpClient().json(url, signal ? { signal } : undefined).pipe(
@@ -281,6 +299,8 @@ function eventMessage(transition: Transition, puzzle: CompiledPuzzle, locale: Lo
       return locale.ui.wrong ?? "";
     case "peek":
       return formatMessage(locale.ui.peeked, { peek: transition.peek });
+    case "reveal":
+      return formatMessage(locale.ui.revealed, { answer: transition.answer });
     default:
       return "";
   }
@@ -401,7 +421,14 @@ export async function startApp({
     document.documentElement.dir = locale.dir;
     document.title = `${locale.ui.gameName} — ${locale.ui.gameLabel}`;
     refresh();
-    if (!view.composer.hidden) focusGuess(view);
+    if (!hasSeenInstructions(storage ?? null)) {
+      view.showInstructions(() => {
+        recordInstructionsSeen(storage ?? null);
+        if (!view.composer.hidden) focusGuess(view);
+      });
+    } else if (!view.composer.hidden) {
+      focusGuess(view);
+    }
     return { puzzle, locale, getProgress: () => progress, view, destroy: () => view.destroy?.() };
   } catch (error: unknown) {
     const isValidationError = error instanceof PuzzleValidationError;
@@ -479,7 +506,7 @@ export async function bootstrapApp({
     }
   }
   if (mode !== "author") {
-    if (puzzleUrl) return startApp({ mount, puzzleUrl, localeUrl, storage });
+    if (puzzleUrl) return startApp({ mount, puzzleUrl, localeUrl, storage: browserStorage });
     try {
       if (repository) {
         const [listing, locale] = await Promise.all([
@@ -497,7 +524,7 @@ export async function bootstrapApp({
           defaultDate: latestAvailablePuzzleDate(entries),
           canAuthor: repository.config.canAuthor,
           locale,
-          storage,
+          storage: browserStorage,
           loadDefinition: (date, _entry, signal) => repository.loadPublic(date, signal)
         });
       }
@@ -522,7 +549,7 @@ export async function bootstrapApp({
         defaultDate: catalog.defaultDate,
         canAuthor: true,
         locale,
-        storage,
+        storage: browserStorage,
         loadDefinition: (_date, entry, signal) => {
           if (entry.definition) return Promise.resolve(entry.definition);
           if (!entry.file) return Promise.reject(new AppError({

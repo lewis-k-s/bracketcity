@@ -100,6 +100,8 @@ export const ProgressSchema = Schema.Struct({
   puzzleRevision: Schema.Finite,
   solved: Schema.Record(Schema.String, Schema.Literal("guess")),
   peeked: Schema.Array(Schema.String),
+  revealed: Schema.optionalKey(Schema.Array(Schema.String)),
+  freePeekVersion: Schema.optionalKey(Schema.Literal(1)),
   wrongGuesses: Schema.Finite,
   keystrokes: Schema.Finite,
   startedAt: Schema.optionalKey(Schema.String),

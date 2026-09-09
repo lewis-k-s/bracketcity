@@ -8,7 +8,7 @@ import { installDomWindow } from "./test-dom.ts";
 
 globalThis.__NEXO_DISABLE_AUTO_START__ = true;
 installAppDom();
-const { startApp, startDatedApp } = await import("../src/app.ts");
+const { INSTRUCTIONS_STORAGE_KEY, startApp, startDatedApp } = await import("../src/app.ts");
 
 function definitionFor(date: string): PuzzleDefinition {
   return { ...structuredClone(branchPuzzle), id: `puzzle-${date}`, releaseDate: date };
@@ -68,6 +68,34 @@ test("destroying a dated application removes navigation and child resources", as
   app.destroy();
   assert.ok(removed.includes("popstate"));
   assert.ok(removed.includes("resize"));
+});
+
+test("instructions open once and persist their dismissal in browser storage", async () => {
+  installAppDom();
+  const values = new Map<string, string>();
+  const storage = {
+    getItem(key: string) { return values.get(key) ?? null; },
+    setItem(key: string, value: string) { values.set(key, value); }
+  };
+  const first = await startApp({
+    mount: document.querySelector<HTMLElement>("#app")!,
+    definition: branchPuzzle,
+    localePack: esLocale,
+    storage
+  });
+  assert.ok(first);
+  assert.equal(first.view.instructionsDialog.hasAttribute("open"), true);
+  first.view.instructionsDialog.querySelector<HTMLButtonElement>('[data-testid="instructions-start"]')!.click();
+  assert.equal(values.get(INSTRUCTIONS_STORAGE_KEY), "seen");
+
+  const second = await startApp({
+    mount: document.querySelector<HTMLElement>("#app")!,
+    definition: branchPuzzle,
+    localePack: esLocale,
+    storage
+  });
+  assert.ok(second);
+  assert.equal(second.view.instructionsDialog.hasAttribute("open"), false);
 });
 
 test("a newer date load interrupts a stale request before it can replace the puzzle", async () => {

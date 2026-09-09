@@ -31,6 +31,8 @@ export interface GameView {
   composerObserver: ResizeObserver | null;
   layoutObserver: ResizeObserver | null;
   live: HTMLDivElement;
+  instructionsDialog: HTMLDialogElement;
+  showInstructions(onDismiss: () => void): void;
   destroy(): void;
 }
 
@@ -187,23 +189,32 @@ function renderSegments(
     }
 
     const hasPeek = progress.peeked.includes(node.id);
+    const hasReveal = progress.revealed.includes(node.id);
     const prompt = resolvedPromptText(puzzle, node, direction);
-    const actionText = hasPeek ? locale.ui.enterAfterPeek : locale.ui.peek;
+    const actionText = hasReveal
+      ? locale.ui.enterAfterReveal
+      : hasPeek ? locale.ui.reveal : locale.ui.peek;
     const accessiblePrompt = formatMessage(locale.ui.clueLabel, { clue: prompt });
-    const hintText = hasPeek ? formatMessage(locale.ui.peekValue, { peek: node.peek }) : "";
+    const hintText = hasReveal
+      ? formatMessage(locale.ui.revealValue, { answer: node.answer })
+      : hasPeek ? formatMessage(locale.ui.peekValue, { peek: node.peek }) : "";
     const button = element("span", {
-      className: `clue clue-button${hasPeek ? " clue-button--peeked" : ""}`,
+      className: `clue clue-button${hasPeek ? " clue-button--peeked" : ""}${hasReveal ? " clue-button--revealed" : ""}`,
       attributes: {
         role: "button",
         tabindex: "0",
         "data-clue-state": "available",
-        "data-hint-state": hasPeek ? "peeked" : "none",
+        "data-hint-state": hasReveal ? "revealed" : hasPeek ? "peeked" : "none",
         "aria-label": [accessiblePrompt, hintText, actionText].filter(Boolean).join(" ")
       }
     });
     elements.set(node.id, button);
-    renderHint(button, node, direction, puzzle, progress, locale, onHint, elements);
-    if (hasPeek) {
+    if (hasReveal) {
+      button.append(element("span", { className: "clue-answer", text: node.answer }));
+    } else {
+      renderHint(button, node, direction, puzzle, progress, locale, onHint, elements);
+    }
+    if (hasPeek && !hasReveal) {
       button.append(
         element("span", {
           className: "peek-marker",
@@ -504,7 +515,118 @@ export function createGameShell(
     className: "visually-hidden",
     attributes: { "aria-live": "polite", "aria-atomic": "true", role: "status", "data-testid": "live-status" }
   });
-  mount.append(shell, composer, live);
+  const instructionsDialog = element("dialog", {
+    className: "instructions-dialog",
+    attributes: {
+      "aria-labelledby": "instructions-title",
+      "data-testid": "instructions-dialog"
+    }
+  });
+  const instructionsTitle = element("h2", {
+    className: "instructions-dialog-title",
+    text: locale.ui.instructionsTitle,
+    attributes: { id: "instructions-title", tabindex: "-1" }
+  });
+  const instructionsIntro = element("p", {
+    className: "instructions-dialog-intro",
+    text: locale.ui.instructionsIntro
+  });
+  const rules = element("ol", { className: "instructions-rules" });
+  const rule = (title: string, body: string): HTMLLIElement => {
+    const item = element("li");
+    item.append(
+      element("strong", { text: title }),
+      element("p", { text: body })
+    );
+    return item;
+  };
+  rules.append(
+    rule(locale.ui.instructionsRuleStartTitle ?? "", locale.ui.instructionsRuleStart ?? ""),
+    rule(locale.ui.instructionsRuleChainTitle ?? "", locale.ui.instructionsRuleChain ?? ""),
+    rule(locale.ui.instructionsRuleAnswerTitle ?? "", locale.ui.instructionsRuleAnswer ?? ""),
+    rule(locale.ui.instructionsRuleFinalTitle ?? "", locale.ui.instructionsRuleFinal ?? ""),
+    rule(locale.ui.instructionsRuleHelpTitle ?? "", locale.ui.instructionsRuleHelp ?? "")
+  );
+  const examples = element("section", {
+    className: "instructions-examples",
+    attributes: { "aria-labelledby": "instructions-examples-title" }
+  });
+  examples.append(element("h3", {
+    className: "instructions-examples-title",
+    text: locale.ui.instructionsExamplesTitle,
+    attributes: { id: "instructions-examples-title" }
+  }));
+  const exampleGrid = element("div", { className: "instructions-example-grid" });
+  const example = (label: string, contents: Node, answer: string): HTMLElement => {
+    const card = element("div", { className: "instructions-example" });
+    const preview = element("p", { className: "instructions-example-preview" });
+    preview.append(contents);
+    card.append(
+      element("strong", { text: label }),
+      preview,
+      element("p", {
+        className: "instructions-example-answer",
+        text: formatMessage(locale.ui.instructionsExampleAnswer, { answer })
+      })
+    );
+    return card;
+  };
+  const replacement = document.createDocumentFragment();
+  replacement.append(element("span", {
+    className: "clue instructions-clue",
+    text: "Animal que maúlla"
+  }));
+  const directional = document.createDocumentFragment();
+  const directionalClue = element("span", { className: "clue instructions-clue" });
+  directionalClue.append(
+    document.createTextNode("En el calor del"),
+    element("span", {
+      className: "answer-slot-arrow",
+      text: "→",
+      attributes: { "aria-hidden": "true" }
+    }),
+    element("span", {
+      className: "answer-slot",
+      text: "___",
+      attributes: { "aria-label": locale.ui.answerSlot ?? "respuesta" }
+    })
+  );
+  directional.append(directionalClue);
+  const infill = document.createDocumentFragment();
+  infill.append(element("span", {
+    className: "clue instructions-clue",
+    text: "El planeta ____ tiene anillos"
+  }));
+  exampleGrid.append(
+    example(locale.ui.instructionsExampleReplacement ?? "", replacement, "gato"),
+    example(locale.ui.instructionsExampleDirectional ?? "", directional, "momento"),
+    example(locale.ui.instructionsExampleInfill ?? "", infill, "Saturno")
+  );
+  examples.append(exampleGrid);
+  const startButton = element("button", {
+    className: "instructions-start-button",
+    text: locale.ui.instructionsStart,
+    attributes: { type: "button", "data-testid": "instructions-start" }
+  });
+  instructionsDialog.append(instructionsTitle, instructionsIntro, rules, examples, startButton);
+
+  let instructionsDismissed = false;
+  let onInstructionsDismiss = () => {};
+  const dismissInstructions = () => {
+    if (instructionsDismissed) return;
+    instructionsDismissed = true;
+    onInstructionsDismiss();
+  };
+  instructionsDialog.addEventListener("close", dismissInstructions);
+  startButton.addEventListener("click", () => {
+    if (typeof instructionsDialog.close === "function") instructionsDialog.close();
+    else {
+      instructionsDialog.removeAttribute("open");
+      dismissInstructions();
+    }
+  });
+
+  mount.append(shell, composer, live, instructionsDialog);
 
   const syncShellCenter = () => {
     const mountRect = mount.getBoundingClientRect();
@@ -553,6 +675,15 @@ export function createGameShell(
     composerObserver,
     layoutObserver,
     live,
+    instructionsDialog,
+    showInstructions(onDismiss) {
+      onInstructionsDismiss = onDismiss;
+      instructionsDismissed = false;
+      if (typeof instructionsDialog.showModal === "function") instructionsDialog.showModal();
+      else instructionsDialog.setAttribute("open", "");
+      instructionsDialog.scrollTop = 0;
+      instructionsTitle.focus({ preventScroll: true });
+    },
     destroy() {
       composerObserver?.disconnect();
       layoutObserver?.disconnect();

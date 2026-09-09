@@ -145,6 +145,20 @@ test("available clue activation calls the hint handler with its stable ID", () =
   assert.deepEqual(activated, ["lib"]);
 });
 
+test("a second hint tap reveals the answer while keeping the clue unsolved", () => {
+  installDom();
+  const puzzle = compilePuzzle(branchPuzzle, esLocale);
+  let progress = createProgress(puzzle);
+  progress.peeked.push("lib");
+  progress.revealed.push("lib");
+  const view = shell(puzzle);
+  renderPuzzle(view.puzzleText, puzzle, progress, esLocale, () => {});
+  const clue = getRenderedClueElement(view.puzzleText, "lib", "available");
+  assert.equal(clue.dataset.hintState, "revealed");
+  assert.equal(clue.textContent, "lib");
+  assert.match(clue.getAttribute("aria-label") ?? "", /Respuesta: lib/u);
+});
+
 test("inline clue controls support Enter and Space", () => {
   installDom();
   const puzzle = compilePuzzle(branchPuzzle, esLocale);

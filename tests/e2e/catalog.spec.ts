@@ -7,6 +7,12 @@ async function openFresh(page: Page, path = "/"): Promise<void> {
   await page.goto(path);
   await page.evaluate(() => localStorage.clear());
   await page.reload();
+  await Promise.race([
+    page.getByTestId("guess-input").waitFor({ state: "attached" }),
+    page.getByRole("alert").waitFor({ state: "visible" })
+  ]);
+  const instructions = page.getByTestId("instructions-dialog");
+  if (await instructions.isVisible()) await page.getByTestId("instructions-start").click();
 }
 
 async function submitWithVirtualKeyboard(page: Page, answer: string): Promise<void> {

@@ -359,6 +359,7 @@ test("publishes a dated creator puzzle and opens it in play mode", async ({ page
   await expect(selector.locator("option")).toHaveCount(4);
   await expect(page.getByTestId("puzzle")).toContainText("animal doméstico");
   await expect(page.getByTestId("puzzle")).not.toContainText("gata");
+  await page.getByTestId("instructions-start").click();
   await submitWithVirtualKeyboard(page, "gata");
   await expect(page.getByTestId("completion")).toContainText("La gata.");
   await page.reload();

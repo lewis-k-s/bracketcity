@@ -697,6 +697,139 @@ body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
   margin-top: 0.25rem;
 }
 
+:is(#app, #bracket-city-app) .instructions-dialog {
+  width: min(calc(100% - 2rem), 44rem);
+  max-height: calc(100dvh - 2rem);
+  overflow: auto;
+  padding: clamp(1.1rem, 3vw, 1.7rem);
+  border: 1px solid var(--ink);
+  border-radius: 0.35rem;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0.5rem 0.5rem 0 rgba(44, 42, 40, 0.2);
+}
+
+:is(#app, #bracket-city-app) .instructions-dialog::backdrop {
+  background: rgba(26, 24, 22, 0.62);
+}
+
+:is(#app, #bracket-city-app) .instructions-dialog-title {
+  margin: 0;
+  font-size: clamp(1.45rem, 5vw, 2rem);
+  letter-spacing: -0.04em;
+}
+
+:is(#app, #bracket-city-app) .instructions-dialog-title:focus {
+  outline: 0;
+}
+
+:is(#app, #bracket-city-app) .instructions-dialog-intro {
+  margin: 0.55rem 0 1rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+:is(#app, #bracket-city-app) .instructions-rules {
+  display: grid;
+  gap: 0.65rem;
+  margin: 1rem 0 0;
+  padding-left: 1.35rem;
+}
+
+:is(#app, #bracket-city-app) .instructions-rules li {
+  padding-left: 0.15rem;
+}
+
+:is(#app, #bracket-city-app) .instructions-rules strong {
+  display: block;
+  font-size: 0.92rem;
+}
+
+:is(#app, #bracket-city-app) .instructions-rules p {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+:is(#app, #bracket-city-app) .instructions-examples {
+  margin-top: 1.15rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--line);
+}
+
+:is(#app, #bracket-city-app) .instructions-examples-title {
+  margin: 0;
+  font-size: 0.92rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+:is(#app, #bracket-city-app) .instructions-example-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.6rem;
+}
+
+:is(#app, #bracket-city-app) .instructions-example {
+  min-width: 0;
+  padding: 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 0.25rem;
+  background: #fafafa;
+}
+
+:is(#app, #bracket-city-app) .instructions-example > strong {
+  display: block;
+  color: var(--blue-dark);
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+:is(#app, #bracket-city-app) .instructions-example-preview {
+  margin: 0.45rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+:is(#app, #bracket-city-app) .instructions-example-answer {
+  margin: 0.45rem 0 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+:is(#app, #bracket-city-app) .instructions-clue {
+  padding: 0.06em 0.12em;
+  border-radius: 0.15rem;
+  background: var(--blue);
+  color: #ffffff;
+  font-weight: 700;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+:is(#app, #bracket-city-app) .instructions-start-button {
+  width: 100%;
+  min-height: 2.75rem;
+  margin-top: 1.15rem;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--blue-dark);
+  border-radius: 0.25rem;
+  background: var(--blue-dark);
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+:is(#app, #bracket-city-app) .instructions-start-button:focus-visible {
+  outline: 3px solid rgba(78, 100, 173, 0.38);
+  outline-offset: 3px;
+}
+
 :is(#app, #bracket-city-app) .author-utilities-label {
   color: var(--muted);
   font-size: 0.65rem;
@@ -1947,6 +2080,16 @@ body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
   :is(#app, #bracket-city-app) .puzzle-text {
     font-size: 1rem;
     line-height: 1.38;
+  }
+
+  :is(#app, #bracket-city-app) .instructions-dialog {
+    width: calc(100% - 1rem);
+    max-height: calc(100dvh - 1rem);
+    padding: 1rem;
+  }
+
+  :is(#app, #bracket-city-app) .instructions-example-grid {
+    grid-template-columns: 1fr;
   }
 
   :is(#app, #bracket-city-app) .clue-button {
