@@ -27,7 +27,15 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - name: Install Playwright browsers
-        run: npx playwright install chromium webkit
+        run: |
+          mapfile -t google_sources < <(
+            sudo grep -RIl "https://dl.google.com/linux/chrome" \
+              /etc/apt/sources.list /etc/apt/sources.list.d 2>/dev/null || true
+          )
+          for source in "${google_sources[@]}"; do
+            sudo mv "$source" "${source}.disabled"
+          done
+          npx playwright install --with-deps chromium webkit
       - run: npm run test:all
       - run: npm run package:plugin
       - name: Upload the installable bridge
