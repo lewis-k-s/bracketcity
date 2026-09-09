@@ -16,7 +16,7 @@ npm run dev              # local standalone Vite server
 npm run studio:dev       # Studio mirror with live Nexo PHP and Vite assets
 npm run build:pages      # create dist-pages/
 npm run test:all         # unit, PHP, Pages, WordPress, and browser gates
-npm run package:plugin   # create and install-test release/nexo-1.2.1.zip
+npm run package:plugin   # create and install-test release/nexo-1.2.2.zip
 npm run deploy:prepare   # build Pages and the installable bridge ZIP
 ```
 
