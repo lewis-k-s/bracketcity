@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Data, Effect } from "effect";
@@ -127,18 +127,20 @@ function escapeHtml(value: unknown): string {
 export function renderPagesIndex(revision = "local"): string {
   const safeRevision = escapeHtml(revision);
   return `<!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Nexo asset host</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="description"
+      content="Un juego multilingüe de pistas anidadas que se resuelve desde dentro hacia fuera."
+    />
+    <title>Nexo — Pistas anidadas</title>
   </head>
-  <body>
-    <main>
-      <h1>Nexo asset host</h1>
-      <p>The game runs on its WordPress page.</p>
-      <p>Release: <code>${safeRevision}</code></p>
-    </main>
+  <body class="nexo-standalone">
+    <main id="app"></main>
+    <script src="./loader.js" data-release="${safeRevision}"></script>
   </body>
 </html>
 `;
@@ -169,6 +171,11 @@ export async function buildPagesRelease({ revision = process.env.GITHUB_SHA ?? "
     cssPath: cssAssets[0]!,
     localePath
   }));
+  await Promise.all(["locales", "puzzles"].map((directory) => cp(
+    resolve(projectRoot, directory),
+    resolve(outputDirectory, directory),
+    { recursive: true }
+  )));
   await writeFile(resolve(outputDirectory, "index.html"), renderPagesIndex(revision));
   await writeFile(resolve(outputDirectory, ".nojekyll"), "");
   await rm(resolve(outputDirectory, ".vite"), { recursive: true, force: true });

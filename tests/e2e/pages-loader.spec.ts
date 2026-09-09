@@ -31,6 +31,15 @@ async function selectPreviewText(page: Page, selectedText: string): Promise<void
   await page.getByTestId("author-convert-selection").click();
 }
 
+test("Pages root runs the standalone game", async ({ page }) => {
+  await page.goto("http://127.0.0.1:4175/");
+
+  await expect(page.getByTestId("puzzle")).toBeVisible();
+  await expect(page.getByTestId("date-selector")).toHaveValue("2026-08-30");
+  await expect(page.locator('script[src*="/loader.js"]')).toHaveCount(1);
+  await expect(page.locator('script[src*="/assets/nexo-"]')).toHaveCount(1);
+});
+
 test("classic Pages bundle runs on the WordPress origin and keeps progress there", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.route("**/wp-json/bracket-city/v1/**", (route) => {

@@ -87,13 +87,15 @@ test("release rejects unsafe generated asset paths", () => {
   }), /safe Pages asset path/);
 });
 
-test("diagnostic page escapes its revision", () => {
+test("standalone page mounts the game and escapes its revision", () => {
   const html = renderPagesIndex('<script>alert("x")</script>');
   assert.doesNotMatch(html, /<script>alert/);
   assert.match(html, /&lt;script&gt;alert\(&quot;x&quot;\)&lt;\/script&gt;/);
+  assert.match(html, /<main id="app"><\/main>/);
+  assert.match(html, /<script src="\.\/loader\.js"/);
 });
 
-test("Pages artifact contains only stable entry files and hashed runtime assets", async () => {
+test("Pages artifact contains a standalone game and stable WordPress loader assets", async () => {
   const files = await listFiles(pagesDirectory);
   assert.ok(files.includes(".nojekyll"));
   assert.ok(files.includes("index.html"));
@@ -103,7 +105,10 @@ test("Pages artifact contains only stable entry files and hashed runtime assets"
   assert.equal(files.filter((name) => /^assets\/author-view-[\w-]+\.js$/.test(name)).length, 1);
   assert.equal(files.filter((name) => /^assets\/nexo-[\w-]+\.css$/.test(name)).length, 1);
   assert.equal(files.filter((name) => /^assets\/es-ES-[a-f0-9]+\.js$/.test(name)).length, 1);
-  assert.ok(!files.some((name) => /puzzles?|\.json$|manifest/i.test(name)));
+  assert.ok(files.includes("locales/es-ES.json"));
+  assert.ok(files.includes("puzzles/manifest.json"));
+  assert.ok(files.includes("puzzles/schema-v1.json"));
+  assert.ok(files.includes("puzzles/2026-08-30-es.json"));
 
   const appName = files.find((name) => /^assets\/nexo-[\w-]+\.js$/.test(name));
   const app = await readFile(resolve(pagesDirectory, appName!), "utf8");
