@@ -6,3 +6,4 @@ playwright-report/
 release/
 .package-stage/
 .DS_Store
+supabase-pw.txt
