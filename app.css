@@ -2211,6 +2211,10 @@ body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
     transform: translateX(calc(-50% + var(--nexo-viewport-center-offset, 0px)));
   }
 
+  :is(#app, #bracket-city-app) .guess-form {
+    width: min(100%, 43rem);
+  }
+
   :is(#app, #bracket-city-app) .virtual-keyboard {
     display: none;
   }
