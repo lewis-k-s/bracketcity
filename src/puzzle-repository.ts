@@ -134,6 +134,7 @@ export function readSupabaseConfig(doc: Document = globalThis.document): Supabas
       ...config,
       url: trimSlash(url.href),
       publishableKey: config.publishableKey,
+      authorModeEnabled: config.authorModeEnabled === true,
       canAuthor: false,
       timeZone: typeof config.timeZone === "string" ? config.timeZone : "Europe/Madrid"
     }));

@@ -36,6 +36,15 @@ jobs:
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
       - name: Apply database migrations
         run: supabase db push
+      - name: Enable the manager-only Auth hook
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --request PATCH \
+            --url "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/config/auth" \
+            --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            --header "Content-Type: application/json" \
+            --data '{"hook_custom_access_token_enabled":true,"hook_custom_access_token_uri":"pg-functions://postgres/private/puzzle_manager_access_token_hook"}' \
+            --output /dev/null
       - name: Deploy Edge Functions
         if: ${{ hashFiles('supabase/functions/**/index.ts') != '' }}
         run: supabase functions deploy

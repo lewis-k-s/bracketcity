@@ -7,11 +7,11 @@ while `view.ts`, `app.ts`, and the author modules render the public and creator
 interfaces. Static runtime data is in `puzzles/` and `locales/`; keep puzzle
 definitions valid against `puzzles/schema-v1.json`.
 
-The WordPress bridge is in `wordpress-plugin/`. Its PHP entry point is
-`nexo.php`, with shortcode, capability, REST, storage, and validation classes
-in `wordpress-plugin/includes/`. The Pages build writes external frontend
-assets to `dist-pages/`. The plugin ZIP contains only PHP and bootstrap seeds.
-Do not edit generated `dist/`, `dist-pages/`, or `release/` files.
+The deprecated WordPress bridge is in `wordpress-plugin/`. Keep it only for
+rollback, migration, and historical tests. Production and the Mudlarker embed
+use the GitHub Pages bundle with Supabase. The Pages build writes frontend
+assets to `dist-pages/`. Do not edit generated `dist/`, `dist-pages/`, or
+`release/` files.
 
 Tests live in `tests/`. Unit tests use `tests/*.test.ts`, end-to-end browser
 tests use `tests/e2e/*.spec.ts`, and PHP/WordPress checks live in `tests/php/`.
@@ -22,15 +22,12 @@ tests use `tests/e2e/*.spec.ts`, and PHP/WordPress checks live in `tests/php/`.
 npm install                 # install Node dependencies
 npm run dev                 # start Vite locally
 npm run test:unit           # run Node unit tests
-npm run test:php            # lint and run PHP contract tests
-npm run test:wordpress      # run disposable WordPress + MariaDB integration tests
 npm run test:e2e            # run Playwright browser and accessibility tests
 npm run build:pages         # create the GitHub Pages frontend artifact
-npm run package:plugin      # run release gates and create release/nexo-<version>.zip
+npm run test:legacy-wordpress # optional archived PHP and WordPress checks
 ```
 
-Run `npm run test:all` before a release. The WordPress test uses Docker and
-removes its containers and volumes after completion.
+Run `npm run test:all` before a release.
 
 ## Coding Style & Naming Conventions
 
@@ -42,9 +39,9 @@ hooks and data keys. Keep puzzle filenames date-based, for example
 `puzzles/2026-08-31-es.json`.
 
 Preserve security boundaries: validate untrusted puzzle JSON, do not render raw
-HTML from puzzle content, require `manage_nexo_puzzles` for writes, and retain
-the `Europe/Madrid` release rule. Do not add WordPress secrets or puzzle
-publishing to GitHub CI.
+HTML from puzzle content, require the Supabase manager allowlist for writes,
+keep the Mudlarker embed player-only, and retain the `Europe/Madrid` release
+rule. Do not add service-role or WordPress secrets to frontend builds.
 
 ## Commit & Pull Request Guidelines
 

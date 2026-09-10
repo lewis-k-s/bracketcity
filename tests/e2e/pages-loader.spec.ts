@@ -105,6 +105,30 @@ test("a root Supabase invitation callback opens authenticated author mode", asyn
   });
 });
 
+test("a blog embed prefers Supabase and does not expose creator sign-in", async ({ page }) => {
+  let wordpressRequests = 0;
+  await page.route("**/wp-json/bracket-city/v1/**", (route) => {
+    wordpressRequests++;
+    return json(route, { message: "Legacy WordPress data must not be used." }, 500);
+  });
+  await page.route("**/*.supabase.co/rest/v1/puzzles*", (route) => {
+    const select = new URL(route.request().url()).searchParams.get("select");
+    if (select === "definition") return json(route, [{ definition: earlierPuzzle }]);
+    return json(route, [{
+      release_date: earlierPuzzle.releaseDate,
+      puzzle_id: earlierPuzzle.id,
+      revision: earlierPuzzle.revision ?? 1
+    }]);
+  });
+
+  await page.goto("/tests/e2e/fixtures/supabase-embed-page.html?mode=author");
+
+  await expect(page.getByTestId("puzzle")).toBeVisible();
+  await expect(page.getByTestId("date-selector")).toHaveValue(earlierPuzzle.releaseDate);
+  await expect(page.getByTestId("manager-email")).toHaveCount(0);
+  expect(wordpressRequests).toBe(0);
+});
+
 test("classic Pages bundle runs on the WordPress origin and keeps progress there", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.route("**/wp-json/bracket-city/v1/**", (route) => {

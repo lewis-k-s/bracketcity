@@ -105,6 +105,7 @@ test("standalone page embeds only a validated Supabase browser configuration", (
   assert.match(html, /id="nexo-supabase-config"/u);
   assert.match(html, /https:\/\/abcdefghijklmnopqrst\.supabase\.co/u);
   assert.match(html, /sb_publishable_public-key/u);
+  assert.match(html, /"authorModeEnabled":true/u);
   assert.throws(() => readPagesSupabaseConfig({
     SUPABASE_PROJECT_REF: "abcdefghijklmnopqrst",
     SUPABASE_PUBLISHABLE_KEY: "sb_secret_private-key"

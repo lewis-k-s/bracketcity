@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   verify:
-    name: Test and package
+    name: Test and build Pages
     runs-on: ubuntu-latest
     env:
       SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
@@ -40,14 +40,6 @@ jobs:
           done
           npx playwright install --with-deps chromium webkit
       - run: npm run test:all
-      - run: npm run package:plugin
-      - name: Upload the installable bridge
-        uses: actions/upload-artifact@v7
-        with:
-          name: nexo-plugin-${{ github.sha }}
-          path: release/nexo-*.zip
-          if-no-files-found: error
-          retention-days: 30
       - name: Configure GitHub Pages
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v5

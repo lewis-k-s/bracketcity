@@ -3,7 +3,7 @@
   "version": "1.2.2",
   "private": true,
   "type": "module",
-  "description": "Entre Paréntesis multilingual nested-clue game and WordPress plugin.",
+  "description": "Entre Paréntesis multilingual nested-clue game backed by Supabase.",
   "scripts": {
     "dev": "vite",
     "dev:studio-assets": "vite --config vite.wordpress.config.ts",
@@ -27,7 +27,8 @@
     "test:pages": "npm run build:pages && tsx --test tests/pages/*.test.ts",
     "test:package": "tsx --test tests/package/*.test.ts",
     "test:e2e": "npm run build:pages && playwright test",
-    "test:all": "npm run typecheck && npm run test:unit && npm run test:php && npm run test:pages && npm run test:package && npm run test:wordpress && npm run test:e2e",
+    "test:all": "npm run typecheck && npm run test:unit && npm run test:pages && npm run test:e2e",
+    "test:legacy-wordpress": "npm run test:php && npm run test:package && npm run test:wordpress",
     "package:plugin": "npm run typecheck && tsx scripts/package-plugin.ts && tsx scripts/verify-wordpress-package.ts",
     "deploy:prepare": "sh scripts/prepare-deploy.sh",
     "package:verify": "tsx scripts/package-plugin.ts --verify-only --skip-checks",

@@ -1,11 +1,10 @@
 # GitHub Pages Deployment
 
 GitHub Actions tests every pull request and push to `main`. A successful
-`main` run deploys `dist-pages/` to GitHub Pages and retains the installable
-WordPress bridge ZIP for 30 days.
+`main` run deploys `dist-pages/` to GitHub Pages.
 
 Before you push a release, run `npm run deploy:prepare`. It builds the same
-Pages files and creates a checked bridge ZIP locally, but does not publish.
+Pages files locally, but does not publish.
 
 ## Repository setup
 
@@ -27,40 +26,32 @@ repository variable or frontend build.
 
 The Supabase migration workflow also uses `SUPABASE_ACCESS_TOKEN` and
 `SUPABASE_DB_PASSWORD` as repository secrets. It applies checked-in database
-migrations only. Do not add WordPress credentials to GitHub.
+migrations and the checked-in project configuration. Do not add WordPress
+credentials to GitHub.
 
 The same workflow deploys checked-in Edge Functions. Supabase provides the
 function with its runtime URL, publishable key, and service-role key. The Pages
 artifact receives only `SUPABASE_PUBLISHABLE_KEY`. Authentication URL settings,
-signup disabling, user invitations, and entries in `private.puzzle_managers`
-are deliberate production operations; `supabase db push` does not perform them.
+user invitations and entries in `private.puzzle_managers` are deliberate
+production operations.
 
-## WordPress rollout
+## WordPress embed
 
-Download `nexo-plugin-<commit>` from the workflow artifacts. Upload its ZIP in
-WordPress.com under **Plugins**, activate it, and add this shortcode to a normal
-Page:
+The Mudlarker page embeds the public Pages bundle with a Custom HTML block:
 
-```text
-[bracket_city asset_base="https://OWNER.github.io/REPOSITORY"]
+```html
+<script id="nexo-supabase-config" type="application/json">
+  {"url":"https://PROJECT.supabase.co","publishableKey":"PUBLISHABLE_KEY"}
+</script>
+<div id="bracket-city-app"></div>
+<script src="https://entre-parentesis.es/loader.js"></script>
 ```
 
-The URL must use HTTPS and must not contain credentials, a query, or a
-fragment. The bridge stores puzzles and supplies same-origin REST data and
-nonces to the WordPress page. The standalone GitHub Pages site reads its
-public puzzle catalog from Supabase.
-
-## Operational credentials
-
-GitHub CI needs no WordPress secret. For an external command-line client,
-create a dedicated WordPress user with the **Entre Paréntesis Puzzle Manager** role. In
-that user's profile, create a site-specific Application Password. Store it in
-the client credential manager, not in this repository or GitHub Actions. Revoke
-it from the same profile when it is no longer needed.
+The publishable key is safe to include in page source. The embed reads released
+puzzles from Supabase. It does not enable creator sign-in. The legacy PHP
+plugin remains in the repository only for rollback and migration work.
 
 ## Rollback
 
 Revert the faulty frontend commit and push the revert to `main`. GitHub Pages
-will deploy the prior code. Keep the previous bridge ZIP outside the 30-day
-artifact window; upload it manually if PHP bridge rollback is required. Neither
-operation changes stored puzzle posts.
+will deploy the prior code. This does not change stored Supabase puzzles.

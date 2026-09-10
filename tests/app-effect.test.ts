@@ -61,6 +61,7 @@ test("Supabase invite callbacks open author mode without a query parameter", () 
   assert.equal(readApplicationMode(invite, true), "author");
   assert.equal(readApplicationMode(magicLink, true), "author");
   assert.equal(readApplicationMode(invite, false), null);
+  assert.equal(readApplicationMode(new URL("https://mudlarker.org/puzzles/?mode=author"), false), null);
   assert.equal(readApplicationMode(new URL("https://entre-parentesis.es/#type=invite"), true), null);
   assert.equal(readApplicationMode(new URL(
     "https://entre-parentesis.es/?mode=suggest#access_token=session&refresh_token=refresh&type=invite"

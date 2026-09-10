@@ -128,6 +128,7 @@ export const WordPressConfigSchema = Schema.Struct({
 export const SupabaseConfigSchema = Schema.Struct({
   url: Schema.String,
   publishableKey: Schema.String,
+  authorModeEnabled: Schema.Boolean,
   canAuthor: Schema.Literal(false),
   currentDate: Schema.optionalKey(Schema.String),
   timeZone: Schema.optionalKey(Schema.String),

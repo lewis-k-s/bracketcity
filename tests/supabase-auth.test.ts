@@ -9,6 +9,7 @@ import { installDomWindow, q } from "./test-dom.ts";
 const config: SupabaseConfig = {
   url: "https://project-ref.supabase.co",
   publishableKey: "sb_publishable_test-key",
+  authorModeEnabled: true,
   canAuthor: false
 };
 

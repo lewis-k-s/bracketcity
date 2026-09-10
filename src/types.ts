@@ -192,6 +192,7 @@ export interface WordPressConfig extends PuzzleRepositoryConfig {
 export interface SupabaseConfig extends PuzzleRepositoryConfig {
   readonly url: string;
   readonly publishableKey: string;
+  readonly authorModeEnabled: boolean;
 }
 
 export interface AuthenticatedSupabaseConfig extends Omit<SupabaseConfig, "canAuthor"> {

@@ -23,6 +23,7 @@ interface PagesBuildResult extends PagesAssets {
 interface PagesSupabaseConfig {
   readonly url: string;
   readonly publishableKey: string;
+  readonly authorModeEnabled: true;
 }
 
 interface ManifestEntry {
@@ -151,7 +152,8 @@ export function readPagesSupabaseConfig(
   }
   return {
     url: `https://${projectRef}.supabase.co`,
-    publishableKey
+    publishableKey,
+    authorModeEnabled: true
   };
 }
 

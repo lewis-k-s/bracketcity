@@ -47,6 +47,7 @@ function supabaseConfig(overrides: Partial<SupabaseConfig> = {}): SupabaseConfig
   return {
     url: "https://project-ref.supabase.co",
     publishableKey: "sb_publishable_test-key",
+    authorModeEnabled: false,
     canAuthor: false,
     timeZone: "Europe/Madrid",
     ...overrides
@@ -67,6 +68,8 @@ test("shortcode JSON configuration is read without executing markup", () => {
 test("Pages Supabase configuration accepts only a public HTTPS origin and publishable key", () => {
   const dom = new JSDOM('<script id="nexo-supabase-config" type="application/json">{"url":"https://project-ref.supabase.co/","publishableKey":"sb_publishable_test-key"}</script>');
   assert.deepEqual(readSupabaseConfig(dom.window.document), supabaseConfig());
+  const authoring = new JSDOM('<script id="nexo-supabase-config" type="application/json">{"url":"https://project-ref.supabase.co/","publishableKey":"sb_publishable_test-key","authorModeEnabled":true}</script>');
+  assert.deepEqual(readSupabaseConfig(authoring.window.document), supabaseConfig({ authorModeEnabled: true }));
   assert.equal(readSupabaseConfig(new JSDOM("").window.document), null);
 
   for (const source of [

@@ -2,8 +2,9 @@
 
 Entre Paréntesis is a multilingual nested-clue game. The public GitHub Pages player reads
 released puzzles from Supabase when the Pages build has its public Supabase
-configuration. The existing WordPress Page and editor continue to use the
-WordPress bridge. Player progress stays in each site's `localStorage`.
+configuration. The Mudlarker WordPress page embeds the same Pages bundle and
+reads the same Supabase database. Player progress stays in each site's
+`localStorage`.
 
 The browser brand is set in `src/brand.ts`. The WordPress bridge uses
 `NEXO_BRAND_NAME`, which a host can define before the plugin loads. The legacy
@@ -11,28 +12,30 @@ The browser brand is set in `src/brand.ts`. The WordPress bridge uses
 
 ## Develop and test
 
-Use a current Node.js release, npm, and WordPress Studio. Docker is required
-only for the disposable WordPress integration test.
+Use a current Node.js release and npm. Docker is required only when you run the
+legacy WordPress checks.
 
 ```sh
 npm install
 npm run dev              # local standalone Vite server
-npm run studio:dev       # Studio mirror with live Entre Paréntesis PHP and Vite assets
 npm run build:pages      # create dist-pages/
-npm run test:all         # unit, PHP, Pages, WordPress, and browser gates
-npm run package:plugin   # create and install-test release/nexo-1.2.2.zip
-npm run deploy:prepare   # build Pages and the installable bridge ZIP
+npm run test:all         # unit, Pages, and browser release gates
+npm run deploy:prepare   # build the Pages artifact
+npm run test:legacy-wordpress # optional archived PHP bridge checks
 ```
 
-The WordPress integration test uses disposable WordPress and MariaDB
-containers. The Pages build produces stable `loader.js` and `release.js` files,
-plus content-hashed application, CSS, and locale assets. Bundled puzzle JSON is
-kept only as an unconfigured local fallback.
+The Pages build produces stable `loader.js` and `release.js` files, plus
+content-hashed application, CSS, and locale assets. Bundled puzzle JSON is kept
+only as an unconfigured local fallback.
 
 For the Studio local-development and release workflow, see
 [Local WordPress development](docs/local-wordpress.md).
 
-## WordPress bridge
+## Legacy WordPress bridge
+
+The PHP bridge is deprecated. Production play and creation use Supabase. Keep
+the bridge source only for rollback, data migration, and historical tests. Do
+not package or upload a new plugin during the normal release workflow.
 
 Plugin source is in `wordpress-plugin/`. The bridge registers the private
 `bc_puzzle` post type, the `bracket-city/v1` REST routes, and this shortcode:
@@ -109,16 +112,29 @@ Activation imports a seed only when no active or trashed puzzle has its date,
 and never replaces WordPress data.
 Create all future puzzles through the authenticated builder or REST API.
 
+## Embed on Mudlarker
+
+Use a Custom HTML block on the WordPress page. The publishable key is public;
+database policies limit it to released puzzle reads. Omitting
+`authorModeEnabled` makes this a player-only surface.
+
+```html
+<script id="nexo-supabase-config" type="application/json">
+  {"url":"https://PROJECT.supabase.co","publishableKey":"PUBLISHABLE_KEY"}
+</script>
+<div id="bracket-city-app"></div>
+<script src="https://entre-parentesis.es/loader.js"></script>
+```
+
 ## Deploy
 
-Run `npm run deploy:prepare` before release. It builds the Pages artifact and
-the installable bridge ZIP without publishing either one.
+Run `npm run deploy:prepare` before release. It builds the Pages artifact
+without publishing it.
 
 Push to `main` to run all gates and deploy `dist-pages/` through GitHub Pages.
-CI also uploads the bridge ZIP as a workflow artifact, but WordPress.com
-Personal requires manual plugin upload. No WordPress credential is stored in
-GitHub. See [GitHub Pages deployment](docs/continuous-integration.md) for setup,
-credential, rollout, and rollback details.
+No WordPress credential is stored in GitHub. See
+[GitHub Pages deployment](docs/continuous-integration.md) for setup, credential,
+rollout, and rollback details.
 
 ## Supabase puzzle migration
 
@@ -148,13 +164,13 @@ uniqueness, and exact final expansion.
 
 ## Supabase puzzle management
 
-Open `/?mode=author` on the Pages site to use the invite-only puzzle manager.
-The page sends an email magic link only for an existing Supabase Auth user. The
-browser sends the resulting user token to the `puzzle-admin` Edge Function. The
-function checks `private.puzzle_managers`, runs the full TypeScript puzzle
-validator, and then uses service-only database functions for save, Trash, and
-restore operations. Anonymous and ordinary authenticated users cannot write to
-the puzzle table.
+Open `/?mode=author` on the dedicated domain to use the invite-only puzzle
+manager. Supabase issues an access token only when the user exists in
+`private.puzzle_managers`. The browser sends that token to the `puzzle-admin`
+Edge Function, which checks the same table again on every request. It then runs
+the full TypeScript puzzle validator and uses service-only database functions
+for save, Trash, and restore operations. Anonymous and ordinary authenticated
+users cannot write to the puzzle table.
 
 Before first use, configure the hosted Supabase project:
 
