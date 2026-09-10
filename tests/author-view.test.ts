@@ -184,7 +184,7 @@ test("author mode opens the suggestion page in place, explains access, and copie
   }
 });
 
-test("guided bracket formats explain directional forms without rendering internal IDs", () => {
+test("guided parenthesis formats explain directional forms without rendering internal IDs", () => {
   installDom();
   const app = buildDirectedDraft(memoryStorage());
 
@@ -192,8 +192,8 @@ test("guided bracket formats explain directional forms without rendering interna
   assert.ok(workspace.contains(q('[data-testid="author-tree-panel"]')));
   assert.ok(workspace.contains(q('[data-testid="clue-inspector"]')));
   assert.doesNotMatch(q(".author-tree").textContent, /c\d+/u);
-  assert.match(q(".author-tree").textContent, /\[cubierta formada por dos=dosel\]/u);
-  assert.match(q(".author-tree").textContent, /\[número después de uno→dos\]/u);
+  assert.match(q(".author-tree").textContent, /\(cubierta formada por dos=dosel\)/u);
+  assert.match(q(".author-tree").textContent, /\(número después de uno→dos\)/u);
   assert.equal(q('[data-testid="author-bracket-format-right"]').getAttribute("aria-pressed"), "true");
   assert.match(q('[data-testid="author-bracket-format"]').textContent, /pista→respuesta/u);
   assert.equal(q('[data-testid="author-bracket-format-right"] .author-syntax-answer').textContent, "respuesta");
@@ -208,7 +208,7 @@ test("guided bracket formats explain directional forms without rendering interna
 
   q('button.author-tree-button[data-clue-id="c01"]').click();
   assert.doesNotMatch(q(".reference-chip").textContent, /c\d+/u);
-  assert.match(q(".reference-chip").textContent, /\[dos←número después de uno\]/u);
+  assert.match(q(".reference-chip").textContent, /\(dos←número después de uno\)/u);
 });
 
 test("the editor flow and whole-page panel skin stay independent", () => {
@@ -252,7 +252,7 @@ test("the direct editor parses nested groups, inserts syntax keys, and undoes a 
   assert.ok(q('[data-testid="author-inline-composer"]'));
   assert.equal(q('[data-testid="author-final-text"]'), null);
 
-  inputValue(q('[data-testid="author-inline-source"]'), "La [animal [de casa→doméstico]=gata].");
+  inputValue(q('[data-testid="author-inline-source"]'), "La (animal (de casa→doméstico)=gata).");
   assert.deepEqual(app.getDraft().root, ["La ", { ref: "c01" }, "."]);
   assert.deepEqual(app.getDraft().clues.c01!.prompt, ["animal ", { ref: "c02", direction: "right" }]);
   assert.equal(app.getDraft().clues.c01!.answer, "gata");
@@ -261,7 +261,7 @@ test("the direct editor parses nested groups, inserts syntax keys, and undoes a 
   assert.equal(q('[data-testid="author-inline-group-count"]').textContent, "2");
   assert.equal(q('[data-testid="author-inline-group-depth"]').textContent, "2");
   assert.equal(qa('[data-testid="author-inline-remove"]').length, 2);
-  assert.equal(storage.value(AUTHOR_INLINE_STORAGE_KEY), "La [animal [de casa→doméstico]=gata].");
+  assert.equal(storage.value(AUTHOR_INLINE_STORAGE_KEY), "La (animal (de casa→doméstico)=gata).");
   assert.equal(q('[data-testid="author-answer"]'), null);
   assert.ok(q('[data-testid="author-inline-key-answer"]'));
 
@@ -276,17 +276,17 @@ test("the direct editor parses nested groups, inserts syntax keys, and undoes a 
   source.focus();
   source.setSelectionRange(3, 7);
   q('[data-testid="author-inline-key-wrap"]').click();
-  assert.equal(q('[data-testid="author-inline-source"]').value, "La [=gata].");
+  assert.equal(q('[data-testid="author-inline-source"]').value, "La (=gata).");
 });
 
 test("the direct editor keeps malformed syntax visible and blocks export", () => {
   installDom();
   startAuthorApp({ mount: q("#app"), locale, storage: memoryStorage(), flow: "inline" });
-  inputValue(q('[data-testid="author-inline-source"]'), "Una [pista");
+  inputValue(q('[data-testid="author-inline-source"]'), "Una (pista");
 
-  assert.match(q('[data-testid="author-inline-parse-error"]').textContent, /Falta \]/u);
+  assert.match(q('[data-testid="author-inline-parse-error"]').textContent, /Falta \)/u);
   assert.equal(q('[data-testid="author-download"]').disabled, true);
-  assert.equal(q('[data-testid="author-inline-source"]').value, "Una [pista");
+  assert.equal(q('[data-testid="author-inline-source"]').value, "Una (pista");
 });
 
 test("author mode falls back to an in-memory draft when storage reads fail", () => {
@@ -441,7 +441,7 @@ test("the editor adds two independent hints and supports preview selection on th
   inputValue(right, "house");
 
   assert.equal(q('[data-testid="author-bracket-format-both"]').getAttribute("aria-pressed"), "true");
-  assert.equal(q('[data-testid="author-structure-preview"]').textContent, "[sun→___←house]");
+  assert.equal(q('[data-testid="author-structure-preview"]').textContent, "(sun→___←house)");
   const definition = JSON.parse(q('[data-testid="author-json"]').value);
   assert.deepEqual(definition.clues.c01!.rightPrompt, ["house"]);
 
@@ -450,7 +450,7 @@ test("the editor adds two independent hints and supports preview selection on th
   assert.equal(app.getDraft().clues.c02!.answer, "house");
 });
 
-test("only preview selections add exact partial-word bracket layers", () => {
+test("only preview selections add exact partial-word parenthesis layers", () => {
   installDom();
   const app = startAuthorApp({ mount: q("#app"), locale, storage: memoryStorage() });
   const finalInput = q('[data-testid="author-final-text"]');

@@ -101,7 +101,7 @@ test("duplicate date values fail closed", async ({ page }) => {
   await expect(page.getByTestId("guess-input")).toHaveCount(0);
 });
 
-test("lado unlocks the outer tras lado bracket, whose answer is viaje", async ({ page }) => {
+test("lado unlocks the outer tras lado parenthesis group, whose answer is viaje", async ({ page }) => {
   await openFresh(page);
   await submitWithVirtualKeyboard(page, "lado");
 
@@ -110,7 +110,7 @@ test("lado unlocks the outer tras lado bracket, whose answer is viaje", async ({
   await expect(page.locator('[data-clue-state="solved"]').filter({ hasText: "viaje" })).toHaveText("viaje");
 });
 
-test("nested solved answers use a high-contrast highlight inside available brackets", async ({ page }) => {
+test("nested solved answers use a high-contrast highlight inside available parentheses", async ({ page }) => {
   await openFresh(page, "/?date=2026-08-31");
   await submitWithVirtualKeyboard(page, "ando");
 

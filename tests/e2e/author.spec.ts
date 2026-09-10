@@ -91,19 +91,19 @@ test("classic skin uses the blue Agrupar accent", async ({ page }) => {
   await expect(groupButton).toHaveCSS("border-radius", "4px");
 });
 
-test("the direct flow parses bracket syntax, exposes direction keys, and undoes groups", async ({ page }) => {
+test("the direct flow parses parenthesis syntax, exposes direction keys, and undoes groups", async ({ page }) => {
   await page.goto("/?mode=author&flow=inline");
   await page.evaluate(() => localStorage.clear());
   await page.reload();
 
   const source = page.getByTestId("author-inline-source");
-  await source.fill("La [animal [de casa→doméstico]=gata].");
+  await source.fill("La (animal (de casa→doméstico)=gata).");
   await expect(page.getByTestId("author-inline-group")).toHaveCount(2);
   await expect(page.getByTestId("author-inline-group-count")).toHaveText("2");
   await expect(page.getByTestId("author-inline-group-depth")).toHaveText("2");
   await expect(page.getByTestId("author-inline-answer-slot")).toHaveCount(1);
   await expect(page.locator(".author-inline-group-contents").nth(1)).toHaveText("de casa→___");
-  await expect(source).toHaveValue("La [animal [de casa→doméstico]=gata].");
+  await expect(source).toHaveValue("La (animal (de casa→doméstico)=gata).");
   await expect(page.getByRole("group", { name: "Teclado de estructura" })).toContainText("←");
   await expect(page.getByRole("group", { name: "Teclado de estructura" })).toContainText("→");
   await expect(page.getByRole("group", { name: "Teclado de estructura" })).toContainText("=");
@@ -174,7 +174,7 @@ test("creates a playable nested draft with an internal answer slot and direction
   await createNestedDraft(page);
   await page.getByTestId("author-bracket-format-right").click();
 
-  await expect(page.locator('.author-tree-button[data-clue-id="c02"]')).toHaveText("[última letra→X]");
+  await expect(page.locator('.author-tree-button[data-clue-id="c02"]')).toHaveText("(última letra→X)");
   await expect(page.getByTestId("author-validation-state")).toContainText("válido");
   await expect(page.getByTestId("author-download")).toBeEnabled();
 
@@ -212,8 +212,8 @@ test("guided mode pairs the syntax tree with a compact direction editor", async 
   const tree = page.getByTestId("author-tree-panel");
   const inspector = page.getByTestId("clue-inspector");
   await expect(workspace).toBeVisible();
-  await expect(tree).toContainText("[AX=AX]");
-  await expect(tree).toContainText("[última letra→X]");
+  await expect(tree).toContainText("(AX=AX)");
+  await expect(tree).toContainText("(última letra→X)");
   await expect(inspector.getByTestId("author-bracket-format-right")).toHaveAttribute("aria-pressed", "true");
   await expect(inspector.getByTestId("author-bracket-format-right").locator(".author-syntax-answer")).toHaveText("respuesta");
 
@@ -245,7 +245,7 @@ test("authors two independent hints and nests from the right-side preview", asyn
   await page.getByTestId("c01:right-literal-0").fill("house");
 
   await expect(page.getByTestId("author-bracket-format-both")).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByTestId("author-structure-preview")).toHaveText("[sun→___←house]");
+  await expect(page.getByTestId("author-structure-preview")).toHaveText("(sun→___←house)");
   const definition = JSON.parse(await page.getByTestId("author-json").inputValue());
   expect(definition.clues.c01.rightPrompt).toEqual(["house"]);
 
@@ -255,7 +255,7 @@ test("authors two independent hints and nests from the right-side preview", asyn
   expect(draft.clues.c02.answer).toBe("house");
 });
 
-test("the preview is the only surface that creates exact partial-word bracket layers", async ({ page }) => {
+test("the preview is the only surface that creates exact partial-word parenthesis layers", async ({ page }) => {
   const finalText = page.getByTestId("author-final-text");
   await finalText.fill("La sartén.");
 

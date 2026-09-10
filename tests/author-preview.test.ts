@@ -56,10 +56,10 @@ test("clue IDs that equal answers are not exposed in preview markup", () => {
     clues: { telescopio: { answer: "telescopio", prompt: ["instrumento óptico"] } }
   });
   assert.doesNotMatch(container.outerHTML, /telescopio/u);
-  assert.equal(container.textContent, "Un [instrumento óptico]");
+  assert.equal(container.textContent, "Un (instrumento óptico)");
 });
 
-test("one-sided direction arrows and answer slots render inside their bracket", () => {
+test("one-sided direction arrows and answer slots render inside their parentheses", () => {
   const { container } = setup({
     root: [{ ref: "left", direction: "left" }, " ", { ref: "right", direction: "right" }, " ", { ref: "parent", direction: "left" }],
     clues: {
@@ -70,14 +70,14 @@ test("one-sided direction arrows and answer slots render inside their bracket", 
     }
   });
   const wrappers = container.querySelectorAll("[data-author-bracket]");
-  assert.equal(wrappers.item(0).textContent, "[___←izquierda]");
-  assert.equal(wrappers.item(1).textContent, "[derecha→___]");
-  assert.equal(wrappers.item(2).textContent, "[___←[hija]]");
+  assert.equal(wrappers.item(0).textContent, "(___←izquierda)");
+  assert.equal(wrappers.item(1).textContent, "(derecha→___)");
+  assert.equal(wrappers.item(2).textContent, "(___←(hija))");
   assert.equal(container.querySelectorAll("[data-answer-slot]").length, 3);
   assert.equal((wrappers.item(0).previousSibling as Element | null)?.getAttribute("data-author-direction"), undefined);
 });
 
-test("two distinct hints share one bracket and map right-side selections", () => {
+test("two distinct hints share one parenthesis group and map right-side selections", () => {
   const { dom, container } = setup({
     root: [{ ref: "light" }],
     clues: {
@@ -85,7 +85,7 @@ test("two distinct hints share one bracket and map right-side selections", () =>
     }
   });
   const wrapper = container.querySelector("[data-author-bracket]")!;
-  assert.equal(wrapper.textContent, "[sun→___←house]");
+  assert.equal(wrapper.textContent, "(sun→___←house)");
   assert.doesNotMatch(container.outerHTML, /light/u);
   const right = container.querySelector('[data-author-hint="after"] [data-testid="author-preview-literal"]')!;
   assert.deepEqual(mapAuthorPreviewSelection(select(dom, right.firstChild!, 0, right.firstChild!, 5), container), {
@@ -115,7 +115,7 @@ test("selection mapping accepts browser-shaped boundaries around one literal", (
   });
 });
 
-test("selection mapping rejects collapsed, cross-literal, bracket, and outside selections", () => {
+test("selection mapping rejects collapsed, cross-literal, parenthesis, and outside selections", () => {
   const { dom, container } = setup({
     root: ["uno", { ref: "clue" }, "tres"],
     clues: { clue: { answer: "dos", prompt: ["pista"] } }
@@ -134,7 +134,7 @@ test("selection mapping rejects collapsed, cross-literal, bracket, and outside s
   assert.equal(mapAuthorPreviewSelection(select(dom, outside.firstChild!, 0, outside.firstChild!, 2), container), null);
 });
 
-test("cyclic and missing references render finite non-answer brackets", () => {
+test("cyclic and missing references render finite non-answer parenthesis groups", () => {
   const { container } = setup({
     root: [{ ref: "cycle" }, { ref: "missing" }],
     clues: { cycle: { answer: "no mostrar", prompt: [{ ref: "cycle" }] } }

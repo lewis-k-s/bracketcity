@@ -200,11 +200,11 @@ body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
 }
 
 :is(#app, #bracket-city-app) .clue::before {
-  content: "[";
+  content: "(";
 }
 
 :is(#app, #bracket-city-app) .clue::after {
-  content: "]";
+  content: ")";
 }
 
 :is(#app, #bracket-city-app) .clue--locked {
@@ -410,11 +410,11 @@ body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
 }
 
 :is(#app, #bracket-city-app) .submit-button::before {
-  content: "[";
+  content: "(";
 }
 
 :is(#app, #bracket-city-app) .submit-button::after {
-  content: "]";
+  content: ")";
 }
 
 :is(#app, #bracket-city-app) .virtual-keyboard {

@@ -406,7 +406,7 @@ for (const [name, mutate, code] of invalidCases) {
   });
 }
 
-test("validator warns for literal brackets and excessive depth", () => {
+test("validator warns for literal parentheses and excessive depth", () => {
   const definition: PuzzleDefinition = {
     schemaVersion: 1,
     id: "deep-es",
@@ -418,7 +418,7 @@ test("validator warns for literal brackets and excessive depth", () => {
   for (let index = 0; index < 9; index += 1) {
     definition.clues[`n${index}`] = {
       answer: `n${index}`,
-      prompt: index === 8 ? ["hoja [final]"] : [{ ref: `n${index + 1}` }]
+      prompt: index === 8 ? ["hoja (final)"] : [{ ref: `n${index + 1}` }]
     };
   }
   const result = validatePuzzle(definition, esLocale);

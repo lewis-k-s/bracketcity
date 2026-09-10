@@ -87,7 +87,7 @@ interface PriorGroup {
   readonly signature: string;
 }
 
-const SPECIAL_CHARACTERS = new Set(["\\", "[", "]", "←", "→", "=", "|"]);
+const SPECIAL_CHARACTERS = new Set(["\\", "(", ")", "←", "→", "=", "|"]);
 
 export const MAX_INLINE_GROUPS = 100;
 export const MAX_INLINE_DEPTH = 10;
@@ -246,7 +246,7 @@ function analyzeGroup(group: InlineGroupNode, issues: InlineParseIssue[]): void 
     issues.push({
       code: "MISSING_ANSWER",
       offset: group.start,
-      message: "Añade la respuesta con =, por ejemplo [pista=respuesta]."
+      message: "Añade la respuesta con =, por ejemplo (pista=respuesta)."
     });
     return;
   }
@@ -306,7 +306,7 @@ export function parseAuthorInlineSource(sourceValue: unknown): InlineParseResult
         offset += 2;
         continue;
       }
-      if (character === "[") {
+      if (character === "(") {
         bracketCount += 1;
         const nextDepth = depth + skippedGroups + 1;
         bracketDepth = Math.max(bracketDepth, nextDepth);
@@ -317,7 +317,7 @@ export function parseAuthorInlineSource(sourceValue: unknown): InlineParseResult
             issues.push({
               code: "TOO_MANY_GROUPS",
               offset: start,
-              message: `Máximo ${MAX_INLINE_GROUPS} grupos con corchetes.`
+              message: `Máximo ${MAX_INLINE_GROUPS} grupos entre paréntesis.`
             });
             groupLimitReported = true;
           }
@@ -328,7 +328,7 @@ export function parseAuthorInlineSource(sourceValue: unknown): InlineParseResult
             issues.push({
               code: "TOO_DEEP",
               offset: start,
-              message: `Máxima profundidad: ${MAX_INLINE_DEPTH} corchetes.`
+              message: `Máxima profundidad: ${MAX_INLINE_DEPTH} pares de paréntesis.`
             });
             depthLimitReported = true;
           }
@@ -353,14 +353,14 @@ export function parseAuthorInlineSource(sourceValue: unknown): InlineParseResult
           issues.push({
             code: "UNCLOSED_GROUP",
             offset: start,
-            message: "Falta ] para cerrar este grupo."
+            message: "Falta ) para cerrar este grupo."
           });
         }
         analyzeGroup(group, issues);
         nodes.push(group);
         continue;
       }
-      if (character === "]") {
+      if (character === ")") {
         offset += 1;
         if (skippedGroups > 0) {
           skippedGroups -= 1;
@@ -371,7 +371,7 @@ export function parseAuthorInlineSource(sourceValue: unknown): InlineParseResult
         issues.push({
           code: "UNEXPECTED_CLOSE",
           offset: start,
-          message: "Este ] no tiene un [ de apertura."
+          message: "Este ) no tiene un ( de apertura."
         });
         pushText(nodes, character, start, offset);
         continue;
@@ -407,7 +407,7 @@ export function parseAuthorInlineSource(sourceValue: unknown): InlineParseResult
 }
 
 function escapeLiteral(value: string): string {
-  return value.replace(/[\\[\]←→=|]/gu, (character) => `\\${character}`);
+  return value.replace(/[\\()←→=|]/gu, (character) => `\\${character}`);
 }
 
 function formatSegments(
@@ -418,17 +418,17 @@ function formatSegments(
   return segments.map((segment) => {
     if (typeof segment === "string") return escapeLiteral(segment);
     const clue = clues[segment.ref];
-    if (!clue || active.has(segment.ref)) return "[]";
+    if (!clue || active.has(segment.ref)) return "()";
     const nextActive = new Set(active);
     nextActive.add(segment.ref);
     const left = formatSegments(clue.prompt, clues, nextActive);
     const answer = escapeLiteral(clue.answer);
     if (Array.isArray(clue.rightPrompt)) {
-      return `[${left}→${answer}←${formatSegments(clue.rightPrompt, clues, nextActive)}]`;
+      return `(${left}→${answer}←${formatSegments(clue.rightPrompt, clues, nextActive)})`;
     }
-    if (segment.direction === "left") return `[${answer}←${left}]`;
-    if (segment.direction === "right") return `[${left}→${answer}]`;
-    return `[${left}=${answer}]`;
+    if (segment.direction === "left") return `(${answer}←${left})`;
+    if (segment.direction === "right") return `(${left}→${answer})`;
+    return `(${left}=${answer})`;
   }).join("");
 }
 
@@ -695,7 +695,7 @@ export function renderAuthorInlinePreview(container: HTMLElement, parsed: Inline
       });
       const open = document.createElement("span");
       open.className = "author-inline-edge";
-      open.textContent = "[";
+      open.textContent = "(";
       open.setAttribute("aria-hidden", "true");
       const contents = document.createElement("span");
       contents.className = "author-inline-group-contents";
@@ -718,7 +718,7 @@ export function renderAuthorInlinePreview(container: HTMLElement, parsed: Inline
       }
       const close = document.createElement("span");
       close.className = "author-inline-edge";
-      close.textContent = "]";
+      close.textContent = ")";
       close.setAttribute("aria-hidden", "true");
       const remove = document.createElement("button");
       remove.className = "author-inline-remove";

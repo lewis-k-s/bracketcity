@@ -577,14 +577,14 @@ export function startAuthorApp({
     const edge = (text: string) => element("span", { className: "author-syntax-edge", text });
     const clue = (text: string) => element("span", { className: "author-syntax-clue", text });
     const answerToken = element("span", { className: "author-syntax-answer", text: answer });
-    syntax.append(edge("["));
+    syntax.append(edge("("));
     if (format === "left") {
       syntax.append(answerToken, edge("←"), clue(left));
     } else {
       syntax.append(clue(left), edge(format === "plain" ? "=" : "→"), answerToken);
       if (format === "both") syntax.append(edge("←"), clue(right));
     }
-    syntax.append(edge("]"));
+    syntax.append(edge(")"));
     return syntax;
   };
 
@@ -1039,7 +1039,7 @@ export function startAuthorApp({
       const start = input.selectionStart ?? input.value.length;
       const end = input.selectionEnd ?? start;
       const selected = input.value.slice(start, end);
-      const insertion = wrapSelection ? `[=${selected}]` : value;
+      const insertion = wrapSelection ? `(=${selected})` : value;
       const nextSource = `${input.value.slice(0, start)}${insertion}${input.value.slice(end)}`;
       const caret = wrapSelection ? start + 1 : start + insertion.length;
       applyInlineSource(nextSource, caret);
@@ -1049,8 +1049,8 @@ export function startAuthorApp({
       attributes: { role: "group", "aria-label": locale.ui.authorInlineKeyboard }
     });
     for (const key of [
-      { label: "[", value: "[", name: "open" },
-      { label: "]", value: "]", name: "close" },
+      { label: "(", value: "(", name: "open" },
+      { label: ")", value: ")", name: "close" },
       { label: "=", value: "=", name: "answer" },
       { label: "←", value: "←", name: "left" },
       { label: "→", value: "→", name: "right" }
@@ -1202,10 +1202,10 @@ export function startAuthorApp({
     );
     const examples = element("div", { className: "author-bracket-examples" });
     for (const format of [
-      "[pista=respuesta]",
-      "[pista→respuesta]",
-      "[respuesta←pista]",
-      "[pista izquierda→respuesta←pista derecha]"
+      "(pista=respuesta)",
+      "(pista→respuesta)",
+      "(respuesta←pista)",
+      "(pista izquierda→respuesta←pista derecha)"
     ]) {
       examples.append(element("code", { className: "author-bracket-example", text: format }));
     }

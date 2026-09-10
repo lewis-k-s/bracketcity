@@ -243,7 +243,7 @@ function validateSegments(
     if (typeof segment === "string") {
       if (segment.length > 0) hasContent = true;
       if (hasRawHtml(segment)) addIssue(errors, "RAW_HTML", segmentPath, "Raw HTML is not allowed.");
-      if (/[\[\]]/u.test(segment)) addIssue(warnings, "LITERAL_BRACKET", segmentPath, "Literal square brackets can be confusing.");
+      if (/[()]/u.test(segment)) addIssue(warnings, "LITERAL_BRACKET", segmentPath, "Literal parentheses can be confusing.");
       continue;
     }
     const keys = isRecord(segment) ? Object.keys(segment) : [];

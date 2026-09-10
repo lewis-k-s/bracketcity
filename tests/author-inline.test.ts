@@ -12,9 +12,9 @@ import {
 } from "../src/author-inline.ts";
 import { createAuthorDraft } from "../src/author.ts";
 
-test("inline syntax parses nesting and all direction forms", () => {
+test("inline parenthesis syntax parses nesting and all direction forms", () => {
   const parsed = parseAuthorInlineSource(
-    "Inicio [sol [estrella=astro]→luz] y [hogar←casa], [día→claroscuro←noche]."
+    "Inicio (sol (estrella=astro)→luz) y (hogar←casa), (día→claroscuro←noche)."
   );
 
   assert.deepEqual(parsed.issues, []);
@@ -30,28 +30,28 @@ test("inline syntax parses nesting and all direction forms", () => {
   assert.equal(parsed.bracketDepth, 2);
 });
 
-test("inline syntax reports incomplete brackets and misplaced arrows", () => {
-  assert.equal(parseAuthorInlineSource("texto]").issues[0]?.code, "UNEXPECTED_CLOSE");
-  assert.equal(parseAuthorInlineSource("[texto").issues[0]?.code, "UNCLOSED_GROUP");
-  assert.equal(parseAuthorInlineSource("[uno→dos=respuesta]").issues[0]?.code, "INVALID_DIRECTION");
-  assert.equal(parseAuthorInlineSource("[pista]").issues[0]?.code, "MISSING_ANSWER");
-  assert.equal(parseAuthorInlineSource("[pista= ]").issues[0]?.code, "EMPTY_ANSWER");
-  assert.equal(parseAuthorInlineSource("[pista=uno=dos]").issues[0]?.code, "MULTIPLE_ANSWERS");
-  assert.equal(parseAuthorInlineSource("[pista=uno|dos]").issues[0]?.code, "ALTERNATIVES_DISABLED");
-  assert.equal(parseAuthorInlineSource("[pista=uno\\|dos]").groups[0]?.answer, "uno|dos");
-  const spaced = parseAuthorInlineSource("[ pista con espacios = respuesta final ]");
+test("inline syntax reports incomplete parentheses and misplaced arrows", () => {
+  assert.equal(parseAuthorInlineSource("texto)").issues[0]?.code, "UNEXPECTED_CLOSE");
+  assert.equal(parseAuthorInlineSource("(texto").issues[0]?.code, "UNCLOSED_GROUP");
+  assert.equal(parseAuthorInlineSource("(uno→dos=respuesta)").issues[0]?.code, "INVALID_DIRECTION");
+  assert.equal(parseAuthorInlineSource("(pista)").issues[0]?.code, "MISSING_ANSWER");
+  assert.equal(parseAuthorInlineSource("(pista= )").issues[0]?.code, "EMPTY_ANSWER");
+  assert.equal(parseAuthorInlineSource("(pista=uno=dos)").issues[0]?.code, "MULTIPLE_ANSWERS");
+  assert.equal(parseAuthorInlineSource("(pista=uno|dos)").issues[0]?.code, "ALTERNATIVES_DISABLED");
+  assert.equal(parseAuthorInlineSource("(pista=uno\\|dos)").groups[0]?.answer, "uno|dos");
+  const spaced = parseAuthorInlineSource("( pista con espacios = respuesta final )");
   assert.deepEqual(spaced.issues, []);
   assert.deepEqual(spaced.groups[0]?.prompt.map((node) => node.type === "text" ? node.value : node.type), ["pista con espacios"]);
   assert.equal(spaced.groups[0]?.answer, "respuesta final");
 });
 
-test("inline syntax records bracket limits and rejects excessive count or depth", () => {
-  const tooMany = parseAuthorInlineSource(Array.from({ length: MAX_INLINE_GROUPS + 1 }, () => "[pista=respuesta]").join(" "));
+test("inline syntax records parenthesis limits and rejects excessive count or depth", () => {
+  const tooMany = parseAuthorInlineSource(Array.from({ length: MAX_INLINE_GROUPS + 1 }, () => "(pista=respuesta)").join(" "));
   assert.equal(tooMany.bracketCount, MAX_INLINE_GROUPS + 1);
   assert.equal(tooMany.bracketDepth, 1);
   assert.ok(tooMany.issues.some((issue) => issue.code === "TOO_MANY_GROUPS"));
 
-  const tooDeep = parseAuthorInlineSource(`${"[".repeat(MAX_INLINE_DEPTH + 1)}pista${"]".repeat(MAX_INLINE_DEPTH + 1)}`);
+  const tooDeep = parseAuthorInlineSource(`${"(".repeat(MAX_INLINE_DEPTH + 1)}pista${")".repeat(MAX_INLINE_DEPTH + 1)}`);
   assert.equal(tooDeep.bracketCount, MAX_INLINE_DEPTH + 1);
   assert.equal(tooDeep.bracketDepth, MAX_INLINE_DEPTH + 1);
   assert.ok(tooDeep.issues.some((issue) => issue.code === "TOO_DEEP"));
@@ -59,7 +59,7 @@ test("inline syntax records bracket limits and rejects excessive count or depth"
 
 test("inline syntax creates a nested author draft and preserves answers", () => {
   const initial = createAuthorDraft({ finalText: "" });
-  const firstParse = parseAuthorInlineSource("La [animal [de casa→=doméstico]=gata].");
+  const firstParse = parseAuthorInlineSource("La (animal (de casa→=doméstico)=gata).");
   const first = draftFromAuthorInlineParse(initial, firstParse);
 
   assert.deepEqual(first.root, ["La ", { ref: "c01" }, "."]);
@@ -68,7 +68,7 @@ test("inline syntax creates a nested author draft and preserves answers", () => 
   assert.equal(first.clues.c01!.answer, "gata");
   assert.equal(first.clues.c02!.answer, "doméstico");
 
-  const secondParse = parseAuthorInlineSource("La [animal muy [de casa→=doméstico]=perra].");
+  const secondParse = parseAuthorInlineSource("La (animal muy (de casa→=doméstico)=perra).");
   const second = draftFromAuthorInlineParse(first, secondParse);
   assert.equal(second.clues.c01!.answer, "perra");
   assert.equal(second.clues.c02!.answer, "doméstico");
@@ -78,11 +78,11 @@ test("inline syntax creates a nested author draft and preserves answers", () => 
 test("adding a group preserves matching siblings and selects the new group", () => {
   const initial = draftFromAuthorInlineParse(
     createAuthorDraft(),
-    parseAuthorInlineSource("[primera=uno] y [segunda=dos]")
+    parseAuthorInlineSource("(primera=uno) y (segunda=dos)")
   );
   initial.selectedClueId = "c02";
 
-  const parsed = parseAuthorInlineSource("[primera=uno] y [nueva=tres] y [segunda=dos]");
+  const parsed = parseAuthorInlineSource("(primera=uno) y (nueva=tres) y (segunda=dos)");
   const next = draftFromAuthorInlineParse(initial, parsed);
   assert.equal(next.clues.c01!.answer, "uno");
   assert.equal(next.clues.c02!.answer, "dos");
@@ -92,10 +92,10 @@ test("adding a group preserves matching siblings and selects the new group", () 
 });
 
 test("editing inline answers preserves aliases from an existing puzzle", () => {
-  const initial = draftFromAuthorInlineParse(createAuthorDraft(), parseAuthorInlineSource("[pista=uno]"));
+  const initial = draftFromAuthorInlineParse(createAuthorDraft(), parseAuthorInlineSource("(pista=uno)"));
   initial.clues.c01!.accept = ["alternativa heredada"];
 
-  const next = draftFromAuthorInlineParse(initial, parseAuthorInlineSource("[pista=dos]"));
+  const next = draftFromAuthorInlineParse(initial, parseAuthorInlineSource("(pista=dos)"));
 
   assert.equal(next.clues.c01!.answer, "dos");
   assert.deepEqual(next.clues.c01!.accept, ["alternativa heredada"]);
@@ -104,25 +104,25 @@ test("editing inline answers preserves aliases from an existing puzzle", () => {
 test("draft formatting escapes literal syntax characters and round trips", () => {
   const draft = draftFromAuthorInlineParse(
     createAuthorDraft(),
-    parseAuthorInlineSource("Literal \\[ y [pista\\=igual→=res\\|puesta]")
+    parseAuthorInlineSource("Literal \\( y (pista\\=igual→=res\\|puesta)")
   );
 
   const formatted = formatAuthorDraftAsInlineSource(draft);
-  assert.equal(formatted, "Literal \\[ y [pista\\=igual→res\\|puesta]");
+  assert.equal(formatted, "Literal \\( y (pista\\=igual→res\\|puesta)");
   assert.deepEqual(parseAuthorInlineSource(formatted).issues, []);
 
   const legacyDraft = draftFromAuthorInlineParse(
     createAuthorDraft(),
-    parseAuthorInlineSource("[pista→=respuesta] [←otra=dos] [izquierda→←derecha=tres]")
+    parseAuthorInlineSource("(pista→=respuesta) (←otra=dos) (izquierda→←derecha=tres)")
   );
   assert.equal(
     formatAuthorDraftAsInlineSource(legacyDraft),
-    "[pista→respuesta] [dos←otra] [izquierda→tres←derecha]"
+    "(pista→respuesta) (dos←otra) (izquierda→tres←derecha)"
   );
 });
 
 test("the preview renders nested groups and removes a group as its answer", () => {
-  const parsed = parseAuthorInlineSource("La [animal [doméstico=casero]=gata].");
+  const parsed = parseAuthorInlineSource("La (animal (doméstico=casero)=gata).");
   const draft = draftFromAuthorInlineParse(createAuthorDraft(), parsed);
   const dom = new JSDOM("<!doctype html><main id='preview'></main>");
   const preview = dom.window.document.querySelector<HTMLElement>("#preview")!;
@@ -143,7 +143,7 @@ test("the preview renders nested groups and removes a group as its answer", () =
 });
 
 test("the preview renders a canonical answer gap for every directional form", () => {
-  const parsed = parseAuthorInlineSource("[pista→a] [b←otra] [izquierda→c←derecha]");
+  const parsed = parseAuthorInlineSource("(pista→a) (b←otra) (izquierda→c←derecha)");
   const dom = new JSDOM("<!doctype html><main id='preview'></main>");
   const preview = dom.window.document.querySelector<HTMLElement>("#preview")!;
   renderAuthorInlinePreview(preview, parsed);
@@ -159,7 +159,7 @@ test("the preview renders a canonical answer gap for every directional form", ()
 });
 
 test("clicking a group body selects the deepest tapped group", () => {
-  const parsed = parseAuthorInlineSource("[exterior [interior=dos]=uno]");
+  const parsed = parseAuthorInlineSource("(exterior (interior=dos)=uno)");
   draftFromAuthorInlineParse(createAuthorDraft(), parsed);
   const dom = new JSDOM("<!doctype html><main id='preview'></main>");
   const preview = dom.window.document.querySelector<HTMLElement>("#preview")!;

@@ -84,9 +84,9 @@ function renderSegments(
       "data-author-bracket": ""
     });
     const open = element(document, "span", { "data-author-bracket-edge": "open", "aria-hidden": "true" });
-    open.textContent = "[";
+    open.textContent = "(";
     const close = element(document, "span", { "data-author-bracket-edge": "close", "aria-hidden": "true" });
-    close.textContent = "]";
+    close.textContent = ")";
     wrapper.append(open);
     if (clue && !active.has(segment.ref)) {
       const nextActive = new Set(active);

@@ -68,7 +68,7 @@ test("the first visit shows the Spanish rules and remembers dismissal", async ({
   await expect.poll(() => bracketExample.evaluate((node) => ({
     before: getComputedStyle(node, "::before").content,
     after: getComputedStyle(node, "::after").content
-  }))).toEqual({ before: '"["', after: '"]"' });
+  }))).toEqual({ before: '"("', after: '")"' });
 
   await page.getByTestId("instructions-start").click();
   await expect(dialog).toBeHidden();
@@ -163,7 +163,7 @@ test("canonical answers are not embedded in the puzzle DOM before typed submissi
   expect(html).not.toContain(canonicalLeafAnswer);
 });
 
-test("a correct global answer resolves its bracket without clue selection", async ({ page }) => {
+test("a correct global answer resolves its parenthesis group without clue selection", async ({ page }) => {
   await submit(page, canonicalLeafAnswer);
 
   const submitButton = page.getByTestId("submit-button");

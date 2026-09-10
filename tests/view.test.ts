@@ -171,7 +171,7 @@ test("inline clue controls support Enter and Space", () => {
   assert.deepEqual(activated, ["lib", "lib"]);
 });
 
-test("one-sided directions render an answer slot inside the unresolved bracket", () => {
+test("one-sided directions render an answer slot inside the unresolved parenthesis group", () => {
   installDom();
   const definition = structuredClone(branchPuzzle);
   definition.clues.book!.prompt[0] = { ref: "lib", direction: "left" };
@@ -196,7 +196,7 @@ test("one-sided directions render an answer slot inside the unresolved bracket",
   assert.equal(getRenderedClueElement(view.puzzleText, "lib").querySelector("[data-answer-slot]"), null);
 });
 
-test("two-sided hints share one bracket and do not expose their answer", () => {
+test("two-sided hints share one parenthesis group and do not expose their answer", () => {
   installDom();
   const definition = structuredClone(branchPuzzle);
   definition.clues.book!.answer = "secreto";
