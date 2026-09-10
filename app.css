@@ -2206,6 +2206,8 @@ body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
     width: min(calc(100vw - 2rem), 46rem);
     margin-right: 0;
     margin-left: 50%;
+    padding-right: clamp(1rem, 2.5vw, 1.5rem);
+    padding-left: clamp(1rem, 2.5vw, 1.5rem);
     transform: translateX(calc(-50% + var(--nexo-viewport-center-offset, 0px)));
   }
 
