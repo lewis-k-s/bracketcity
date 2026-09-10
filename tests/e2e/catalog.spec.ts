@@ -72,6 +72,18 @@ test("31 August completes all nested branches as one confirmed sentence", async 
   await expect(page.getByTestId("completion")).toContainText(
     "Lewis se entera de la sartén para un solo huevo."
   );
+  const completion = page.getByTestId("completion");
+  await expect(completion.getByRole("img", { name: "Jardín de celebración: Lo lograste, puzzle resuelto." })).toBeVisible();
+  await expect(completion.getByRole("img", { name: "Precisión total" })).toBeVisible();
+  await expect(completion.locator(".completion-artwork-image")).toHaveCount(2);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  expect(await completion.locator(".completion-artwork").evaluate((element) =>
+    getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/u).length
+  )).toBe(2);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await completion.locator(".completion-artwork").evaluate((element) =>
+    getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/u).length
+  )).toBe(1);
   await expect(page.locator("body")).not.toContainText("simulación");
   await expect(page.getByTestId("puzzle")).toBeHidden();
   await expect(page.getByTestId("date-selector")).toBeVisible();

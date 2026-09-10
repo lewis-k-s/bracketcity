@@ -64,7 +64,8 @@ export const esLocale: LocalePack = {
     revealed: "La respuesta es {answer}. Pierdes 5 puntos.",
     rankPerfect: "Precisión total",
     rankSharp: "Mente aguda",
-    rankSteady: "Paso firme"
+    rankGoodForm: "En buena forma",
+    rankWarmup: "Calentando motores"
   },
   matching: {
     locale: "es-ES",

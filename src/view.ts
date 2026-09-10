@@ -1,4 +1,5 @@
 import { isComplete, isSolved } from "./engine.ts";
+import { completionArtworkForScore, completionGardenArtwork } from "./completion-artwork.ts";
 import type {
   CatalogEntry,
   CompiledClue,
@@ -20,6 +21,8 @@ export interface GameView {
   completionHeading: HTMLHeadingElement;
   finalText: HTMLParagraphElement;
   resultText: HTMLParagraphElement;
+  completionGarden: HTMLImageElement;
+  completionScoreArtwork: HTMLImageElement;
   shareButton: HTMLButtonElement;
   shareStatus: HTMLParagraphElement;
   composer: HTMLDivElement;
@@ -440,6 +443,29 @@ export function createGameShell(
   });
   const finalText = element("p", { className: "final-text" });
   const resultText = element("p", { className: "result-text" });
+  const completionArtwork = element("div", { className: "completion-artwork" });
+  const gardenFigure = element("figure", { className: "completion-artwork-card completion-garden" });
+  const completionGarden = element("img", {
+    className: "completion-artwork-image",
+    attributes: {
+      src: completionGardenArtwork.src,
+      alt: completionGardenArtwork.alt,
+      decoding: "async"
+    }
+  });
+  gardenFigure.append(completionGarden);
+  const scoreFigure = element("figure", { className: "completion-artwork-card completion-score-artwork" });
+  const scoreArtwork = completionArtworkForScore(0);
+  const completionScoreArtwork = element("img", {
+    className: "completion-artwork-image",
+    attributes: {
+      src: scoreArtwork.src,
+      alt: scoreArtwork.alt,
+      decoding: "async"
+    }
+  });
+  scoreFigure.append(completionScoreArtwork);
+  completionArtwork.append(gardenFigure, scoreFigure);
   const shareButton = element("button", {
     className: "share-button",
     text: locale.ui.shareResult,
@@ -450,7 +476,7 @@ export function createGameShell(
     attributes: { "aria-live": "polite", "data-testid": "share-status" }
   });
   shareButton.addEventListener("click", () => handlers.onShare?.());
-  completion.append(completionHeading, finalText, resultText, shareButton, shareStatus);
+  completion.append(completionHeading, finalText, resultText, shareButton, shareStatus, completionArtwork);
   card.append(completion);
   shell.append(header, card);
 
@@ -664,6 +690,8 @@ export function createGameShell(
     completionHeading,
     finalText,
     resultText,
+    completionGarden,
+    completionScoreArtwork,
     shareButton,
     shareStatus,
     composer,
@@ -728,6 +756,9 @@ export function updateGameSummary(
   view.composer.hidden = complete;
   if (complete) {
     view.finalText.textContent = puzzle.definition.finalText;
+    const artwork = completionArtworkForScore(scoreResult.score);
+    view.completionScoreArtwork.src = artwork.src;
+    view.completionScoreArtwork.alt = artwork.alt;
     const rankKey = scoreResult.rank?.labelKey;
     const rankLabel = rankKey ? locale.ui[rankKey] ?? rankKey : "";
     view.resultText.textContent = formatMessage(locale.ui.result, { score: scoreResult.score, rank: rankLabel });

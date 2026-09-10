@@ -36,9 +36,10 @@ export const DEFAULT_SCORING = Object.freeze({
   wrongGuess: -2,
   peek: -5,
   ranks: [
-    { minScore: 95, labelKey: "rankPerfect" },
-    { minScore: 80, labelKey: "rankSharp" },
-    { minScore: 0, labelKey: "rankSteady" }
+    { minScore: 100, labelKey: "rankPerfect" },
+    { minScore: 90, labelKey: "rankSharp" },
+    { minScore: 60, labelKey: "rankGoodForm" },
+    { minScore: 0, labelKey: "rankWarmup" }
   ]
 });
 

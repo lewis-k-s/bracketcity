@@ -10,6 +10,7 @@ import {
   showSubmitFeedback,
   updateGameSummary
 } from "../src/view.ts";
+import { completionArtworkForScore } from "../src/completion-artwork.ts";
 import type { DateNavigation, GameView } from "../src/view.ts";
 import { branchPuzzle, esLocale } from "./fixtures.ts";
 import type { CompiledPuzzle, Progress } from "../src/types.ts";
@@ -282,6 +283,10 @@ test("completion panel contains exact final text, score, and rank", () => {
   assert.equal(view.completion.hidden, false);
   assert.equal(view.finalText.textContent, branchPuzzle.finalText);
   assert.match(view.resultText.textContent, /100 puntos/u);
+  assert.match(view.completionGarden.src, /completion_garden\.jpeg$/u);
+  assert.match(view.completionScoreArtwork.src, /precision_total\.jpeg$/u);
+  assert.equal(view.completionScoreArtwork.alt, "Precisión total");
+  assert.equal(view.completion.lastElementChild?.className, "completion-artwork");
   assert.equal(view.card.hidden, false);
   assert.equal(view.puzzleText.hidden, true);
   assert.strictEqual(view.completion.parentElement, view.card);
@@ -293,6 +298,24 @@ test("completion panel contains exact final text, score, and rank", () => {
   dateSelector.value = "2026-08-31";
   dateSelector.dispatchEvent(new window.Event("change", { bubbles: true }));
   assert.deepEqual(dateChanges, ["2026-08-31"]);
+});
+
+test("completion artwork uses the score thresholds", () => {
+  const cases = [
+    [0, "calentando_motores.jpeg", "Calentando motores"],
+    [59, "calentando_motores.jpeg", "Calentando motores"],
+    [60, "en_buena_forma.jpeg", "En buena forma"],
+    [89, "en_buena_forma.jpeg", "En buena forma"],
+    [90, "mente_aguda.jpeg", "Mente aguda"],
+    [99, "mente_aguda.jpeg", "Mente aguda"],
+    [100, "precision_total.jpeg", "Precisión total"]
+  ] as const;
+
+  for (const [score, filename, alt] of cases) {
+    const artwork = completionArtworkForScore(score);
+    assert.match(artwork.src, new RegExp(`${filename}$`, "u"));
+    assert.equal(artwork.alt, alt);
+  }
 });
 
 test("the virtual keyboard value submits through the visible form", () => {
