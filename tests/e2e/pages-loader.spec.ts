@@ -32,6 +32,15 @@ async function selectPreviewText(page: Page, selectedText: string): Promise<void
 }
 
 test("Pages root runs the standalone game", async ({ page }) => {
+  await page.route("**/*.supabase.co/rest/v1/puzzles*", (route) => {
+    const select = new URL(route.request().url()).searchParams.get("select");
+    if (select === "definition") return json(route, [{ definition: earlierPuzzle }]);
+    return json(route, [{
+      release_date: earlierPuzzle.releaseDate,
+      puzzle_id: earlierPuzzle.id,
+      revision: earlierPuzzle.revision ?? 1
+    }]);
+  });
   await page.goto("http://127.0.0.1:4175/");
 
   await expect(page.getByTestId("puzzle")).toBeVisible();

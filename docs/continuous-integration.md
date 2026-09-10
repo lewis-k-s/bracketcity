@@ -15,9 +15,19 @@ Pages files and creates a checked bridge ZIP locally, but does not publish.
 4. Push to `main`, then open the deployment URL shown by the workflow.
 5. Confirm that `index.html`, `loader.js`, and `release.js` respond successfully.
 
-The workflow uses only GitHub's automatic token. It needs `contents: read`,
-`pages: write`, and `id-token: write`. Do not add WordPress credentials to
-GitHub. CI does not publish or change puzzle data.
+The Pages job uses GitHub's automatic token. It needs `contents: read`,
+`pages: write`, and `id-token: write`. Configure these repository variables:
+
+- `SUPABASE_PROJECT_REF`: the 20-character project reference.
+- `SUPABASE_PUBLISHABLE_KEY`: the public `sb_publishable_` browser key.
+
+The publishable key is not a database administrator secret. Row-level security
+limits it to released puzzle reads. Do not put a Supabase secret key in a
+repository variable or frontend build.
+
+The Supabase migration workflow also uses `SUPABASE_ACCESS_TOKEN` and
+`SUPABASE_DB_PASSWORD` as repository secrets. It applies checked-in database
+migrations only. Do not add WordPress credentials to GitHub.
 
 ## WordPress rollout
 
@@ -31,7 +41,8 @@ Page:
 
 The URL must use HTTPS and must not contain credentials, a query, or a
 fragment. The bridge stores puzzles and supplies same-origin REST data and
-nonces. GitHub Pages supplies only JavaScript, CSS, and locale data.
+nonces to the WordPress page. The standalone GitHub Pages site reads its
+public puzzle catalog from Supabase.
 
 ## Operational credentials
 

@@ -15,6 +15,7 @@
     "build": "npm run build:pages",
     "build:standalone": "vite build",
     "build:pages": "tsx scripts/build-pages.ts",
+    "migrate:wordpress": "tsx scripts/migrate-wordpress-puzzles.ts",
     "preview": "vite preview",
     "preview:pages": "vite preview --config vite.pages.config.ts",
     "typecheck": "tsc --noEmit",

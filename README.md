@@ -1,9 +1,9 @@
 # Nexo
 
-Nexo is a multilingual nested-clue game. The public player and puzzle editor
-run on one WordPress Page. WordPress stores private puzzle posts and provides
-the REST API. GitHub Pages hosts the versioned JavaScript, CSS, and locale
-assets. Player progress stays in the WordPress origin's `localStorage`.
+Nexo is a multilingual nested-clue game. The public GitHub Pages player reads
+released puzzles from Supabase when the Pages build has its public Supabase
+configuration. The existing WordPress Page and editor continue to use the
+WordPress bridge. Player progress stays in each site's `localStorage`.
 
 ## Develop and test
 
@@ -22,8 +22,8 @@ npm run deploy:prepare   # build Pages and the installable bridge ZIP
 
 The WordPress integration test uses disposable WordPress and MariaDB
 containers. The Pages build produces stable `loader.js` and `release.js` files,
-plus content-hashed application, CSS, and locale assets. It contains no puzzle
-JSON.
+plus content-hashed application, CSS, and locale assets. Bundled puzzle JSON is
+kept only as an unconfigured local fallback.
 
 For the Studio local-development and release workflow, see
 [Local WordPress development](docs/local-wordpress.md).
@@ -115,6 +115,28 @@ CI also uploads the bridge ZIP as a workflow artifact, but WordPress.com
 Personal requires manual plugin upload. No WordPress credential is stored in
 GitHub. See [GitHub Pages deployment](docs/continuous-integration.md) for setup,
 credential, rollout, and rollback details.
+
+## Supabase puzzle migration
+
+The migration in `supabase/migrations/` creates the public puzzle table and a
+read-only policy. Anonymous clients can read only published puzzles whose
+release date has started in `Europe/Madrid`. Browser clients cannot insert,
+update, or delete rows.
+
+Use the public WordPress page or REST URL to validate released puzzles without
+writing them:
+
+```sh
+npm run migrate:wordpress -- https://BLOG.example/puzzles/
+```
+
+Add `--apply` to import them into the linked Supabase project. The import is
+transactional and does not replace a row with an older revision. If several
+WordPress dates reuse one internal puzzle ID, the importer adds the release
+date to those IDs so browser progress remains separate.
+
+The public WordPress API does not expose future or trashed puzzles. Move those
+records through an authenticated export if they are needed.
 
 The portable puzzle shape is described by `puzzles/schema-v1.json`. Validators
 also enforce graph reachability, unique ownership, no cycles, normalized answer

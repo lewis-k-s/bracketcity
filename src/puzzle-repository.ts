@@ -1,7 +1,12 @@
 import { Data, Effect } from "effect";
 
 import { restorePublishedPuzzles } from "./published.ts";
-import { decodeCatalogEntry, decodePuzzleDefinition, decodeWordPressConfig } from "./effect.ts";
+import {
+  decodeCatalogEntry,
+  decodePuzzleDefinition,
+  decodeSupabaseConfig,
+  decodeWordPressConfig
+} from "./effect.ts";
 import type {
   CatalogEntry,
   ExistingPuzzle,
@@ -9,8 +14,10 @@ import type {
   LocalePack,
   PuzzleDefinition,
   PuzzleListing,
+  PuzzleRepositoryConfig,
   SuggestionMetadata,
   StorageLike,
+  SupabaseConfig,
   WordPressConfig
 } from "./types.ts";
 
@@ -75,13 +82,13 @@ function responseMessage(body: unknown, status: number): string {
   return body?.message ?? body?.error ?? `La solicitud falló (${status}).`;
 }
 
-async function responseBody(response: Response): Promise<unknown> {
+async function responseBody(response: Response, source = "WordPress"): Promise<unknown> {
   const contentType = response.headers?.get?.("content-type") ?? "";
   if (contentType.toLocaleLowerCase().includes("json")) return response.json();
   const text = await response.text();
   throw new PuzzleRepositoryError(
     "INVALID_CONTENT_TYPE",
-    "WordPress devolvió una respuesta que no era JSON.",
+    `${source} devolvió una respuesta que no era JSON.`,
     response.status,
     text
   );
@@ -108,8 +115,34 @@ export function readWordPressConfig(doc: Document = globalThis.document): WordPr
   }
 }
 
-export interface WordPressPuzzleRepository {
-  readonly config: WordPressConfig;
+export function readSupabaseConfig(doc: Document = globalThis.document): SupabaseConfig | null {
+  const node = doc?.querySelector?.("#nexo-supabase-config");
+  if (!node) return null;
+  try {
+    const config: unknown = JSON.parse(node.textContent || "{}");
+    if (!isRecord(config)) throw new Error("Configuration must be an object.");
+    const url = new URL(String(config.url ?? ""));
+    if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash) {
+      throw new Error("url must be an HTTPS origin.");
+    }
+    if (url.pathname !== "/") throw new Error("url must not contain a path.");
+    if (typeof config.publishableKey !== "string" || !config.publishableKey.startsWith("sb_publishable_")) {
+      throw new Error("publishableKey is required.");
+    }
+    return Effect.runSync(decodeSupabaseConfig("Supabase DOM configuration", {
+      ...config,
+      url: trimSlash(url.href),
+      publishableKey: config.publishableKey,
+      canAuthor: false,
+      timeZone: typeof config.timeZone === "string" ? config.timeZone : "Europe/Madrid"
+    }));
+  } catch (error) {
+    throw new PuzzleRepositoryError("INVALID_CONFIG", `Configuración de Supabase no válida: ${errorMessage(error)}`);
+  }
+}
+
+export interface PuzzleRepository<C extends PuzzleRepositoryConfig = PuzzleRepositoryConfig> {
+  readonly config: C;
   readonly listPublic: (signal?: AbortSignal) => Promise<PuzzleListing>;
   readonly listAdmin: (signal?: AbortSignal) => Promise<PuzzleListing>;
   readonly loadPublic: (date: string, signal?: AbortSignal) => Promise<PuzzleDefinition>;
@@ -130,6 +163,9 @@ export interface WordPressPuzzleRepository {
   readonly trashPuzzle: (date: string, signal?: AbortSignal) => Promise<unknown>;
   readonly restorePuzzle: (date: string, signal?: AbortSignal) => Promise<unknown>;
 }
+
+export type WordPressPuzzleRepository = PuzzleRepository<WordPressConfig>;
+export type SupabasePuzzleRepository = PuzzleRepository<SupabaseConfig>;
 
 export interface EffectPuzzleRepository {
   readonly config: WordPressConfig;
@@ -293,6 +329,97 @@ export function createWordPressPuzzleRepository(
   };
 }
 
+export function createSupabasePuzzleRepository(
+  config: SupabaseConfig,
+  fetchImpl: FetchLike = globalThis.fetch
+): SupabasePuzzleRepository {
+  if (!config?.url || !config.publishableKey || typeof fetchImpl !== "function") {
+    throw new PuzzleRepositoryError("INVALID_CONFIG", "Falta la configuración del repositorio de rompecabezas.");
+  }
+  const base = trimSlash(config.url);
+  const request = async (query: URLSearchParams, signal?: AbortSignal): Promise<unknown> => {
+    const url = new URL(`${base}/rest/v1/puzzles`);
+    url.search = query.toString();
+    let response: Response;
+    try {
+      response = await fetchImpl(url, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          apikey: config.publishableKey,
+          Authorization: `Bearer ${config.publishableKey}`
+        },
+        ...(signal ? { signal } : {})
+      });
+    } catch (error) {
+      throw new PuzzleRepositoryError("NETWORK_ERROR", `No se pudo conectar con Supabase. ${errorMessage(error)}`);
+    }
+    const parsed = await responseBody(response, "Supabase");
+    if (!response.ok) {
+      throw new PuzzleRepositoryError("REQUEST_FAILED", responseMessage(parsed, response.status), response.status, parsed);
+    }
+    return parsed;
+  };
+  const authRequired = (): never => {
+    throw new PuzzleRepositoryError(
+      "AUTH_REQUIRED",
+      "La administración de rompecabezas en Supabase todavía no está habilitada.",
+      403
+    );
+  };
+
+  return {
+    config,
+    async listPublic(signal) {
+      const result = await request(new URLSearchParams({
+        select: "release_date,puzzle_id,revision",
+        status: "eq.published",
+        order: "release_date.desc"
+      }), signal);
+      if (!Array.isArray(result)) {
+        throw new PuzzleRepositoryError("INVALID_RESPONSE", "Supabase devolvió una lista no válida.");
+      }
+      const entries = await Promise.all(result.map((row, index): Promise<CatalogEntry> => {
+        if (!isRecord(row)) {
+          throw new PuzzleRepositoryError("INVALID_RESPONSE", "Supabase devolvió una fila no válida.");
+        }
+        return Effect.runPromise(decodeCatalogEntry(`Supabase puzzle listing[${index}]`, {
+          date: row.release_date,
+          id: row.puzzle_id,
+          revision: row.revision
+        }));
+      }));
+      return {
+        entries,
+        ...(config.currentDate ? { currentDate: config.currentDate } : {}),
+        timeZone: config.timeZone ?? "Europe/Madrid"
+      };
+    },
+    async loadPublic(date, signal) {
+      const result = await request(new URLSearchParams({
+        select: "definition",
+        release_date: `eq.${date}`,
+        status: "eq.published",
+        limit: "1"
+      }), signal);
+      if (!Array.isArray(result) || result.length !== 1 || !isRecord(result[0])) {
+        throw new PuzzleRepositoryError("NOT_FOUND", "No se encontró el rompecabezas solicitado.", 404);
+      }
+      return Effect.runPromise(decodePuzzleDefinition(`Supabase puzzle ${date}`, result[0].definition));
+    },
+    listAdmin: async () => authRequired(),
+    loadAdmin: async () => authRequired(),
+    save: async () => authRequired(),
+    submitSuggestion: async () => authRequired(),
+    listSuggestions: async () => authRequired(),
+    loadSuggestion: async () => authRequired(),
+    approveSuggestion: async () => authRequired(),
+    rejectSuggestion: async () => authRequired(),
+    trashPuzzle: async () => authRequired(),
+    restorePuzzle: async () => authRequired()
+  };
+}
+
 function repositoryEffect<A>(operation: (signal: AbortSignal) => Promise<A>): Effect.Effect<A, PuzzleRepositoryError> {
   return Effect.tryPromise({
     try: operation,
@@ -322,7 +449,7 @@ export function getLegacyPublishedPuzzles(storage: StorageLike | null, localePac
 }
 
 export async function importLegacyPublishedPuzzles(
-  repository: Pick<WordPressPuzzleRepository, "save">,
+  repository: Pick<PuzzleRepository, "save">,
   definitions: readonly PuzzleDefinition[],
   existingDates: Set<string> = new Set()
 ): Promise<ImportResult[]> {

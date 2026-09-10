@@ -9,6 +9,7 @@ import type {
   PuzzleCatalog,
   PuzzleDefinition,
   StorageLike,
+  SupabaseConfig,
   WordPressConfig
 } from "./types.ts";
 
@@ -124,6 +125,16 @@ export const WordPressConfigSchema = Schema.Struct({
   timeZone: Schema.optionalKey(Schema.String)
 });
 
+export const SupabaseConfigSchema = Schema.Struct({
+  url: Schema.String,
+  publishableKey: Schema.String,
+  canAuthor: Schema.Literal(false),
+  currentDate: Schema.optionalKey(Schema.String),
+  timeZone: Schema.optionalKey(Schema.String),
+  pageUrl: Schema.optionalKey(Schema.String),
+  localeUrl: Schema.optionalKey(Schema.String)
+});
+
 export const AuthorDraftSchema = Schema.Struct({
   version: Schema.Literal(1),
   metadata: Schema.Struct({
@@ -173,6 +184,7 @@ type Decodable = typeof PuzzleDefinitionSchema
   | typeof PuzzleCatalogSchema
   | typeof ProgressSchema
   | typeof WordPressConfigSchema
+  | typeof SupabaseConfigSchema
   | typeof AuthorDraftSchema
   | typeof PublishedPuzzleStoreSchema
   | typeof CatalogEntrySchema;
@@ -200,6 +212,9 @@ export const decodeProgress = (source: string, input: unknown) =>
 
 export const decodeWordPressConfig = (source: string, input: unknown) =>
   decodeUnknownEffect(WordPressConfigSchema, source, input) as Effect.Effect<WordPressConfig, DecodeError>;
+
+export const decodeSupabaseConfig = (source: string, input: unknown) =>
+  decodeUnknownEffect(SupabaseConfigSchema, source, input) as Effect.Effect<SupabaseConfig, DecodeError>;
 
 export const decodeAuthorDraft = (source: string, input: unknown) =>
   decodeUnknownEffect(AuthorDraftSchema, source, input) as Effect.Effect<AuthorDraft, DecodeError>;

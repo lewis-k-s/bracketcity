@@ -170,10 +170,7 @@ export interface PublishedPuzzleStore {
   readonly puzzles: Record<string, PuzzleDefinition>;
 }
 
-export interface WordPressConfig {
-  readonly restBase: string;
-  readonly assetBase?: string;
-  readonly nonce?: string;
+export interface PuzzleRepositoryConfig {
   readonly canAuthor: boolean;
   readonly canSuggest?: boolean;
   readonly suggestionKey?: string;
@@ -184,6 +181,17 @@ export interface WordPressConfig {
   readonly localeUrl?: string;
   readonly currentDate?: string;
   readonly timeZone?: string;
+}
+
+export interface WordPressConfig extends PuzzleRepositoryConfig {
+  readonly restBase: string;
+  readonly assetBase?: string;
+  readonly nonce?: string;
+}
+
+export interface SupabaseConfig extends PuzzleRepositoryConfig {
+  readonly url: string;
+  readonly publishableKey: string;
 }
 
 export interface PuzzleListing {

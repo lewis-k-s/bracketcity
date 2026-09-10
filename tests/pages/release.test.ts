@@ -6,7 +6,8 @@ import { JSDOM } from "jsdom";
 import {
   renderPagesIndex,
   renderPagesLoader,
-  renderPagesRelease
+  renderPagesRelease,
+  readPagesSupabaseConfig
 } from "../../scripts/build-pages.ts";
 import { renderWordPressDevLoader } from "../../scripts/local-wordpress-loader.ts";
 
@@ -93,6 +94,21 @@ test("standalone page mounts the game and escapes its revision", () => {
   assert.match(html, /&lt;script&gt;alert\(&quot;x&quot;\)&lt;\/script&gt;/);
   assert.match(html, /<main id="app"><\/main>/);
   assert.match(html, /<script src="\.\/loader\.js"/);
+});
+
+test("standalone page embeds only a validated Supabase browser configuration", () => {
+  const config = readPagesSupabaseConfig({
+    SUPABASE_PROJECT_REF: "abcdefghijklmnopqrst",
+    SUPABASE_PUBLISHABLE_KEY: "sb_publishable_public-key"
+  });
+  const html = renderPagesIndex("revision", config);
+  assert.match(html, /id="nexo-supabase-config"/u);
+  assert.match(html, /https:\/\/abcdefghijklmnopqrst\.supabase\.co/u);
+  assert.match(html, /sb_publishable_public-key/u);
+  assert.throws(() => readPagesSupabaseConfig({
+    SUPABASE_PROJECT_REF: "abcdefghijklmnopqrst",
+    SUPABASE_PUBLISHABLE_KEY: "sb_secret_private-key"
+  }), /publishable browser key/u);
 });
 
 test("Pages artifact contains a standalone game and stable WordPress loader assets", async () => {

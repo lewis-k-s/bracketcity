@@ -5,12 +5,14 @@ import {
   PuzzleRepositoryError,
   addSuccessfulLegacyImports,
   assertValidCorrection,
+  createSupabasePuzzleRepository,
   createWordPressPuzzleRepository,
   importLegacyPublishedPuzzles,
   latestAvailablePuzzleDate,
+  readSupabaseConfig,
   readWordPressConfig
 } from "../src/puzzle-repository.ts";
-import type { PuzzleDefinition, WordPressConfig } from "../src/types.ts";
+import type { PuzzleDefinition, SupabaseConfig, WordPressConfig } from "../src/types.ts";
 import { branchPuzzle } from "./fixtures.ts";
 
 interface FetchCall {
@@ -40,6 +42,16 @@ function puzzle(overrides: Partial<PuzzleDefinition> = {}): PuzzleDefinition {
   return { ...structuredClone(branchPuzzle), ...overrides };
 }
 
+function supabaseConfig(overrides: Partial<SupabaseConfig> = {}): SupabaseConfig {
+  return {
+    url: "https://project-ref.supabase.co",
+    publishableKey: "sb_publishable_test-key",
+    canAuthor: false,
+    timeZone: "Europe/Madrid",
+    ...overrides
+  };
+}
+
 test("shortcode JSON configuration is read without executing markup", () => {
   const dom = new JSDOM('<script id="bracket-city-config" type="application/json">{"restBase":"/wp-json/bracket-city/v1/","assetBase":"https://assets.example.test","canAuthor":true,"nonce":"n"}</script>');
   assert.deepEqual(readWordPressConfig(dom.window.document), {
@@ -49,6 +61,60 @@ test("shortcode JSON configuration is read without executing markup", () => {
     nonce: "n"
   });
   assert.equal(readWordPressConfig(new JSDOM("").window.document), null);
+});
+
+test("Pages Supabase configuration accepts only a public HTTPS origin and publishable key", () => {
+  const dom = new JSDOM('<script id="nexo-supabase-config" type="application/json">{"url":"https://project-ref.supabase.co/","publishableKey":"sb_publishable_test-key"}</script>');
+  assert.deepEqual(readSupabaseConfig(dom.window.document), supabaseConfig());
+  assert.equal(readSupabaseConfig(new JSDOM("").window.document), null);
+
+  for (const source of [
+    '{"url":"http://project-ref.supabase.co","publishableKey":"sb_publishable_test-key"}',
+    '{"url":"https://project-ref.supabase.co/rest/v1","publishableKey":"sb_publishable_test-key"}',
+    '{"url":"https://project-ref.supabase.co","publishableKey":"sb_secret_private"}'
+  ]) {
+    const invalid = new JSDOM(`<script id="nexo-supabase-config" type="application/json">${source}</script>`);
+    assert.throws(
+      () => readSupabaseConfig(invalid.window.document),
+      (error) => error instanceof PuzzleRepositoryError && error.code === "INVALID_CONFIG"
+    );
+  }
+});
+
+test("Supabase public reads use PostgREST with the publishable key", async () => {
+  const calls: FetchCall[] = [];
+  const repository = createSupabasePuzzleRepository(supabaseConfig(), async (url, options) => {
+    const href = String(url);
+    calls.push({ url: href, options: options ?? {} });
+    if (href.includes("select=release_date%2Cpuzzle_id%2Crevision")) {
+      return response([{ release_date: "2026-09-01", puzzle_id: "daily", revision: 3 }]);
+    }
+    return response([{ definition: puzzle({ id: "daily", releaseDate: "2026-09-01", revision: 3 }) }]);
+  });
+
+  const listing = await repository.listPublic();
+  const definition = await repository.loadPublic("2026-09-01");
+
+  assert.deepEqual(listing.entries, [{ date: "2026-09-01", id: "daily", revision: 3 }]);
+  assert.equal(definition.id, "daily");
+  assert.equal(calls[0]!.url, "https://project-ref.supabase.co/rest/v1/puzzles?select=release_date%2Cpuzzle_id%2Crevision&status=eq.published&order=release_date.desc");
+  assert.match(calls[1]!.url, /release_date=eq\.2026-09-01/u);
+  for (const call of calls) {
+    const headers = call.options.headers as Record<string, string>;
+    assert.equal(headers.apikey, "sb_publishable_test-key");
+    assert.equal(headers.Authorization, "Bearer sb_publishable_test-key");
+    assert.equal(call.options.credentials, undefined);
+  }
+});
+
+test("Supabase public repository rejects unavailable rows and administrative writes", async () => {
+  const repository = createSupabasePuzzleRepository(supabaseConfig(), async () => response([]));
+  await assert.rejects(repository.loadPublic("2026-09-01"), (error) => (
+    error instanceof PuzzleRepositoryError && error.code === "NOT_FOUND" && error.status === 404
+  ));
+  await assert.rejects(repository.save(puzzle()), (error) => (
+    error instanceof PuzzleRepositoryError && error.code === "AUTH_REQUIRED" && error.status === 403
+  ));
 });
 
 test("the newest available puzzle is selected independently of the server calendar date", () => {

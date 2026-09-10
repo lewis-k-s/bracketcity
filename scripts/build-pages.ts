@@ -19,6 +19,11 @@ interface PagesBuildResult extends PagesAssets {
   readonly outputDirectory: string;
 }
 
+interface PagesSupabaseConfig {
+  readonly url: string;
+  readonly publishableKey: string;
+}
+
 interface ManifestEntry {
   readonly file?: string;
   readonly isEntry?: boolean;
@@ -124,8 +129,39 @@ function escapeHtml(value: unknown): string {
     .replaceAll('"', "&quot;");
 }
 
-export function renderPagesIndex(revision = "local"): string {
+function jsonForHtml(value: unknown): string {
+  return JSON.stringify(value)
+    .replaceAll("<", "\\u003c")
+    .replaceAll(">", "\\u003e")
+    .replaceAll("&", "\\u0026");
+}
+
+export function readPagesSupabaseConfig(
+  environment: Record<string, string | undefined> = process.env
+): PagesSupabaseConfig | null {
+  const projectRef = environment.SUPABASE_PROJECT_REF;
+  const publishableKey = environment.SUPABASE_PUBLISHABLE_KEY;
+  if (!projectRef && !publishableKey) return null;
+  if (!projectRef || !/^[a-z0-9]{20}$/u.test(projectRef)) {
+    throw new Error("SUPABASE_PROJECT_REF must be a 20-character project reference.");
+  }
+  if (!publishableKey?.startsWith("sb_publishable_")) {
+    throw new Error("SUPABASE_PUBLISHABLE_KEY must be a publishable browser key.");
+  }
+  return {
+    url: `https://${projectRef}.supabase.co`,
+    publishableKey
+  };
+}
+
+export function renderPagesIndex(
+  revision = "local",
+  supabaseConfig: PagesSupabaseConfig | null = null
+): string {
   const safeRevision = escapeHtml(revision);
+  const configElement = supabaseConfig
+    ? `\n    <script id="nexo-supabase-config" type="application/json">${jsonForHtml(supabaseConfig)}</script>`
+    : "";
   return `<!doctype html>
 <html lang="es">
   <head>
@@ -139,7 +175,7 @@ export function renderPagesIndex(revision = "local"): string {
     <title>Nexo — Pistas anidadas</title>
   </head>
   <body class="nexo-standalone">
-    <main id="app"></main>
+    <main id="app"></main>${configElement}
     <script src="./loader.js" data-release="${safeRevision}"></script>
   </body>
 </html>
@@ -176,7 +212,10 @@ export async function buildPagesRelease({ revision = process.env.GITHUB_SHA ?? "
     resolve(outputDirectory, directory),
     { recursive: true }
   )));
-  await writeFile(resolve(outputDirectory, "index.html"), renderPagesIndex(revision));
+  await writeFile(
+    resolve(outputDirectory, "index.html"),
+    renderPagesIndex(revision, readPagesSupabaseConfig())
+  );
   await writeFile(resolve(outputDirectory, ".nojekyll"), "");
   await rm(resolve(outputDirectory, ".vite"), { recursive: true, force: true });
 

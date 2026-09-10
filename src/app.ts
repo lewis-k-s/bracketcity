@@ -26,10 +26,12 @@ import { PuzzleCatalogError, readRequestedPuzzleDate, resolvePuzzleEntry, valida
 import {
   addSuccessfulLegacyImports,
   assertValidCorrection,
+  createSupabasePuzzleRepository,
   createWordPressPuzzleRepository,
   getLegacyPublishedPuzzles,
   importLegacyPublishedPuzzles,
   latestAvailablePuzzleDate,
+  readSupabaseConfig,
   readWordPressConfig
 } from "./puzzle-repository.ts";
 import { mergePublishedPuzzles, publishPuzzle, restorePublishedPuzzles } from "./published.ts";
@@ -458,7 +460,12 @@ export async function bootstrapApp({
   }
   if (!mount) return null;
   const wordpressConfig = readWordPressConfig();
-  const repository = wordpressConfig ? createWordPressPuzzleRepository(wordpressConfig) : null;
+  const supabaseConfig = readSupabaseConfig();
+  const repository = wordpressConfig
+    ? createWordPressPuzzleRepository(wordpressConfig)
+    : supabaseConfig
+      ? createSupabasePuzzleRepository(supabaseConfig)
+      : null;
   const deployedLocale = globalThis.__NEXO_LOCALE_PACK__ ?? null;
   if (wordpressConfig?.localeUrl && localeUrl?.pathname?.endsWith?.("/locales/es-ES.json")) {
     localeUrl = new URL(wordpressConfig.localeUrl, document.baseURI);
