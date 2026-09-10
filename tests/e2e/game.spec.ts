@@ -4,10 +4,12 @@ import AxeBuilder from "@axe-core/playwright";
 
 async function freshPage(page: Page): Promise<void> {
   await page.goto("/?date=2026-08-28");
-  await page.evaluate(() => localStorage.clear());
+  await page.evaluate(() => {
+    localStorage.clear();
+    localStorage.setItem("nested-clue:instructions:v1", "seen");
+  });
   await page.reload();
-  const instructions = page.getByTestId("instructions-dialog");
-  if (await instructions.isVisible()) await page.getByTestId("instructions-start").click();
+  await expect(page.getByTestId("instructions-dialog")).toBeHidden();
   await expect(page.getByTestId("guess-input")).toBeVisible();
 }
 
@@ -52,7 +54,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("the first visit shows the Spanish rules and remembers dismissal", async ({ page }) => {
-  await page.evaluate(() => localStorage.clear());
+  await page.evaluate(() => localStorage.removeItem("nested-clue:instructions:v1"));
   await page.reload();
 
   const dialog = page.getByTestId("instructions-dialog");
