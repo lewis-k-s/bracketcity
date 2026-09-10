@@ -1,3 +1,5 @@
+import { BRAND_NAME } from "../src/brand.ts";
+
 export function renderWordPressDevLoader(locale: unknown): string {
   return `(function () {
   "use strict";
@@ -14,7 +16,7 @@ export function renderWordPressDevLoader(locale: unknown): string {
     var message = document.createElement("p");
     message.className = "nexo-error";
     message.setAttribute("role", "alert");
-    message.textContent = "No se pudo cargar el entorno local de Nexo.";
+    message.textContent = ${JSON.stringify(`No se pudo cargar el entorno local de ${BRAND_NAME}.`)};
     mount.replaceChildren(message);
   };
   document.head.appendChild(application);

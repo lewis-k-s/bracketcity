@@ -57,7 +57,7 @@ test("the first visit shows the Spanish rules and remembers dismissal", async ({
 
   const dialog = page.getByTestId("instructions-dialog");
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole("heading", { name: "Cómo jugar a Nexo" })).toBeVisible();
+  await expect(dialog.getByRole("heading", { name: "Cómo jugar a Entre Paréntesis" })).toBeVisible();
   await expect(dialog.getByText("Empieza por las pistas resaltadas")).toBeVisible();
   await expect(dialog.getByText("Una respuesta puede formar parte de la siguiente pista")).toBeVisible();
   await expect(dialog.locator(".instructions-example")).toHaveCount(3);
@@ -111,7 +111,7 @@ test("leaf-first global guesses unlock all branches and complete the sentence", 
   await page.getByTestId("share-result").click();
   await expect(page.getByTestId("share-status")).toHaveText("Resultado copiado.");
   const copiedShare = await page.evaluate(() => (window as typeof window & { copiedShare?: string }).copiedShare);
-  expect(copiedShare).toContain("Nexo · Primera luz");
+  expect(copiedShare).toContain("Entre Paréntesis · Primera luz");
   expect(copiedShare).toContain("100/100 puntos");
   expect(copiedShare).toContain("?date=2026-08-28");
   expect(copiedShare).not.toContain("El telescopio James Webb envió su primera imagen científica en 2022.");

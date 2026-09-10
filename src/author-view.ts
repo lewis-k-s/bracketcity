@@ -26,6 +26,7 @@ import {
   replaceInlineGroup
 } from "./author-inline.ts";
 import { mapAuthorPreviewSelection, renderAuthorPreview } from "./author-preview.ts";
+import { applyBrandName } from "./brand.ts";
 import { formatMessage } from "./view.ts";
 import type { InlineGroupNode, InlineParseResult } from "./author-inline.ts";
 import type {
@@ -74,6 +75,7 @@ interface StartAuthorAppOptions {
   readonly onRejectSuggestion?: ((suggestionId: number) => unknown) | null | undefined;
   readonly onDeletePuzzle?: ((date: string) => unknown) | null | undefined;
   readonly onRestorePuzzle?: ((date: string) => unknown) | null | undefined;
+  readonly onSignOut?: (() => unknown) | null | undefined;
   readonly legacyPuzzles?: PuzzleDefinition[] | undefined;
   readonly onImportLegacy?: (() => Promise<ImportResult[]>) | null | undefined;
   readonly currentDate?: string | null | undefined;
@@ -194,6 +196,7 @@ export function startAuthorApp({
   onRejectSuggestion = null,
   onDeletePuzzle = null,
   onRestorePuzzle = null,
+  onSignOut = null,
   legacyPuzzles = [],
   onImportLegacy = null,
   currentDate = null,
@@ -207,7 +210,7 @@ export function startAuthorApp({
 }: StartAuthorAppOptions = {}): AuthorAppHandle | null {
   if (!mountOption || !localeOption) return null;
   const mount = mountOption;
-  const locale = localeOption;
+  const locale = applyBrandName(localeOption);
   const createBlankDraft = (): AuthorDraft => {
     if (variant !== "suggestion") return createAuthorDraft();
     const random = globalThis.crypto?.randomUUID?.().replace(/-/gu, "").slice(0, 12)
@@ -1758,6 +1761,22 @@ export function startAuthorApp({
         "aria-current": "page"
       }
     }));
+    if (variant === "author" && typeof onSignOut === "function") {
+      const signOut = element("button", {
+        className: "mode-link",
+        text: locale.ui.authorSignOut ?? "Cerrar sesión",
+        attributes: { type: "button", "data-testid": "manager-sign-out" }
+      });
+      signOut.addEventListener("click", () => {
+        signOut.setAttribute("disabled", "");
+        Promise.resolve(onSignOut()).catch((error: unknown) => {
+          operationError = errorMessage(error);
+          liveMessage = operationError;
+          render();
+        });
+      });
+      nav.append(signOut);
+    }
     header.append(identity, nav);
 
     const flowMode = element("div", {

@@ -1,11 +1,11 @@
 <?php
 /**
- * Plugin Name: Nexo
+ * Plugin Name: Entre Paréntesis
  * Description: A daily nested-clue word game and its private puzzle publisher.
  * Version: 1.2.2
  * Requires at least: 6.5
  * Requires PHP: 8.1
- * Author: Nexo
+ * Author: Entre Paréntesis
  * Text Domain: nexo
  */
 
@@ -14,6 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 define( 'NEXO_VERSION', '1.2.2' );
+if ( ! defined( 'NEXO_BRAND_NAME' ) ) define( 'NEXO_BRAND_NAME', 'Entre Paréntesis' );
 define( 'NEXO_FILE', __FILE__ );
 define( 'NEXO_DIR', plugin_dir_path( __FILE__ ) );
 define( 'NEXO_TIME_ZONE', 'Europe/Madrid' );

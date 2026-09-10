@@ -48,6 +48,21 @@ function memoryStorage(): MemoryStorage {
   };
 }
 
+test("authenticated puzzle managers can sign out from the author header", async () => {
+  installDom();
+  let calls = 0;
+  startAuthorApp({
+    mount: q("#app"),
+    locale,
+    storage: memoryStorage(),
+    onSignOut() { calls += 1; }
+  });
+
+  q('[data-testid="manager-sign-out"]').click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(calls, 1);
+});
+
 function button(label: string | undefined): HTMLElement {
   const match = [...qa("button")].find((node) => node.textContent.trim() === label);
   assert.ok(match, `Button '${label}' must exist.`);
@@ -109,7 +124,7 @@ test("author mode starts with a stored draft, labelled fields, and validation fe
   const app = startAuthorApp({ mount: q("#app"), locale, storage });
 
   assert.ok(app);
-  assert.equal(q("h1").textContent, locale.ui.authorTitle);
+  assert.equal(q("h1").textContent, "Crear Entre Paréntesis");
   assert.ok(q('[data-testid="author-final-text"]'));
   assert.match(q('[data-testid="author-validation-state"]').textContent, /todavía no es válido/u);
   assert.equal(q('[data-testid="author-download"]').disabled, true);
@@ -689,7 +704,7 @@ test("suggestion mode submits a valid undated draft without exposing JSON contro
     }
   });
 
-  assert.equal(q("h1").textContent, locale.ui.suggestionTitle);
+  assert.equal(q("h1").textContent, "Proponer Entre Paréntesis");
   assert.equal(q("#author-release-date").value, "");
   assert.equal(q('[data-testid="author-json"]'), null);
   assert.equal(q('[data-testid="author-download"]'), null);

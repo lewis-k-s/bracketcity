@@ -1,5 +1,5 @@
 <?php
-/** Standalone validator for Nexo puzzle definitions. */
+/** Standalone validator for Entre Paréntesis puzzle definitions. */
 
 if ( ! defined( 'ABSPATH' ) && ! defined( 'NEXO_TESTING' ) ) {
 	exit;

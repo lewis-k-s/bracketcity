@@ -49,6 +49,15 @@ test("Pages root runs the standalone game", async ({ page }) => {
   await expect(page.locator('script[src*="/assets/nexo-"]')).toHaveCount(1);
 });
 
+test("standalone Supabase author mode shows invite-only login before loading the editor", async ({ page }) => {
+  await page.goto("/tests/e2e/fixtures/supabase-page.html?mode=author");
+
+  await expect(page.getByRole("heading", { name: "Administrar Entre Paréntesis" })).toBeVisible();
+  await expect(page.getByTestId("manager-email")).toHaveAttribute("type", "email");
+  await expect(page.getByTestId("manager-sign-in")).toBeVisible();
+  await expect(page.getByTestId("author-final-text")).toHaveCount(0);
+});
+
 test("classic Pages bundle runs on the WordPress origin and keeps progress there", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.route("**/wp-json/bracket-city/v1/**", (route) => {
@@ -295,7 +304,7 @@ test("shared suggestion link submits an undated pending puzzle", async ({ page }
   });
 
   await page.goto(`${fixtureUrl}?mode=suggest&suggestion_key=fixture-suggestion-key`);
-  await expect(page.getByRole("heading", { name: "Proponer un Nexo" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Proponer Entre Paréntesis" })).toBeVisible();
   expect(await page.evaluate(() => performance.getEntriesByType("resource")
     .some((entry) => entry.name.includes("/assets/author-view-")))).toBe(true);
   await page.getByTestId("author-final-text").fill("La gata.");

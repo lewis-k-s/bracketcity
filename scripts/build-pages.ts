@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Data, Effect } from "effect";
 import { build } from "vite";
+import { BRAND_NAME } from "../src/brand.ts";
 import type { LocalePack } from "../src/types.ts";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -42,7 +43,7 @@ function errorPanelSource(messageExpression: string): string {
   panel.className = "fatal-panel";
   panel.setAttribute("role", "alert");
   var title = document.createElement("h1");
-  title.textContent = "Nexo";
+  title.textContent = ${JSON.stringify(BRAND_NAME)};
   var body = document.createElement("p");
   body.textContent = ${messageExpression};
   panel.append(title, body);
@@ -56,14 +57,14 @@ export function renderPagesLoader(): string {
   globalThis.__NEXO_LOADER_STARTED__ = true;
   var loader = document.currentScript;
   if (!loader || !loader.src) {
-${errorPanelSource('"No se pudo identificar el cargador de Nexo."')}
+${errorPanelSource(JSON.stringify(`No se pudo identificar el cargador de ${BRAND_NAME}.`))}
     return;
   }
   var release = document.createElement("script");
   release.src = new URL("release.js?cache=" + Date.now(), loader.src).href;
   release.async = false;
   release.onerror = function () {
-${errorPanelSource('"No se pudo cargar la versión publicada de Nexo."')}
+${errorPanelSource(JSON.stringify(`No se pudo cargar la versión publicada de ${BRAND_NAME}.`))}
   };
   document.head.appendChild(release);
 })();
@@ -80,7 +81,7 @@ export function renderPagesRelease({ appPath, cssPath, localePath }: PagesAssets
   "use strict";
   var release = document.currentScript;
   if (!release || !release.src) {
-${errorPanelSource('"No se pudo identificar la versión de Nexo."')}
+${errorPanelSource(JSON.stringify(`No se pudo identificar la versión de ${BRAND_NAME}.`))}
     return;
   }
   var root = new URL("./", release.src);
@@ -88,7 +89,7 @@ ${errorPanelSource('"No se pudo identificar la versión de Nexo."')}
   style.rel = "stylesheet";
   style.href = new URL(${JSON.stringify(cssPath)}, root).href;
   style.onerror = function () {
-${errorPanelSource('"No se pudieron cargar los estilos de Nexo."')}
+${errorPanelSource(JSON.stringify(`No se pudieron cargar los estilos de ${BRAND_NAME}.`))}
   };
   document.head.appendChild(style);
 
@@ -96,7 +97,7 @@ ${errorPanelSource('"No se pudieron cargar los estilos de Nexo."')}
   locale.src = new URL(${JSON.stringify(localePath)}, root).href;
   locale.async = false;
   locale.onerror = function () {
-${errorPanelSource('"No se pudo cargar el idioma de Nexo."')}
+${errorPanelSource(JSON.stringify(`No se pudo cargar el idioma de ${BRAND_NAME}.`))}
   };
   locale.onload = function () {
     var app = document.createElement("script");
@@ -104,7 +105,7 @@ ${errorPanelSource('"No se pudo cargar el idioma de Nexo."')}
     app.src = new URL(${JSON.stringify(appPath)}, root).href;
     app.async = false;
     app.onerror = function () {
-${errorPanelSource('"No se pudo cargar la aplicación Nexo."')}
+${errorPanelSource(JSON.stringify(`No se pudo cargar la aplicación ${BRAND_NAME}.`))}
     };
     document.body.appendChild(app);
   };
@@ -172,7 +173,7 @@ export function renderPagesIndex(
       name="description"
       content="Un juego multilingüe de pistas anidadas que se resuelve desde dentro hacia fuera."
     />
-    <title>Nexo — Pistas anidadas</title>
+    <title>${BRAND_NAME} — Pistas anidadas</title>
   </head>
   <body class="nexo-standalone">
     <main id="app"></main>${configElement}

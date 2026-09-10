@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "effect": "npm:effect@4.0.0-rc.112"
+  }
+}

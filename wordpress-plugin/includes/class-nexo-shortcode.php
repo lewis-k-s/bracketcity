@@ -22,10 +22,10 @@ final class Nexo_Shortcode {
 
 	public static function render( array $attributes = array() ): string {
 		if ( ! is_singular( 'page' ) || ! ( get_queried_object() instanceof WP_Post ) ) {
-			return '<p class="nexo-error">' . esc_html__( 'Nexo must be placed on a normal WordPress Page.', 'nexo' ) . '</p>';
+			return '<p class="nexo-error">' . esc_html( NEXO_BRAND_NAME . ' must be placed on a normal WordPress Page.' ) . '</p>';
 		}
 		if ( self::$instances > 0 ) {
-			return '<p class="nexo-error">' . esc_html__( 'Only one Nexo game can appear on a Page.', 'nexo' ) . '</p>';
+			return '<p class="nexo-error">' . esc_html( 'Only one ' . NEXO_BRAND_NAME . ' game can appear on a Page.' ) . '</p>';
 		}
 
 		$attributes = shortcode_atts( array( 'asset_base' => '' ), $attributes, 'bracket_city' );
@@ -39,7 +39,7 @@ final class Nexo_Shortcode {
 		}
 		$asset_base = self::validate_asset_base( $asset_base_value );
 		if ( null === $asset_base ) {
-			return '<p class="nexo-error">' . esc_html__( 'Nexo needs a secure HTTPS asset_base URL.', 'nexo' ) . '</p>';
+			return '<p class="nexo-error">' . esc_html( NEXO_BRAND_NAME . ' needs a secure HTTPS asset_base URL.' ) . '</p>';
 		}
 
 		wp_enqueue_script( 'nexo-loader', $asset_base . '/loader.js', array(), NEXO_VERSION, true );

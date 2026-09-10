@@ -77,7 +77,7 @@ test("release injects hashed CSS, locale, and module application scripts", () =>
   assert.equal(app.type, "module");
   assert.equal(app.async, false);
   app.dispatchEvent(new dom.window.Event("error"));
-  assert.match(dom.window.document.getElementById("bracket-city-app")!.textContent, /aplicación Nexo/);
+  assert.match(dom.window.document.getElementById("bracket-city-app")!.textContent, /aplicación Entre Paréntesis/);
 });
 
 test("release rejects unsafe generated asset paths", () => {

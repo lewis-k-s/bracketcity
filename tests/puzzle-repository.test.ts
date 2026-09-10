@@ -5,6 +5,7 @@ import {
   PuzzleRepositoryError,
   addSuccessfulLegacyImports,
   assertValidCorrection,
+  createAuthenticatedSupabasePuzzleRepository,
   createSupabasePuzzleRepository,
   createWordPressPuzzleRepository,
   importLegacyPublishedPuzzles,
@@ -102,9 +103,66 @@ test("Supabase public reads use PostgREST with the publishable key", async () =>
   for (const call of calls) {
     const headers = call.options.headers as Record<string, string>;
     assert.equal(headers.apikey, "sb_publishable_test-key");
-    assert.equal(headers.Authorization, "Bearer sb_publishable_test-key");
+    assert.equal(headers.Authorization, undefined);
     assert.equal(call.options.credentials, undefined);
   }
+});
+
+test("Supabase administration sends the user JWT only to the authenticated function", async () => {
+  const calls: FetchCall[] = [];
+  const repository = createAuthenticatedSupabasePuzzleRepository(
+    supabaseConfig(),
+    async () => "user-session-jwt",
+    async (url, options) => {
+      calls.push({ url: String(url), options: options ?? {} });
+      const body = JSON.parse(String(options?.body)) as Record<string, unknown>;
+      if (body.action === "list") return response({
+        currentDate: "2026-09-10",
+        puzzles: [{ release_date: "2026-09-12", puzzle_id: "future", revision: 2 }]
+      });
+      if (body.action === "load") return response({ definition: puzzle({ releaseDate: String(body.date) }) });
+      return response({ ok: true });
+    }
+  );
+
+  const listing = await repository.listAdmin();
+  await repository.loadAdmin("2026-09-12");
+  await repository.save(puzzle({ releaseDate: "2026-09-12", revision: 2 }), {
+    overwrite: true,
+    expectedRevision: 1
+  });
+  await repository.trashPuzzle("2026-09-12");
+  await repository.restorePuzzle("2026-09-12");
+
+  assert.equal(repository.config.canAuthor, true);
+  assert.equal(listing.currentDate, "2026-09-10");
+  assert.deepEqual(listing.entries, [{ date: "2026-09-12", id: "future", revision: 2 }]);
+  assert.deepEqual(calls.map((call) => JSON.parse(String(call.options.body)).action), [
+    "list", "load", "save", "trash", "restore"
+  ]);
+  assert.equal(JSON.parse(String(calls[2]!.options.body)).expectedRevision, 1);
+  for (const call of calls) {
+    assert.equal(call.url, "https://project-ref.supabase.co/functions/v1/puzzle-admin");
+    const headers = call.options.headers as Record<string, string>;
+    assert.equal(headers.apikey, "sb_publishable_test-key");
+    assert.equal(headers.Authorization, "Bearer user-session-jwt");
+  }
+});
+
+test("Supabase administration fails locally when the session has expired", async () => {
+  let calls = 0;
+  const repository = createAuthenticatedSupabasePuzzleRepository(
+    supabaseConfig(),
+    async () => "",
+    async () => {
+      calls += 1;
+      return response({});
+    }
+  );
+  await assert.rejects(repository.listAdmin(), (error) => (
+    error instanceof PuzzleRepositoryError && error.code === "AUTH_REQUIRED" && error.status === 401
+  ));
+  assert.equal(calls, 0);
 });
 
 test("Supabase public repository rejects unavailable rows and administrative writes", async () => {

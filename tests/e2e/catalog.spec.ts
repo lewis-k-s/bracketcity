@@ -60,7 +60,7 @@ test("31 August completes all nested branches as one confirmed sentence", async 
   await expect(page.locator("#puzzle-title")).toHaveCount(0);
   await expect(page.locator(".instruction, .source-note")).toHaveCount(0);
   await expect(page.locator("body")).not.toContainText("Un solo huevo");
-  await expect(page).toHaveTitle("Nexo — Pistas anidadas");
+  await expect(page).toHaveTitle("Entre Paréntesis — Pistas anidadas");
   for (const answer of ["ando", "tés", "vez", "era", "ida", "Sol"]) {
     await submitWithVirtualKeyboard(page, answer);
   }

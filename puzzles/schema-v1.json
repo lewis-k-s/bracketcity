@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.invalid/nexo/puzzle-schema-v1.json",
-  "title": "Nexo puzzle definition",
+  "title": "Entre Paréntesis puzzle definition",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "id", "locale", "finalText", "root", "clues"],

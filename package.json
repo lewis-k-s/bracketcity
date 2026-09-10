@@ -3,7 +3,7 @@
   "version": "1.2.2",
   "private": true,
   "type": "module",
-  "description": "The Nexo multilingual nested-clue game and WordPress plugin.",
+  "description": "Entre Paréntesis multilingual nested-clue game and WordPress plugin.",
   "scripts": {
     "dev": "vite",
     "dev:studio-assets": "vite --config vite.wordpress.config.ts",
@@ -51,6 +51,7 @@
     "@deck.gl/geo-layers": "^9.0.29",
     "@deck.gl/layers": "^9.0.29",
     "@deck.gl/react": "^9.0.29",
+    "@supabase/supabase-js": "^2.116.0",
     "deck.gl": "^9.0.29",
     "effect": "4.0.0-rc.112",
     "mapbox-gl": "^3.5.1",

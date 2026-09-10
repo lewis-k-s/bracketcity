@@ -2,6 +2,7 @@
 define( 'ABSPATH', __DIR__ . '/' );
 define( 'NEXO_DIR', __DIR__ . '/../../wordpress-plugin/' );
 define( 'NEXO_VERSION', 'test' );
+define( 'NEXO_BRAND_NAME', 'Entre Paréntesis' );
 define( 'NEXO_TIME_ZONE', 'Europe/Madrid' );
 define( 'NEXO_LOCAL_ASSET_BASE', 'http://127.0.0.1:4176' );
 
@@ -40,6 +41,7 @@ function wp_get_environment_type() { return $GLOBALS['nexo_environment_type']; }
 function wp_create_nonce() { return 'nonce'; }
 function wp_json_encode( $value, $flags = 0 ) { return json_encode( $value, $flags ); }
 function esc_url_raw( $value, $protocols = null ) { return $value; }
+function esc_html( $value ) { return $value; }
 function esc_html__( $value ) { return $value; }
 function shortcode_atts( $defaults, $attributes ) { return array_merge( $defaults, $attributes ); }
 function wp_parse_url( $value ) { return parse_url( $value ); }
@@ -186,7 +188,7 @@ check( 'https://owner.github.io/bracketcity' === $config['assetBase'], 'The shor
 check( true === $config['canAuthor'] && 'nonce' === $config['nonce'], 'Authorized users must receive a REST nonce.' );
 check( true === $config['acceptingNewPuzzles'] && 1000 === $config['puzzleLimit'], 'The client must receive the current puzzle capacity.' );
 check( false !== strpos( $config['suggestionUrl'], 'mode=suggest' ), 'Authorized users must receive the collaborator link.' );
-check( false !== strpos( Nexo_Shortcode::render( array( 'asset_base' => 'https://owner.github.io/bracketcity' ) ), 'Only one Nexo game' ), 'Only one shortcode instance is allowed.' );
+check( false !== strpos( Nexo_Shortcode::render( array( 'asset_base' => 'https://owner.github.io/bracketcity' ) ), 'Only one Entre Paréntesis game' ), 'Only one shortcode instance is allowed.' );
 $instances->setValue( null, 0 );
 $GLOBALS['nexo_current_capabilities'] = array();
 $_GET = array( 'mode' => 'suggest', 'suggestion_key' => $suggestion_key );

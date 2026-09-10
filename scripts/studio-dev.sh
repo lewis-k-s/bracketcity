@@ -25,7 +25,7 @@ check_paths() {
 	case "$asset_port" in
 		''|*[!0-9]*) fail 'NEXO_ASSET_PORT must be a port number.' ;;
 	esac
-	[ -d "$plugin_source" ] || fail "Nexo plugin source is missing: $plugin_source"
+	[ -d "$plugin_source" ] || fail "Entre Paréntesis plugin source is missing: $plugin_source"
 	[ -d "$studio_site_path/wp-content/plugins" ] || fail "Studio site is missing: $studio_site_path"
 	[ -e "$studio_registered_path" ] || fail "Studio registered path is missing: $studio_registered_path"
 	[ "$(canonical_directory "$studio_site_path")" = "$(canonical_directory "$studio_registered_path")" ] || fail 'Studio registered path must resolve to NEXO_STUDIO_SITE_PATH.'
@@ -68,7 +68,7 @@ start_studio() {
 
 restore_plugin() {
 	studio stop --path "$studio_registered_path"
-	[ -L "$plugin_target" ] || fail "Local Nexo plugin link is missing: $plugin_target"
+	[ -L "$plugin_target" ] || fail "Local Entre Paréntesis plugin link is missing: $plugin_target"
 	[ "$(canonical_directory "$plugin_target")" = "$(canonical_directory "$plugin_source")" ] || fail "Refusing to remove unexpected plugin link: $plugin_target"
 	[ -d "$plugin_backup" ] || fail "Pulled plugin backup is missing: $plugin_backup"
 	rm "$plugin_target"

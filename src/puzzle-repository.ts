@@ -9,6 +9,7 @@ import {
 } from "./effect.ts";
 import type {
   CatalogEntry,
+  AuthenticatedSupabaseConfig,
   ExistingPuzzle,
   ImportResult,
   LocalePack,
@@ -149,7 +150,7 @@ export interface PuzzleRepository<C extends PuzzleRepositoryConfig = PuzzleRepos
   readonly loadAdmin: (date: string, signal?: AbortSignal) => Promise<PuzzleDefinition>;
   readonly save: (
     definition: PuzzleDefinition,
-    options?: { overwrite?: boolean; signal?: AbortSignal }
+    options?: { overwrite?: boolean; expectedRevision?: number; signal?: AbortSignal }
   ) => Promise<unknown>;
   readonly submitSuggestion: (definition: PuzzleDefinition, signal?: AbortSignal) => Promise<unknown>;
   readonly listSuggestions: (signal?: AbortSignal) => Promise<SuggestionMetadata[]>;
@@ -166,6 +167,7 @@ export interface PuzzleRepository<C extends PuzzleRepositoryConfig = PuzzleRepos
 
 export type WordPressPuzzleRepository = PuzzleRepository<WordPressConfig>;
 export type SupabasePuzzleRepository = PuzzleRepository<SupabaseConfig>;
+export type AuthenticatedSupabasePuzzleRepository = PuzzleRepository<AuthenticatedSupabaseConfig>;
 
 export interface EffectPuzzleRepository {
   readonly config: WordPressConfig;
@@ -180,6 +182,7 @@ export interface EffectPuzzleRepository {
 }
 
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+type AccessTokenProvider = () => Promise<string>;
 
 export function createWordPressPuzzleRepository(
   config: WordPressConfig,
@@ -346,8 +349,7 @@ export function createSupabasePuzzleRepository(
         method: "GET",
         headers: {
           Accept: "application/json",
-          apikey: config.publishableKey,
-          Authorization: `Bearer ${config.publishableKey}`
+          apikey: config.publishableKey
         },
         ...(signal ? { signal } : {})
       });
@@ -417,6 +419,105 @@ export function createSupabasePuzzleRepository(
     rejectSuggestion: async () => authRequired(),
     trashPuzzle: async () => authRequired(),
     restorePuzzle: async () => authRequired()
+  };
+}
+
+export function createAuthenticatedSupabasePuzzleRepository(
+  config: SupabaseConfig,
+  accessToken: AccessTokenProvider,
+  fetchImpl: FetchLike = globalThis.fetch
+): AuthenticatedSupabasePuzzleRepository {
+  if (!config?.url || !config.publishableKey || typeof accessToken !== "function" || typeof fetchImpl !== "function") {
+    throw new PuzzleRepositoryError("INVALID_CONFIG", "Falta la configuración de administración de rompecabezas.");
+  }
+  const adminConfig: AuthenticatedSupabaseConfig = { ...config, canAuthor: true };
+  const endpoint = `${trimSlash(config.url)}/functions/v1/puzzle-admin`;
+  const request = async (body: Record<string, unknown>, signal?: AbortSignal): Promise<unknown> => {
+    const token = await accessToken();
+    if (!token) throw new PuzzleRepositoryError("AUTH_REQUIRED", "La sesión de administración ha caducado.", 401);
+    let response: Response;
+    try {
+      response = await fetchImpl(endpoint, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          apikey: config.publishableKey,
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(body),
+        ...(signal ? { signal } : {})
+      });
+    } catch (error) {
+      throw new PuzzleRepositoryError("NETWORK_ERROR", `No se pudo conectar con Supabase. ${errorMessage(error)}`);
+    }
+    const parsed = await responseBody(response, "Supabase");
+    if (!response.ok) {
+      const code = response.status === 401 || response.status === 403
+        ? "AUTH_REQUIRED"
+        : isRecord(parsed) && typeof parsed.code === "string" ? parsed.code : "REQUEST_FAILED";
+      throw new PuzzleRepositoryError(code, responseMessage(parsed, response.status), response.status, parsed);
+    }
+    return parsed;
+  };
+
+  return {
+    config: adminConfig,
+    listPublic: createSupabasePuzzleRepository(config, fetchImpl).listPublic,
+    loadPublic: createSupabasePuzzleRepository(config, fetchImpl).loadPublic,
+    async listAdmin(signal) {
+      const result = await request({ action: "list" }, signal);
+      if (!isRecord(result) || !Array.isArray(result.puzzles)) {
+        throw new PuzzleRepositoryError("INVALID_RESPONSE", "Supabase devolvió una lista no válida.");
+      }
+      const entries = await Promise.all(result.puzzles.map((row, index): Promise<CatalogEntry> => {
+        if (!isRecord(row)) throw new PuzzleRepositoryError("INVALID_RESPONSE", "Supabase devolvió una fila no válida.");
+        return Effect.runPromise(decodeCatalogEntry(`Supabase admin puzzle listing[${index}]`, {
+          date: row.release_date,
+          id: row.puzzle_id,
+          revision: row.revision
+        }));
+      }));
+      return {
+        entries,
+        ...(typeof result.currentDate === "string" ? { currentDate: result.currentDate } : {}),
+        timeZone: "Europe/Madrid"
+      };
+    },
+    async loadAdmin(date, signal) {
+      const result = await request({ action: "load", date }, signal);
+      if (!isRecord(result) || !Object.hasOwn(result, "definition")) {
+        throw new PuzzleRepositoryError("INVALID_RESPONSE", "Supabase devolvió un rompecabezas no válido.");
+      }
+      return Effect.runPromise(decodePuzzleDefinition(`Supabase admin puzzle ${date}`, result.definition));
+    },
+    save(definition, { overwrite = false, expectedRevision, signal } = {}) {
+      return request({
+        action: "save",
+        definition,
+        overwrite,
+        ...(overwrite && expectedRevision !== undefined ? { expectedRevision } : {})
+      }, signal);
+    },
+    submitSuggestion: async () => {
+      throw new PuzzleRepositoryError("NOT_SUPPORTED", "Las sugerencias todavía no están habilitadas en Supabase.", 501);
+    },
+    listSuggestions: async () => [],
+    loadSuggestion: async () => {
+      throw new PuzzleRepositoryError("NOT_SUPPORTED", "Las sugerencias todavía no están habilitadas en Supabase.", 501);
+    },
+    approveSuggestion: async () => {
+      throw new PuzzleRepositoryError("NOT_SUPPORTED", "Las sugerencias todavía no están habilitadas en Supabase.", 501);
+    },
+    rejectSuggestion: async () => {
+      throw new PuzzleRepositoryError("NOT_SUPPORTED", "Las sugerencias todavía no están habilitadas en Supabase.", 501);
+    },
+    trashPuzzle(date, signal) {
+      return request({ action: "trash", date }, signal);
+    },
+    restorePuzzle(date, signal) {
+      return request({ action: "restore", date }, signal);
+    }
   };
 }
 

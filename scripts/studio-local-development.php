@@ -1,5 +1,5 @@
 <?php
-/** Local-only Nexo settings installed by scripts/studio-dev.sh. */
+/** Local-only Entre Paréntesis settings installed by scripts/studio-dev.sh. */
 
 if ( ! defined( 'WP_ENVIRONMENT_TYPE' ) ) {
 	define( 'WP_ENVIRONMENT_TYPE', 'local' );

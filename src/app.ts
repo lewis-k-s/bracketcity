@@ -24,8 +24,10 @@ import {
 } from "./view.ts";
 import { PuzzleCatalogError, readRequestedPuzzleDate, resolvePuzzleEntry, validatePuzzleCatalog } from "./catalog.ts";
 import {
+  PuzzleRepositoryError,
   addSuccessfulLegacyImports,
   assertValidCorrection,
+  createAuthenticatedSupabasePuzzleRepository,
   createSupabasePuzzleRepository,
   createWordPressPuzzleRepository,
   getLegacyPublishedPuzzles,
@@ -36,6 +38,7 @@ import {
 } from "./puzzle-repository.ts";
 import { mergePublishedPuzzles, publishPuzzle, restorePublishedPuzzles } from "./published.ts";
 import { createCompletionShare } from "./share.ts";
+import { applyBrandName, BRAND_NAME } from "./brand.ts";
 import type { AuthorAppHandle, AuthorPanelSkin } from "./author-view.ts";
 import {
   decodeLocalePack,
@@ -151,11 +154,36 @@ function renderFatalError(mount: HTMLElement, message: string): void {
   panel.className = "fatal-panel";
   panel.setAttribute("role", "alert");
   const title = document.createElement("h1");
-  title.textContent = "Nexo";
+  title.textContent = BRAND_NAME;
   const body = document.createElement("p");
   body.textContent = message;
   panel.append(title, body);
   mount.replaceChildren(panel);
+}
+
+function renderManagerSessionError(
+  mount: HTMLElement,
+  message: string,
+  signOut: () => Promise<void>
+): void {
+  renderFatalError(mount, message);
+  const button = document.createElement("button");
+  button.className = "author-button author-button--quiet";
+  button.type = "button";
+  button.textContent = "Cerrar sesión";
+  button.addEventListener("click", () => {
+    button.disabled = true;
+    void signOut().then(() => {
+      const url = new URL(globalThis.location.href);
+      url.hash = "";
+      url.search = "";
+      url.searchParams.set("mode", "author");
+      globalThis.location.assign(url.href);
+    }, () => {
+      button.disabled = false;
+    });
+  });
+  mount.querySelector(".fatal-panel")?.append(button);
 }
 
 function datedPuzzleError(date: string | null | undefined): PuzzleCatalogError {
@@ -196,6 +224,7 @@ export async function startDatedApp({
   storage?: StorageLike | null | undefined;
   loadDefinition: (date: string, entry: CatalogEntry, signal: AbortSignal) => Promise<PuzzleDefinition>;
 }): Promise<AppHandle | null> {
+  locale = applyBrandName(locale);
   let activeApp: AppHandle | null = null;
   let activeDate: string | null = null;
   let activeFiber: Fiber.Fiber<AppHandle | null, AppError | PuzzleCatalogError> | null = null;
@@ -320,10 +349,11 @@ export async function startApp({
   if (!mount) return null;
 
   try {
-    const [definition, locale] = await Promise.all([
+    const [definition, loadedLocale] = await Promise.all([
       suppliedDefinition ?? loadPuzzle(puzzleUrl),
       suppliedLocale ?? loadLocale(localeUrl)
     ]);
+    const locale = applyBrandName(loadedLocale);
     if (definition.locale !== locale.id) throw new Error("Puzzle and locale pack do not match.");
     if (dateNavigation?.selectedDate && definition.releaseDate !== dateNavigation.selectedDate) {
       throw new Error(`Puzzle releaseDate must match catalog date ${dateNavigation.selectedDate}.`);
@@ -461,12 +491,12 @@ export async function bootstrapApp({
   if (!mount) return null;
   const wordpressConfig = readWordPressConfig();
   const supabaseConfig = readSupabaseConfig();
-  const repository = wordpressConfig
+  let repository = wordpressConfig
     ? createWordPressPuzzleRepository(wordpressConfig)
     : supabaseConfig
       ? createSupabasePuzzleRepository(supabaseConfig)
       : null;
-  const deployedLocale = globalThis.__NEXO_LOCALE_PACK__ ?? null;
+  const deployedLocale = globalThis.__NEXO_LOCALE_PACK__ ? applyBrandName(globalThis.__NEXO_LOCALE_PACK__) : null;
   if (wordpressConfig?.localeUrl && localeUrl?.pathname?.endsWith?.("/locales/es-ES.json")) {
     localeUrl = new URL(wordpressConfig.localeUrl, document.baseURI);
   }
@@ -480,6 +510,18 @@ export async function bootstrapApp({
     || requestedAuthorSkin === "cards"
     ? requestedAuthorSkin
     : undefined;
+  let managerSession: import("./supabase-auth.ts").SupabaseManagerSession | null = null;
+  if (mode === "author" && supabaseConfig) {
+    try {
+      const { requireSupabaseManagerSession } = await import("./supabase-auth.ts");
+      managerSession = await requireSupabaseManagerSession({ config: supabaseConfig, mount, pageUrl: currentUrl });
+      if (!managerSession) return null;
+      repository = createAuthenticatedSupabasePuzzleRepository(supabaseConfig, managerSession.getAccessToken);
+    } catch (error: unknown) {
+      renderFatalError(mount, `No se pudo iniciar la sesión de administración. ${errorMessage(error)}`.trim());
+      return null;
+    }
+  }
   let browserStorage = storage;
   if (browserStorage === undefined) {
     try {
@@ -603,7 +645,12 @@ export async function bootstrapApp({
           });
         }
         const result = suggestionId === undefined
-          ? await repository.save(definition, { overwrite })
+          ? await repository.save(definition, {
+            overwrite,
+            ...(overwrite && priorDefinition
+              ? { expectedRevision: priorDefinition.revision ?? 1 }
+              : {})
+          })
           : await repository.approveSuggestion(suggestionId, definition);
         for (const candidate of [priorDefinition, definition]) {
           if (!candidate || typeof browserStorage?.removeItem !== "function") continue;
@@ -632,7 +679,15 @@ export async function bootstrapApp({
         puzzleLimit: repository.config.puzzleLimit,
         currentDate: listing.currentDate,
         pageUrl: repository.config.pageUrl,
-        suggestionUrl: repository.config.suggestionUrl
+        suggestionUrl: repository.config.suggestionUrl,
+        onSignOut: managerSession ? async () => {
+          await managerSession.signOut();
+          const signInUrl = new URL(globalThis.location.href);
+          signInUrl.hash = "";
+          signInUrl.search = "";
+          signInUrl.searchParams.set("mode", "author");
+          globalThis.location.assign(signInUrl.href);
+        } : null
       });
     }
     const [locale, manifest] = await Promise.all([
@@ -669,6 +724,10 @@ export async function bootstrapApp({
     };
     return startAuthorApp({ mount, locale, storage, existingPuzzles, onPublish, flow: authorFlow, skin: authorSkin });
   } catch (error: unknown) {
+    if (managerSession && error instanceof PuzzleRepositoryError && [401, 403].includes(error.status)) {
+      renderManagerSessionError(mount, error.message, () => managerSession!.signOut());
+      return null;
+    }
     renderFatalError(mount, `No se pudo cargar el editor. ${errorMessage(error)}`.trim());
     return null;
   }

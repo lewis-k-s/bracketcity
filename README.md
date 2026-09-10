@@ -1,9 +1,13 @@
-# Nexo
+# Entre Paréntesis
 
-Nexo is a multilingual nested-clue game. The public GitHub Pages player reads
+Entre Paréntesis is a multilingual nested-clue game. The public GitHub Pages player reads
 released puzzles from Supabase when the Pages build has its public Supabase
 configuration. The existing WordPress Page and editor continue to use the
 WordPress bridge. Player progress stays in each site's `localStorage`.
+
+The browser brand is set in `src/brand.ts`. The WordPress bridge uses
+`NEXO_BRAND_NAME`, which a host can define before the plugin loads. The legacy
+`nexo` technical identifiers remain stable for installed sites and stored data.
 
 ## Develop and test
 
@@ -13,7 +17,7 @@ only for the disposable WordPress integration test.
 ```sh
 npm install
 npm run dev              # local standalone Vite server
-npm run studio:dev       # Studio mirror with live Nexo PHP and Vite assets
+npm run studio:dev       # Studio mirror with live Entre Paréntesis PHP and Vite assets
 npm run build:pages      # create dist-pages/
 npm run test:all         # unit, PHP, Pages, WordPress, and browser gates
 npm run package:plugin   # create and install-test release/nexo-1.2.2.zip
@@ -38,13 +42,13 @@ Plugin source is in `wordpress-plugin/`. The bridge registers the private
 ```
 
 The URL must use HTTPS. The shortcode loads the Pages `loader.js` in the
-WordPress footer. Administrators and users with the **Nexo Puzzle Manager** role
+WordPress footer. Administrators and users with the **Entre Paréntesis Puzzle Manager** role
 can open the editor and save puzzles. Editors, Authors, and Subscribers cannot.
 Public REST routes expose only puzzles released at midnight in
 `Europe/Madrid`.
 
 The plugin creates a private collaborator link when it is activated. Open the
-authenticated editor and use **Proponer Nexo** to get it.
+authenticated editor and use **Proponer Entre Paréntesis** to get it.
 Anyone with this high-entropy link can build and submit a suggestion, with or
 without a preferred date. Suggestions stay as pending WordPress posts. They do
 not appear in the player or dated catalog. A Puzzle Manager can load them in
@@ -81,7 +85,7 @@ seed is not imported again when the plugin is reactivated.
 
 The editor shows **Move to Trash** only after a stored puzzle is loaded. The
 same screen offers an immediate undo. A daily WordPress event permanently
-deletes Nexo Trash after 30 days. This uses WordPress storage APIs, so it works
+deletes Entre Paréntesis Trash after 30 days. This uses WordPress storage APIs, so it works
 with Studio's SQLite mirror and the production MySQL database.
 
 The first release accepts at most 1,000 published and pending puzzles in total.
@@ -141,3 +145,33 @@ records through an authenticated export if they are needed.
 The portable puzzle shape is described by `puzzles/schema-v1.json`. Validators
 also enforce graph reachability, unique ownership, no cycles, normalized answer
 uniqueness, and exact final expansion.
+
+## Supabase puzzle management
+
+Open `/?mode=author` on the Pages site to use the invite-only puzzle manager.
+The page sends an email magic link only for an existing Supabase Auth user. The
+browser sends the resulting user token to the `puzzle-admin` Edge Function. The
+function checks `private.puzzle_managers`, runs the full TypeScript puzzle
+validator, and then uses service-only database functions for save, Trash, and
+restore operations. Anonymous and ordinary authenticated users cannot write to
+the puzzle table.
+
+Before first use, configure the hosted Supabase project:
+
+1. In **Authentication → URL Configuration**, set the site URL to
+   `https://entre-parentesis.es/` and allow redirects under
+   `https://entre-parentesis.es/**`.
+2. Disable new-user signup. Keep anonymous sign-in disabled.
+3. In **Authentication → Users**, invite the manager by email.
+4. Copy that user's UUID and add it in the SQL editor:
+
+   ```sql
+   insert into private.puzzle_managers (user_id)
+   values ('USER-UUID');
+   ```
+
+Delete the allowlist row to revoke puzzle-management access. The Edge Function
+checks membership on every request, so this does not depend on a cached role in
+the user's token. Do not put the service-role key, a manager UUID, or an email
+allowlist in the Pages build. For another Pages origin, add its exact origin to
+the Edge Function secret `NEXO_ADMIN_ORIGINS` as a comma-separated value.

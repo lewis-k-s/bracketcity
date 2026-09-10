@@ -1,4 +1,5 @@
 import { DEFAULT_SCORING } from "./engine.ts";
+import { BRAND_NAME } from "./brand.ts";
 import type { CompiledPuzzle, LocalePack, ScoreResult } from "./types.ts";
 
 const SHARE_BAR_LENGTH = 10;
@@ -36,10 +37,10 @@ export function createCompletionShare(
   const title = puzzle.definition.title ?? locale.ui.gameLabel;
   const date = formatShareDate(puzzle.definition.releaseDate, locale.id);
   const card = [
-    `${locale.ui.gameName} · ${title}`,
+    `${BRAND_NAME} · ${title}`,
     date,
     `${score.score}/${total} ${locale.ui.sharePoints}`,
     completionBar(score.score, total)
   ].filter(Boolean).join("\n");
-  return { title: `${locale.ui.gameName} · ${title}`, text: `${card}\n\n${url}`, url };
+  return { title: `${BRAND_NAME} · ${title}`, text: `${card}\n\n${url}`, url };
 }

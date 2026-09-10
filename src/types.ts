@@ -194,6 +194,10 @@ export interface SupabaseConfig extends PuzzleRepositoryConfig {
   readonly publishableKey: string;
 }
 
+export interface AuthenticatedSupabaseConfig extends Omit<SupabaseConfig, "canAuthor"> {
+  readonly canAuthor: true;
+}
+
 export interface PuzzleListing {
   readonly entries: CatalogEntry[];
   readonly currentDate?: string;

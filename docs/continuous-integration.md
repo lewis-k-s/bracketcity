@@ -29,6 +29,12 @@ The Supabase migration workflow also uses `SUPABASE_ACCESS_TOKEN` and
 `SUPABASE_DB_PASSWORD` as repository secrets. It applies checked-in database
 migrations only. Do not add WordPress credentials to GitHub.
 
+The same workflow deploys checked-in Edge Functions. Supabase provides the
+function with its runtime URL, publishable key, and service-role key. The Pages
+artifact receives only `SUPABASE_PUBLISHABLE_KEY`. Authentication URL settings,
+signup disabling, user invitations, and entries in `private.puzzle_managers`
+are deliberate production operations; `supabase db push` does not perform them.
+
 ## WordPress rollout
 
 Download `nexo-plugin-<commit>` from the workflow artifacts. Upload its ZIP in
@@ -47,7 +53,7 @@ public puzzle catalog from Supabase.
 ## Operational credentials
 
 GitHub CI needs no WordPress secret. For an external command-line client,
-create a dedicated WordPress user with the **Nexo Puzzle Manager** role. In
+create a dedicated WordPress user with the **Entre Paréntesis Puzzle Manager** role. In
 that user's profile, create a site-specific Application Password. Store it in
 the client credential manager, not in this repository or GitHub Actions. Revoke
 it from the same profile when it is no longer needed.

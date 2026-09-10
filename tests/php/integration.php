@@ -212,7 +212,7 @@ $GLOBALS['wp_query']->the_post();
 $output = do_shortcode( get_post_field( 'post_content', $page_id ) );
 nexo_check( false !== strpos( $output, 'id="bracket-city-config"' ) && false !== strpos( $output, 'id="bracket-city-app"' ), 'The shortcode must emit configuration and one mount.' );
 nexo_check( 1 === substr_count( $output, 'id="bracket-city-app"' ), 'The shortcode must never emit duplicate mount IDs.' );
-nexo_check( false !== strpos( $output, 'Only one Nexo game' ), 'A second shortcode instance must show a clear error.' );
+nexo_check( false !== strpos( $output, 'Only one Entre Paréntesis game' ), 'A second shortcode instance must show a clear error.' );
 ob_start();
 wp_print_footer_scripts();
 $footer = (string) ob_get_clean();

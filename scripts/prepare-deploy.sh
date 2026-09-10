@@ -7,5 +7,5 @@ project_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
 cd "$project_root"
 npm run build:pages
 npm run package:plugin
-printf '%s\n' 'Prepared GitHub Pages assets in dist-pages/ and the Nexo bridge ZIP in release/.'
+printf '%s\n' 'Prepared GitHub Pages assets in dist-pages/ and the Entre Paréntesis bridge ZIP in release/.'
 printf '%s\n' 'Commit and push the reviewed change to main to deploy Pages, then upload the ZIP in WordPress.com.'

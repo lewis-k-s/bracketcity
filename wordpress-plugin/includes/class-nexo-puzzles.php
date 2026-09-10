@@ -16,7 +16,7 @@ final class Nexo_Puzzles {
 		register_post_type(
 			self::POST_TYPE,
 			array(
-				'labels' => array( 'name' => 'Nexo puzzles', 'singular_name' => 'Nexo puzzle' ),
+				'labels' => array( 'name' => NEXO_BRAND_NAME . ' puzzles', 'singular_name' => NEXO_BRAND_NAME . ' puzzle' ),
 				'public' => false,
 				'publicly_queryable' => false,
 				'show_ui' => false,
@@ -55,7 +55,7 @@ final class Nexo_Puzzles {
 		if ( self::has_capacity() ) return true;
 		return new WP_Error(
 			'nexo_puzzle_limit',
-			'Nexo has reached its puzzle limit. Delete a puzzle or reject a pending suggestion before adding another.',
+			NEXO_BRAND_NAME . ' has reached its puzzle limit. Delete a puzzle or reject a pending suggestion before adding another.',
 			array( 'status' => 507, 'limit' => self::max_puzzles() )
 		);
 	}

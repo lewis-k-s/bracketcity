@@ -14,7 +14,7 @@ final class Nexo_Capabilities {
 		if ( null === $manager ) {
 			$manager = add_role(
 				self::MANAGER_ROLE,
-				'Nexo Puzzle Manager',
+				NEXO_BRAND_NAME . ' Puzzle Manager',
 				array(
 					'read' => true,
 					self::MANAGE_PUZZLES => true,
