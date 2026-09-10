@@ -54,7 +54,7 @@ export function createSupabaseAuthClient(config: SupabaseConfig): SupabaseClient
     auth: {
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      flowType: "pkce",
+      flowType: "implicit",
       persistSession: true
     }
   });

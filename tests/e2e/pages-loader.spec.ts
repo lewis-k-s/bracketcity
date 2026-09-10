@@ -4,6 +4,7 @@ import { expect, test } from "@playwright/test";
 import type { Page, Route } from "@playwright/test";
 
 const fixtureUrl = "/tests/e2e/fixtures/wordpress-page.html";
+const locale = JSON.parse(await readFile(resolve(import.meta.dirname, "../../locales/es-ES.json"), "utf8"));
 const puzzle = JSON.parse(await readFile(resolve(import.meta.dirname, "../../puzzles/2026-08-31-es.json"), "utf8"));
 const earlierPuzzle = JSON.parse(await readFile(resolve(import.meta.dirname, "../../puzzles/2026-08-30-es.json"), "utf8"));
 
@@ -56,6 +57,52 @@ test("standalone Supabase author mode shows invite-only login before loading the
   await expect(page.getByTestId("manager-email")).toHaveAttribute("type", "email");
   await expect(page.getByTestId("manager-sign-in")).toBeVisible();
   await expect(page.getByTestId("author-final-text")).toHaveCount(0);
+});
+
+test("a root Supabase invitation callback opens authenticated author mode", async ({ page }) => {
+  await page.route("**/tests/e2e/fixtures/locales/es-ES.json", (route) => json(route, locale));
+  await page.route("**/auth/v1/user", (route) => json(route, {
+    id: "00000000-0000-4000-8000-000000000001",
+    aud: "authenticated",
+    role: "authenticated",
+    email: "manager@example.test",
+    app_metadata: { provider: "email", providers: ["email"] },
+    user_metadata: {},
+    identities: [],
+    created_at: "2026-09-10T13:29:34Z",
+    updated_at: "2026-09-10T13:31:26Z"
+  }));
+  await page.route("**/functions/v1/puzzle-admin", async (route) => {
+    const body = JSON.parse(route.request().postData() ?? "{}") as { action?: string };
+    return body.action === "list"
+      ? json(route, { puzzles: [], currentDate: "2026-09-10", timeZone: "Europe/Madrid" })
+      : json(route, { code: "UNKNOWN_ACTION", message: "Unexpected action" }, 400);
+  });
+  const callback = new URLSearchParams({
+    access_token: "session-token",
+    expires_at: String(Math.floor(Date.now() / 1000) + 3600),
+    expires_in: "3600",
+    refresh_token: "refresh-token",
+    token_type: "bearer",
+    type: "invite"
+  });
+
+  await page.goto(`/tests/e2e/fixtures/supabase-page.html#${callback}`);
+
+  await expect(page.getByRole("heading", { name: "Crear Entre Paréntesis" })).toBeVisible();
+  await expect(page.getByTestId("manager-sign-out")).toBeVisible();
+  await expect.poll(() => {
+    const currentUrl = new URL(page.url());
+    return {
+      mode: currentUrl.searchParams.get("mode"),
+      hasAccessToken: currentUrl.hash.includes("access_token="),
+      hasRefreshToken: currentUrl.hash.includes("refresh_token="),
+    };
+  }).toEqual({
+    mode: "author",
+    hasAccessToken: false,
+    hasRefreshToken: false,
+  });
 });
 
 test("classic Pages bundle runs on the WordPress origin and keeps progress there", async ({ page }) => {

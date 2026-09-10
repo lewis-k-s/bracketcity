@@ -8,7 +8,7 @@ import { installDomWindow } from "./test-dom.ts";
 
 globalThis.__NEXO_DISABLE_AUTO_START__ = true;
 installAppDom();
-const { INSTRUCTIONS_STORAGE_KEY, startApp, startDatedApp } = await import("../src/app.ts");
+const { INSTRUCTIONS_STORAGE_KEY, readApplicationMode, startApp, startDatedApp } = await import("../src/app.ts");
 
 function definitionFor(date: string): PuzzleDefinition {
   return { ...structuredClone(branchPuzzle), id: `puzzle-${date}`, releaseDate: date };
@@ -49,6 +49,23 @@ async function waitUntil(predicate: () => boolean, timeout = 1_000): Promise<voi
     await new Promise((resolve) => setTimeout(resolve, 5));
   }
 }
+
+test("Supabase invite callbacks open author mode without a query parameter", () => {
+  const invite = new URL(
+    "https://entre-parentesis.es/#access_token=session&refresh_token=refresh&type=invite"
+  );
+  const magicLink = new URL(
+    "https://entre-parentesis.es/#access_token=session&refresh_token=refresh&type=magiclink"
+  );
+
+  assert.equal(readApplicationMode(invite, true), "author");
+  assert.equal(readApplicationMode(magicLink, true), "author");
+  assert.equal(readApplicationMode(invite, false), null);
+  assert.equal(readApplicationMode(new URL("https://entre-parentesis.es/#type=invite"), true), null);
+  assert.equal(readApplicationMode(new URL(
+    "https://entre-parentesis.es/?mode=suggest#access_token=session&refresh_token=refresh&type=invite"
+  ), true), "suggest");
+});
 
 test("destroying a dated application removes navigation and child resources", async () => {
   const { added, removed } = installAppDom();

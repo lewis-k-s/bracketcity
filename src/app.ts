@@ -102,6 +102,18 @@ export const INSTRUCTIONS_STORAGE_KEY = "nested-clue:instructions:v1";
 
 const datedAppPopStateCleanups = new WeakMap<HTMLElement, () => void>();
 
+export function readApplicationMode(url: URL, hasSupabaseConfig = false): string | null {
+  const requestedMode = url.searchParams.get("mode");
+  if (requestedMode !== null || !hasSupabaseConfig) return requestedMode;
+  const callback = new URLSearchParams(url.hash.replace(/^#/u, ""));
+  const callbackType = callback.get("type");
+  return callback.has("access_token")
+    && callback.has("refresh_token")
+    && (callbackType === "invite" || callbackType === "magiclink")
+    ? "author"
+    : null;
+}
+
 function hasSeenInstructions(storage: StorageLike | null | undefined): boolean {
   try {
     return storage?.getItem(INSTRUCTIONS_STORAGE_KEY) === "seen";
@@ -501,7 +513,11 @@ export async function bootstrapApp({
     localeUrl = new URL(wordpressConfig.localeUrl, document.baseURI);
   }
   const currentUrl = new URL(globalThis.location?.href ?? document.baseURI);
-  const mode = currentUrl.searchParams.get("mode");
+  const mode = readApplicationMode(currentUrl, supabaseConfig !== null);
+  if (mode === "author" && !currentUrl.searchParams.has("mode")) {
+    currentUrl.searchParams.set("mode", "author");
+    globalThis.history.replaceState(globalThis.history.state, "", currentUrl.href);
+  }
   const authorFlow = currentUrl.searchParams.get("flow") === "inline" ? "inline" : "classic";
   const requestedAuthorSkin = currentUrl.searchParams.get("skin");
   const authorSkin: AuthorPanelSkin | undefined = requestedAuthorSkin === "plain"
