@@ -122,13 +122,18 @@ test("lado unlocks the outer tras lado parenthesis group, whose answer is viaje"
   await expect(page.locator('[data-clue-state="solved"]').filter({ hasText: "viaje" })).toHaveText("viaje");
 });
 
-test("nested solved answers use a high-contrast highlight inside available parentheses", async ({ page }) => {
+test("nested solved answers keep their high-contrast highlight after the parent gets a first-letter hint", async ({ page }) => {
   await openFresh(page, "/?date=2026-08-31");
   await submitWithVirtualKeyboard(page, "ando");
 
   const nestedAnswer = page.locator(".clue-button .clue-answer").filter({ hasText: "ando" });
   await expect(nestedAnswer).toHaveCSS("color", "rgb(44, 40, 37)");
   await expect(nestedAnswer).toHaveCSS("background-color", "rgb(255, 244, 191)");
+
+  await page.locator(".clue-button").filter({ hasText: "ando" }).click();
+  const peekedNestedAnswer = page.locator(".clue--peeked .clue-answer").filter({ hasText: "ando" });
+  await expect(peekedNestedAnswer).toHaveCSS("color", "rgb(44, 40, 37)");
+  await expect(peekedNestedAnswer).toHaveCSS("background-color", "rgb(255, 244, 191)");
 });
 
 test("changing the native date selector updates the game without reloading the page", async ({ page }) => {
