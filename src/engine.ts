@@ -34,7 +34,7 @@ export const DEFAULT_MATCH_POLICY: Readonly<MatchPolicy> = Object.freeze({
 export const DEFAULT_SCORING = Object.freeze({
   base: 100,
   wrongGuess: -2,
-  peek: -5,
+  peek: -2,
   ranks: [
     { minScore: 100, labelKey: "rankPerfect" },
     { minScore: 90, labelKey: "rankSharp" },
@@ -721,9 +721,10 @@ export function recordKeystroke(
 }
 
 export function calculateScore(progress: Progress, scoring: Scoring = {}): ScoreResult {
+  const { peek: _legacyPeek, ...overrides } = scoring;
   const config = {
     ...DEFAULT_SCORING,
-    ...scoring,
+    ...overrides,
     ranks: scoring.ranks ?? DEFAULT_SCORING.ranks
   };
   const rawScore =

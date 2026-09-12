@@ -144,14 +144,14 @@ test("a clue gives only its first letter and requires a typed answer", () => {
   assert.equal(peek.type, "peek");
   assert.deepEqual(peek.progress.peeked, ["lib"]);
   assert.equal(peek.progress.solved.lib, undefined);
-  assert.equal(calculateScore(peek.progress).score, 95);
+  assert.equal(calculateScore(peek.progress).score, 98);
   const repeatedPeek = peekClue(puzzle, peek.progress, "lib", "2026-08-28T10:01:00Z");
   assert.equal(repeatedPeek.type, "noop");
   assert.strictEqual(repeatedPeek.progress, peek.progress);
   assert.deepEqual(repeatedPeek.progress.solved, {});
   assert.deepEqual(repeatedPeek.newlyAvailable, []);
   assert.equal(ids(getAvailableClues(puzzle, repeatedPeek.progress)).includes("book"), false);
-  assert.equal(calculateScore(repeatedPeek.progress).score, 95);
+  assert.equal(calculateScore(repeatedPeek.progress).score, 98);
   const submitted = submitGuess(puzzle, repeatedPeek.progress, "lib", "2026-08-28T10:02:00Z");
   assert.equal(submitted.progress.solved.lib, "guess");
   assert.deepEqual(submitted.newlyAvailable, ["book"]);
@@ -190,8 +190,9 @@ test("score penalties are data-driven, additive, idempotent, and clamped", () =>
   progress = submitGuess(puzzle, progress, "wrong", "2026-08-28T10:00:00Z").progress;
   progress = peekClue(puzzle, progress, "lib", "2026-08-28T10:01:00Z").progress;
   progress = peekClue(puzzle, progress, "lib", "2026-08-28T10:02:00Z").progress;
-  assert.equal(calculateScore(progress).score, 93);
-  assert.equal(calculateScore(progress).score, 93);
+  assert.equal(calculateScore(progress).score, 96);
+  assert.equal(calculateScore(progress).score, 96);
+  assert.equal(calculateScore(progress, { peek: -5 }).score, 96);
   const punished = { ...progress, wrongGuesses: 100 };
   assert.equal(calculateScore(punished).score, 0);
 });

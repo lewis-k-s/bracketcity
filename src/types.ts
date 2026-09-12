@@ -28,6 +28,7 @@ export interface ScoreRank {
 export interface Scoring {
   readonly base?: number;
   readonly wrongGuess?: number;
+  /** Legacy puzzle data can include this field. First-letter hints always cost two points. */
   readonly peek?: number;
   readonly ranks?: readonly ScoreRank[];
 }

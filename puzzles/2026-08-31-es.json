@@ -69,7 +69,7 @@
   "scoring": {
     "base": 100,
     "wrongGuess": -2,
-    "peek": -5,
+    "peek": -2,
     "ranks": [
       { "minScore": 100, "labelKey": "rankPerfect" },
       { "minScore": 90, "labelKey": "rankSharp" },

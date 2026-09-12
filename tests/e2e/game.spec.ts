@@ -137,7 +137,7 @@ test("a first-letter peek does not expose the canonical answer", async ({ page }
   await clue.click();
 
   await expect(clue).toContainText("t…");
-  await expect(page.getByTestId("score")).toHaveText("95");
+  await expect(page.getByTestId("score")).toHaveText("98");
   await expectAnswerAbsentFromRenderedClue(page, canonicalLeafAnswer);
 });
 
