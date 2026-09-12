@@ -137,7 +137,7 @@ test("first-letter peeks use complete grapheme clusters", () => {
   assert.equal(firstGrapheme("👩🏽‍🔬 ciencia", "es-ES"), "👩🏽‍🔬");
 });
 
-test("the first tap peeks, the second reveals for five points, and neither solves", () => {
+test("the first tap peeks for five points, the second reveals without another penalty, and neither solves", () => {
   const puzzle = compilePuzzle(branchPuzzle, esLocale);
   const initial = createProgress(puzzle);
   const peek = peekClue(puzzle, initial, "lib", "2026-08-28T10:00:00Z");
@@ -145,12 +145,14 @@ test("the first tap peeks, the second reveals for five points, and neither solve
   assert.deepEqual(peek.progress.peeked, ["lib"]);
   assert.deepEqual(peek.progress.revealed, []);
   assert.equal(peek.progress.solved.lib, undefined);
+  assert.equal(calculateScore(peek.progress).score, 95);
   const repeatedPeek = peekClue(puzzle, peek.progress, "lib", "2026-08-28T10:01:00Z");
   assert.equal(repeatedPeek.type, "reveal");
   assert.deepEqual(repeatedPeek.progress.revealed, ["lib"]);
   assert.deepEqual(repeatedPeek.progress.solved, {});
   assert.deepEqual(repeatedPeek.newlyAvailable, []);
   assert.equal(ids(getAvailableClues(puzzle, repeatedPeek.progress)).includes("book"), false);
+  assert.equal(calculateScore(repeatedPeek.progress).score, 95);
   const thirdTap = peekClue(puzzle, repeatedPeek.progress, "lib", "2026-08-28T10:01:30Z");
   assert.equal(thirdTap.type, "noop");
 

@@ -733,7 +733,7 @@ export function calculateScore(progress: Progress, scoring: Scoring = {}): Score
   const rawScore =
     config.base +
     progress.wrongGuesses * config.wrongGuess +
-    new Set(progress.freePeekVersion === 1 ? progress.revealed : progress.peeked).size * config.peek;
+    new Set(progress.peeked).size * config.peek;
   const score = Math.max(0, rawScore);
   const ranks = [...config.ranks].sort((left, right) => right.minScore - left.minScore);
   const rank = ranks.find((candidate) => score >= candidate.minScore) ?? ranks.at(-1) ?? null;
@@ -744,7 +744,7 @@ export function calculateScore(progress: Progress, scoring: Scoring = {}): Score
     breakdown: {
       base: config.base,
       wrongGuesses: progress.wrongGuesses,
-      peeked: new Set(progress.freePeekVersion === 1 ? progress.revealed : progress.peeked).size
+      peeked: new Set(progress.peeked).size
     }
   };
 }
