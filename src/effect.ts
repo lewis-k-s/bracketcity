@@ -96,6 +96,18 @@ export const PuzzleCatalogSchema = Schema.Struct({
 });
 
 export const ProgressSchema = Schema.Struct({
+  version: Schema.Literal(4),
+  puzzleId: Schema.String,
+  puzzleRevision: Schema.Finite,
+  solved: Schema.Record(Schema.String, Schema.Literal("guess")),
+  peeked: Schema.Array(Schema.String),
+  wrongGuesses: Schema.Finite,
+  keystrokes: Schema.Finite,
+  startedAt: Schema.optionalKey(Schema.String),
+  completedAt: Schema.optionalKey(Schema.String)
+});
+
+const LegacyProgressSchema = Schema.Struct({
   version: Schema.Literal(3),
   puzzleId: Schema.String,
   puzzleRevision: Schema.Finite,
@@ -184,6 +196,7 @@ type Decodable = typeof PuzzleDefinitionSchema
   | typeof LocalePackSchema
   | typeof PuzzleCatalogSchema
   | typeof ProgressSchema
+  | typeof LegacyProgressSchema
   | typeof WordPressConfigSchema
   | typeof SupabaseConfigSchema
   | typeof AuthorDraftSchema
@@ -210,6 +223,9 @@ export const decodeCatalogEntry = (source: string, input: unknown) =>
 
 export const decodeProgress = (source: string, input: unknown) =>
   decodeUnknownEffect(ProgressSchema, source, input) as Effect.Effect<Progress, DecodeError>;
+
+export const decodeLegacyProgress = (source: string, input: unknown) =>
+  decodeUnknownEffect(LegacyProgressSchema, source, input);
 
 export const decodeWordPressConfig = (source: string, input: unknown) =>
   decodeUnknownEffect(WordPressConfigSchema, source, input) as Effect.Effect<WordPressConfig, DecodeError>;

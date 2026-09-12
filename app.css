@@ -211,7 +211,8 @@ body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
   color: var(--ink);
 }
 
-:is(#app, #bracket-city-app) .clue-button {
+:is(#app, #bracket-city-app) .clue-button,
+:is(#app, #bracket-city-app) .clue--peeked {
   display: inline-block;
   margin: 0;
   padding: 0.06em;
@@ -233,8 +234,9 @@ body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
   background: var(--blue-dark);
 }
 
-:is(#app, #bracket-city-app) .clue-button--peeked {
+:is(#app, #bracket-city-app) .clue--peeked {
   background: var(--blue-dark);
+  cursor: default;
 }
 
 :is(#app, #bracket-city-app) .clue-answer {

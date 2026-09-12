@@ -1,6 +1,6 @@
 import { Data, Effect, Result } from "effect";
 
-import { decodeProgress } from "./effect.ts";
+import { decodeLegacyProgress, decodeProgress } from "./effect.ts";
 
 import type {
   ClueDefinition,
@@ -586,18 +586,20 @@ export function puzzleRevision(puzzle: CompiledPuzzle): number {
 }
 
 export function progressStorageKey(puzzle: CompiledPuzzle): string {
+  return `nested-clue:v4:${puzzle.definition.id}:${puzzleRevision(puzzle)}`;
+}
+
+function legacyProgressStorageKey(puzzle: CompiledPuzzle): string {
   return `nested-clue:v3:${puzzle.definition.id}:${puzzleRevision(puzzle)}`;
 }
 
 export function createProgress(puzzle: CompiledPuzzle): Progress {
   return {
-    version: 3,
+    version: 4,
     puzzleId: puzzle.definition.id,
     puzzleRevision: puzzleRevision(puzzle),
     solved: {},
     peeked: [],
-    revealed: [],
-    freePeekVersion: 1,
     wrongGuesses: 0,
     keystrokes: 0
   };
@@ -607,9 +609,7 @@ function cloneProgress(progress: Progress): Progress {
   return {
     ...progress,
     solved: { ...progress.solved },
-    peeked: [...progress.peeked],
-    revealed: [...(progress.revealed ?? [])],
-    freePeekVersion: progress.freePeekVersion ?? 1
+    peeked: [...progress.peeked]
   };
 }
 
@@ -648,7 +648,7 @@ function transitionResult(
   puzzle: CompiledPuzzle,
   before: Progress,
   progress: Progress,
-  extra: Pick<Transition, "clueId" | "peek" | "answer"> | {} = {}
+  extra: Pick<Transition, "clueId" | "peek"> | {} = {}
 ): Transition {
   const beforeAvailable = new Set(getAvailableClues(puzzle, before).map((clue) => clue.id));
   const newlyAvailable = getAvailableClues(puzzle, progress)
@@ -700,15 +700,11 @@ export function peekClue(
   if (!available || isComplete(puzzle, currentProgress)) {
     return transitionResult("noop", puzzle, currentProgress, currentProgress, { clueId });
   }
-  if (currentProgress.revealed.includes(clueId)) {
+  if (currentProgress.peeked.includes(clueId)) {
     return transitionResult("noop", puzzle, currentProgress, currentProgress, { clueId });
   }
   const before = currentProgress;
   const progress = withStartTime(cloneProgress(currentProgress), now);
-  if (currentProgress.peeked.includes(clueId)) {
-    progress.revealed.push(clueId);
-    return transitionResult("reveal", puzzle, before, progress, { clueId, answer: available.answer });
-  }
   progress.peeked.push(clueId);
   return transitionResult("peek", puzzle, before, progress, { clueId, peek: available.peek });
 }
@@ -756,8 +752,6 @@ export function serializeProgress(progress: Progress): string {
     puzzleRevision: progress.puzzleRevision,
     solved: progress.solved,
     peeked: [...new Set(progress.peeked)],
-    revealed: [...new Set(progress.revealed)],
-    freePeekVersion: progress.freePeekVersion,
     wrongGuesses: progress.wrongGuesses,
     keystrokes: progress.keystrokes
   };
@@ -773,13 +767,11 @@ function validTimestamp(value: unknown): value is string {
 function progressIsValid(puzzle: CompiledPuzzle, progress: unknown): progress is Progress {
   if (!isRecord(progress)) return false;
   if (
-    progress.version !== 3 ||
+    progress.version !== 4 ||
     progress.puzzleId !== puzzle.definition.id ||
     progress.puzzleRevision !== puzzleRevision(puzzle) ||
     !isRecord(progress.solved) ||
     !Array.isArray(progress.peeked) ||
-    (Object.hasOwn(progress, "revealed") && !Array.isArray(progress.revealed)) ||
-    (Object.hasOwn(progress, "freePeekVersion") && progress.freePeekVersion !== 1) ||
     !Number.isSafeInteger(progress.wrongGuesses) ||
     progress.wrongGuesses < 0 ||
     !Number.isSafeInteger(progress.keystrokes) ||
@@ -793,12 +785,6 @@ function progressIsValid(puzzle: CompiledPuzzle, progress: unknown): progress is
   }
   const peeked = new Set(progress.peeked);
   if (peeked.size !== progress.peeked.length || [...peeked].some((id) => !puzzle.nodes.has(id))) return false;
-  const revealed = new Set(progress.revealed ?? []);
-  if (
-    revealed.size !== (progress.revealed ?? []).length ||
-    [...revealed].some((id) => !peeked.has(id)) ||
-    (progress.freePeekVersion !== 1 && revealed.size > 0)
-  ) return false;
   const candidate = progress as unknown as Progress;
   const available = new Set(getAvailableClues(puzzle, candidate).map((clue) => clue.id));
   for (const id of peeked) {
@@ -820,14 +806,31 @@ export function restoreProgress(
   let serialized: unknown = source;
   try {
     if (source && typeof source === "object" && "getItem" in source && typeof source.getItem === "function") {
-      serialized = source.getItem(progressStorageKey(puzzle));
+      serialized = source.getItem(progressStorageKey(puzzle)) ?? source.getItem(legacyProgressStorageKey(puzzle));
     }
-    else if (source === null && typeof localStorage !== "undefined") serialized = localStorage.getItem(progressStorageKey(puzzle));
+    else if (source === null && typeof localStorage !== "undefined") {
+      serialized = localStorage.getItem(progressStorageKey(puzzle)) ?? localStorage.getItem(legacyProgressStorageKey(puzzle));
+    }
     if (!serialized) return createProgress(puzzle);
     const input: unknown = typeof serialized === "string" ? JSON.parse(serialized) : serialized;
-    const progress = Effect.runSync(decodeProgress("saved progress", input));
-    if (!progressIsValid(puzzle, progress)) return createProgress(puzzle);
-    return cloneProgress(progress);
+    try {
+      const progress = Effect.runSync(decodeProgress("saved progress", input));
+      return progressIsValid(puzzle, progress) ? cloneProgress(progress) : createProgress(puzzle);
+    } catch {
+      const legacy = Effect.runSync(decodeLegacyProgress("legacy saved progress", input));
+      const migrated: Progress = {
+        version: 4,
+        puzzleId: legacy.puzzleId,
+        puzzleRevision: legacy.puzzleRevision,
+        solved: { ...legacy.solved },
+        peeked: [...legacy.peeked],
+        wrongGuesses: legacy.wrongGuesses,
+        keystrokes: legacy.keystrokes,
+        ...(legacy.startedAt ? { startedAt: legacy.startedAt } : {}),
+        ...(legacy.completedAt ? { completedAt: legacy.completedAt } : {})
+      };
+      return progressIsValid(puzzle, migrated) ? cloneProgress(migrated) : createProgress(puzzle);
+    }
   } catch {
     return createProgress(puzzle);
   }

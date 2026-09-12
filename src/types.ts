@@ -107,20 +107,18 @@ export interface CompiledPuzzle {
 }
 
 export interface Progress {
-  readonly version: 3;
+  readonly version: 4;
   readonly puzzleId: string;
   readonly puzzleRevision: number;
   solved: Record<string, "guess">;
   peeked: string[];
-  revealed: string[];
-  freePeekVersion: 1;
   wrongGuesses: number;
   keystrokes: number;
   startedAt?: string;
   completedAt?: string;
 }
 
-export type TransitionType = "correct" | "wrong" | "peek" | "reveal" | "empty" | "noop";
+export type TransitionType = "correct" | "wrong" | "peek" | "empty" | "noop";
 
 export interface Transition {
   readonly type: TransitionType;
@@ -130,7 +128,6 @@ export interface Transition {
   readonly becameComplete: boolean;
   readonly clueId?: string;
   readonly peek?: string;
-  readonly answer?: string;
 }
 
 export interface ScoreResult {

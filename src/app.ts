@@ -345,8 +345,6 @@ function eventMessage(transition: Transition, puzzle: CompiledPuzzle, locale: Lo
       return locale.ui.wrong ?? "";
     case "peek":
       return formatMessage(locale.ui.peeked, { peek: transition.peek });
-    case "reveal":
-      return formatMessage(locale.ui.revealed, { answer: transition.answer });
     default:
       return "";
   }

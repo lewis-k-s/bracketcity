@@ -223,7 +223,7 @@ test("classic Pages bundle runs on the WordPress origin and keeps progress there
     keys: Object.keys(localStorage)
   }));
   expect(storage.origin).toBe("http://127.0.0.1:4174");
-  expect(storage.keys.some((key) => key.startsWith("nested-clue:v3:"))).toBe(true);
+  expect(storage.keys.some((key) => key.startsWith("nested-clue:v4:"))).toBe(true);
 });
 
 test("WordPress puzzle dates load through REST without reloading the host page", async ({ page }) => {

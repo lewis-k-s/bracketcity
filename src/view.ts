@@ -192,32 +192,22 @@ function renderSegments(
     }
 
     const hasPeek = progress.peeked.includes(node.id);
-    const hasReveal = progress.revealed.includes(node.id);
     const prompt = resolvedPromptText(puzzle, node, direction);
-    const actionText = hasReveal
-      ? locale.ui.enterAfterReveal
-      : hasPeek ? locale.ui.reveal : locale.ui.peek;
+    const actionText = hasPeek ? locale.ui.enterAfterPeek : locale.ui.peek;
     const accessiblePrompt = formatMessage(locale.ui.clueLabel, { clue: prompt });
-    const hintText = hasReveal
-      ? formatMessage(locale.ui.revealValue, { answer: node.answer })
-      : hasPeek ? formatMessage(locale.ui.peekValue, { peek: node.peek }) : "";
+    const hintText = hasPeek ? formatMessage(locale.ui.peekValue, { peek: node.peek }) : "";
     const button = element("span", {
-      className: `clue clue-button${hasPeek ? " clue-button--peeked" : ""}${hasReveal ? " clue-button--revealed" : ""}`,
+      className: hasPeek ? "clue clue--peeked" : "clue clue-button",
       attributes: {
-        role: "button",
-        tabindex: "0",
         "data-clue-state": "available",
-        "data-hint-state": hasReveal ? "revealed" : hasPeek ? "peeked" : "none",
-        "aria-label": [accessiblePrompt, hintText, actionText].filter(Boolean).join(" ")
+        "data-hint-state": hasPeek ? "peeked" : "none",
+        "aria-label": [accessiblePrompt, hintText, actionText].filter(Boolean).join(" "),
+        ...(!hasPeek ? { role: "button", tabindex: "0" } : {})
       }
     });
     elements.set(node.id, button);
-    if (hasReveal) {
-      button.append(element("span", { className: "clue-answer", text: node.answer }));
-    } else {
-      renderHint(button, node, direction, puzzle, progress, locale, onHint, elements);
-    }
-    if (hasPeek && !hasReveal) {
+    renderHint(button, node, direction, puzzle, progress, locale, onHint, elements);
+    if (hasPeek) {
       button.append(
         element("span", {
           className: "peek-marker",
@@ -226,12 +216,14 @@ function renderSegments(
         })
       );
     }
-    button.addEventListener("click", () => onHint(node.id));
-    button.addEventListener("keydown", (event) => {
-      if (event.key !== "Enter" && event.key !== " ") return;
-      event.preventDefault();
-      onHint(node.id);
-    });
+    if (!hasPeek) {
+      button.addEventListener("click", () => onHint(node.id));
+      button.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        onHint(node.id);
+      });
+    }
     target.append(button);
   }
 }

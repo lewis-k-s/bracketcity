@@ -141,23 +141,24 @@ test("a first-letter peek does not expose the canonical answer", async ({ page }
   await expectAnswerAbsentFromRenderedClue(page, canonicalLeafAnswer);
 });
 
-test("the second clue tap reveals its answer without solving it", async ({ page }) => {
+test("a clue gives no answer after its first-letter hint", async ({ page }) => {
   const clue = canonicalLeaf(page);
   await clue.click();
   await clue.click();
 
-  await expect(clue).toContainText(canonicalLeafAnswer);
-  await expect(clue).toHaveAttribute("data-hint-state", "revealed");
+  await expect(clue).toContainText("t…");
+  await expect(clue).toHaveAttribute("data-hint-state", "peeked");
+  await expectAnswerAbsentFromRenderedClue(page, canonicalLeafAnswer);
   await expect(page.locator('[data-clue-state="solved"]').filter({ hasText: canonicalLeafAnswer })).toHaveCount(0);
 });
 
-test("reload preserves a revealed answer without solving it", async ({ page }) => {
+test("reload preserves a first-letter hint without exposing the answer", async ({ page }) => {
   const clue = canonicalLeaf(page);
-  await clue.click();
   await clue.click();
   await page.reload();
 
-  await expect(canonicalLeaf(page)).toContainText(canonicalLeafAnswer);
+  await expect(canonicalLeaf(page)).toContainText("t…");
+  await expectAnswerAbsentFromRenderedClue(page, canonicalLeafAnswer);
   await expect(page.locator('[data-clue-state="solved"]').filter({ hasText: canonicalLeafAnswer })).toHaveCount(0);
 });
 
