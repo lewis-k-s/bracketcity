@@ -62,6 +62,19 @@ test("authenticated puzzle managers can sign out from the author header", async 
   assert.equal(calls, 1);
 });
 
+test("authenticated puzzle managers can open the analytics dashboard", () => {
+  installDom();
+  startAuthorApp({
+    mount: q("#app"),
+    locale,
+    storage: memoryStorage(),
+    analyticsHref: "https://example.test/?mode=analytics"
+  });
+
+  assert.equal(q('[data-testid="analytics-link"]').textContent, "Analítica");
+  assert.equal(q('[data-testid="analytics-link"]').getAttribute("href"), "https://example.test/?mode=analytics");
+});
+
 function button(label: string | undefined): HTMLElement {
   const match = [...qa("button")].find((node) => node.textContent.trim() === label);
   assert.ok(match, `Button '${label}' must exist.`);

@@ -70,6 +70,7 @@ interface StartAuthorAppOptions {
   readonly onDeletePuzzle?: ((date: string) => unknown) | null | undefined;
   readonly onRestorePuzzle?: ((date: string) => unknown) | null | undefined;
   readonly onSignOut?: (() => unknown) | null | undefined;
+  readonly analyticsHref?: string | null | undefined;
   readonly currentDate?: string | null | undefined;
   readonly pageUrl?: string | null | undefined;
   readonly flow?: "classic" | "inline" | undefined;
@@ -179,6 +180,7 @@ export function startAuthorApp({
   onDeletePuzzle = null,
   onRestorePuzzle = null,
   onSignOut = null,
+  analyticsHref = null,
   currentDate = null,
   pageUrl = null,
   flow = "classic",
@@ -1506,6 +1508,13 @@ export function startAuthorApp({
         "aria-current": "page"
       }
     }));
+    if (analyticsHref) {
+      nav.append(element("a", {
+        className: "mode-link",
+        text: locale.ui.analyticsMode ?? "Analítica",
+        attributes: { href: analyticsHref, "data-testid": "analytics-link" }
+      }));
+    }
     if (typeof onSignOut === "function") {
       const signOut = element("button", {
         className: "mode-link",

@@ -131,6 +131,18 @@ Deno.serve(async (request: Request): Promise<Response> => {
     return errorResponse(origin, "INVALID_REQUEST", "Falta la acción de administración.", 400);
   }
 
+  if (body.action === "analytics") {
+    const days = body.days === null ? null : body.days ?? 30;
+    if (days !== null && (![7, 30, 90].includes(Number(days)) || !Number.isInteger(days))) {
+      return errorResponse(origin, "INVALID_ANALYTICS_PERIOD", "El periodo de analítica no es válido.", 422);
+    }
+    const { data, error } = await admin.rpc("get_puzzle_analytics", { p_days: days });
+    if (error || !isRecord(data)) {
+      return errorResponse(origin, "ANALYTICS_UNAVAILABLE", "No se pudo cargar la analítica.", 500);
+    }
+    return response(origin, { analytics: data });
+  }
+
   if (body.action === "list") {
     const { data, error } = await admin
       .from("puzzles")

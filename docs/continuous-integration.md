@@ -34,6 +34,10 @@ artifact receives only `SUPABASE_PUBLISHABLE_KEY`. Authentication URL settings,
 user invitations and entries in `private.puzzle_managers` are deliberate
 production operations.
 
+The Supabase migration also creates the insert-only puzzle analytics table and
+private summary views. See [Puzzle analytics](analytics.md) for the event
+fields, dashboard queries, and interpretation limits.
+
 ## Blog embed
 
 The Mudlarker page embeds the public Pages bundle with a Custom HTML block:

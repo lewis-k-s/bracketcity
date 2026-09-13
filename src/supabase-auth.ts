@@ -43,9 +43,10 @@ function element<K extends keyof HTMLElementTagNameMap>(
 
 function authRedirectUrl(pageUrl: URL): string {
   const redirect = new URL(pageUrl.href);
+  const requestedMode = redirect.searchParams.get("mode");
   redirect.hash = "";
   redirect.search = "";
-  redirect.searchParams.set("mode", "author");
+  redirect.searchParams.set("mode", requestedMode === "analytics" ? "analytics" : "author");
   return redirect.href;
 }
 

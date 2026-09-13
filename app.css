@@ -59,7 +59,8 @@ body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
 }
 
 #bracket-city-app .game-shell,
-#bracket-city-app .author-shell {
+#bracket-city-app .author-shell,
+#bracket-city-app .analytics-shell {
   background: var(--paper);
 }
 
@@ -130,6 +131,7 @@ body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
   padding: 0.35rem 0.65rem;
   border: 1px solid var(--line);
   border-radius: 0.25rem;
+  background: transparent;
   color: var(--blue-dark);
   font-size: 0.76rem;
   font-weight: 700;
@@ -502,6 +504,152 @@ body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
   padding: 0 clamp(0.5rem, 1.5vw, 1.25rem) 4rem;
   container: author-shell / inline-size;
   transition: background-color 160ms ease;
+}
+
+:is(#app, #bracket-city-app) .analytics-shell {
+  width: min(100%, 78rem);
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 0 clamp(1rem, 4vw, 2.5rem) 3rem;
+}
+
+:is(#app, #bracket-city-app) .analytics-header {
+  display: flex;
+  min-height: 4.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+:is(#app, #bracket-city-app) .analytics-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1.5rem 0 0.75rem;
+}
+
+:is(#app, #bracket-city-app) .analytics-toolbar .author-control-label {
+  width: min(100%, 14rem);
+}
+
+:is(#app, #bracket-city-app) .analytics-period-select {
+  margin-top: 0.35rem;
+}
+
+:is(#app, #bracket-city-app) .analytics-refreshed,
+:is(#app, #bracket-city-app) .analytics-status,
+:is(#app, #bracket-city-app) .analytics-empty {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+:is(#app, #bracket-city-app) .analytics-refreshed,
+:is(#app, #bracket-city-app) .analytics-status {
+  margin: 0;
+}
+
+:is(#app, #bracket-city-app) .analytics-content {
+  display: grid;
+  gap: 1.25rem;
+}
+
+:is(#app, #bracket-city-app) .analytics-content[aria-busy="true"] {
+  opacity: 0.55;
+}
+
+:is(#app, #bracket-city-app) .analytics-section {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.35rem;
+  background: var(--paper);
+}
+
+:is(#app, #bracket-city-app) .analytics-section h2 {
+  margin: 0 0 0.85rem;
+  font-size: 1rem;
+}
+
+:is(#app, #bracket-city-app) .analytics-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+:is(#app, #bracket-city-app) .analytics-card {
+  min-width: 0;
+  min-height: 6.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.7rem;
+  padding: 0.8rem;
+  border: 1px solid rgba(44, 40, 37, 0.22);
+  border-radius: 0.25rem;
+  background: rgba(82, 104, 174, 0.06);
+}
+
+:is(#app, #bracket-city-app) .analytics-card-label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+:is(#app, #bracket-city-app) .analytics-card-value {
+  font-size: clamp(1.1rem, 3vw, 1.45rem);
+  line-height: 1;
+}
+
+:is(#app, #bracket-city-app) .analytics-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+:is(#app, #bracket-city-app) .analytics-table {
+  width: 100%;
+  min-width: 62rem;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+:is(#app, #bracket-city-app) .analytics-table th,
+:is(#app, #bracket-city-app) .analytics-table td {
+  padding: 0.6rem 0.7rem;
+  border-bottom: 1px solid rgba(44, 40, 37, 0.18);
+  text-align: right;
+  white-space: nowrap;
+}
+
+:is(#app, #bracket-city-app) .analytics-table th:first-child,
+:is(#app, #bracket-city-app) .analytics-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--paper);
+  text-align: left;
+}
+
+:is(#app, #bracket-city-app) .analytics-table thead th {
+  color: var(--muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+:is(#app, #bracket-city-app) .analytics-table tbody th {
+  max-width: 19rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:is(#app, #bracket-city-app) .analytics-error {
+  padding: 1rem;
+  border: 1px solid var(--error);
+  color: var(--error);
 }
 
 :is(#app, #bracket-city-app) .author-header {
@@ -2045,6 +2193,29 @@ body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
     padding-left: 0.8rem;
   }
 
+  :is(#app, #bracket-city-app) .analytics-shell {
+    padding-right: 0.8rem;
+    padding-left: 0.8rem;
+  }
+
+  :is(#app, #bracket-city-app) .analytics-header,
+  :is(#app, #bracket-city-app) .analytics-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  :is(#app, #bracket-city-app) .analytics-header {
+    padding: 0.8rem 0;
+  }
+
+  :is(#app, #bracket-city-app) .analytics-header .mode-nav {
+    flex-wrap: wrap;
+  }
+
+  :is(#app, #bracket-city-app) .analytics-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   :is(#app, #bracket-city-app) .game-header {
     min-height: 3.9rem;
   }
@@ -2166,6 +2337,10 @@ body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
 }
 
 @media (max-width: 860px) {
+  :is(#app, #bracket-city-app) .analytics-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   :is(#app, #bracket-city-app) .game-shell {
     width: 100vw;
     margin-right: 0;

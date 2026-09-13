@@ -55,6 +55,27 @@ test("an unauthenticated manager gets invite-only magic-link login", async () =>
   assert.match(q('[data-testid="manager-auth-status"]').textContent ?? "", /Revisa tu correo/u);
 });
 
+test("analytics login returns to the protected dashboard", async () => {
+  installDom();
+  let request: { options?: { emailRedirectTo?: string } } | undefined;
+  const client = {
+    auth: {
+      async getSession() { return { data: { session: null }, error: null }; },
+      async signInWithOtp(options: typeof request) {
+        request = options;
+        return { error: null };
+      },
+      async signOut() { return { error: null }; }
+    }
+  };
+  const pageUrl = new URL("https://entre-parentesis.es/?mode=analytics#token");
+  await requireSupabaseManagerSession({ config, mount: q("#app"), client, pageUrl });
+  q('[data-testid="manager-email"]').value = "manager@example.test";
+  q('[data-testid="manager-sign-in"]').click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(request?.options?.emailRedirectTo, "https://entre-parentesis.es/?mode=analytics");
+});
+
 test("an authenticated manager session supplies fresh tokens and can sign out", async () => {
   installDom();
   let signedOut = false;

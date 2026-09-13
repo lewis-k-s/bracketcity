@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { JSDOM } from "jsdom";
 
+import type { PuzzleAnalyticsEvent } from "../src/analytics.ts";
 import type { PuzzleDefinition } from "../src/types.ts";
 import { branchPuzzle, esLocale } from "./fixtures.ts";
 import { installDomWindow } from "./test-dom.ts";
@@ -62,6 +63,8 @@ test("Supabase invite callbacks open author mode and reject removed modes", () =
   assert.equal(readApplicationMode(magicLink, true), "author");
   assert.equal(readApplicationMode(invite, false), null);
   assert.equal(readApplicationMode(new URL("https://mudlarker.org/puzzles/?mode=author"), false), null);
+  assert.equal(readApplicationMode(new URL("https://entre-parentesis.es/?mode=analytics"), true), "analytics");
+  assert.equal(readApplicationMode(new URL("https://mudlarker.org/puzzles/?mode=analytics"), false), null);
   assert.equal(readApplicationMode(new URL("https://entre-parentesis.es/#type=invite"), true), null);
   assert.equal(readApplicationMode(new URL(
     "https://entre-parentesis.es/?mode=suggest#access_token=session&refresh_token=refresh&type=invite"
@@ -114,6 +117,36 @@ test("instructions open once and persist their dismissal in browser storage", as
   });
   assert.ok(second);
   assert.equal(second.view.instructionsDialog.hasAttribute("open"), false);
+});
+
+test("gameplay records one anonymous load and completion pair", async () => {
+  const { dom } = installAppDom();
+  const events: PuzzleAnalyticsEvent[] = [];
+  const definition: PuzzleDefinition = { ...branchPuzzle, difficulty: "hard" };
+  const app = await startApp({
+    mount: document.querySelector<HTMLElement>("#app")!,
+    definition,
+    localePack: esLocale,
+    analytics: async (event) => { events.push(event); }
+  });
+  assert.ok(app);
+  await waitUntil(() => events.length === 1);
+
+  for (const answer of ["lib", "libro", "cielo", "azul", "libro azul"]) {
+    app.view.input.value = answer;
+    app.view.form.dispatchEvent(new dom.window.Event("submit", { bubbles: true, cancelable: true }));
+  }
+  await waitUntil(() => events.length === 2);
+
+  assert.equal(events[0]!.eventType, "load");
+  assert.equal(events[1]!.eventType, "completion");
+  assert.equal(events[0]!.runId, events[1]!.runId);
+  assert.equal(events[1]!.difficulty, 3);
+  assert.equal(events[1]!.score, 100);
+  assert.equal(events[1]!.maxScore, 100);
+  assert.equal(events[1]!.mistakes, 0);
+  assert.equal(events[1]!.hintsUsed, 0);
+  app.destroy();
 });
 
 test("a newer date load interrupts a stale request before it can replace the puzzle", async () => {

@@ -42,6 +42,12 @@ test("the management function verifies identity, authorization, and puzzle valid
   assert.doesNotMatch(edgeFunction, /verify_jwt\s*=\s*false/u);
 });
 
+test("the manager-only Edge Function returns aggregate analytics", () => {
+  assert.match(edgeFunction, /body\.action === "analytics"/u);
+  assert.match(edgeFunction, /admin\.rpc\("get_puzzle_analytics"/u);
+  assert.match(edgeFunction, /\[7, 30, 90\]/u);
+});
+
 test("Auth disables account creation without disabling invited-user email login", () => {
   assert.match(config, /\[auth\][\s\S]*?enable_signup = false/u);
   assert.match(config, /\[auth\.email\][\s\S]*?enable_signup = true/u);

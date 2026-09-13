@@ -33,7 +33,10 @@ import {
 } from "./puzzle-repository.ts";
 import { mergePublishedPuzzles, publishPuzzle, restorePublishedPuzzles } from "./published.ts";
 import { createCompletionShare } from "./share.ts";
+import { createSupabaseAnalyticsRecorder, startPuzzleAnalyticsSession } from "./analytics.ts";
 import { applyBrandName, BRAND_NAME } from "./brand.ts";
+import type { AnalyticsDashboardHandle } from "./analytics-dashboard.ts";
+import type { PuzzleAnalyticsRecorder } from "./analytics.ts";
 import type { AuthorAppHandle, AuthorPanelSkin } from "./author-view.ts";
 import {
   decodeLocalePack,
@@ -76,6 +79,7 @@ interface StartAppOptions {
   localePack?: LocalePack | null | undefined;
   storage?: StorageLike | null | undefined;
   dateNavigation?: DateNavigation | null | undefined;
+  analytics?: PuzzleAnalyticsRecorder | null | undefined;
 }
 
 interface BootstrapOptions {
@@ -96,10 +100,12 @@ export const INSTRUCTIONS_STORAGE_KEY = "nested-clue:instructions:v1";
 
 const datedAppPopStateCleanups = new WeakMap<HTMLElement, () => void>();
 
-export function readApplicationMode(url: URL, authorModeEnabled = false): string | null {
+export function readApplicationMode(url: URL, authorModeEnabled = false): "author" | "analytics" | null {
   const requestedMode = url.searchParams.get("mode");
   if (requestedMode !== null) {
-    return requestedMode === "author" && authorModeEnabled ? "author" : null;
+    return (requestedMode === "author" || requestedMode === "analytics") && authorModeEnabled
+      ? requestedMode
+      : null;
   }
   if (!authorModeEnabled) return null;
   const callback = new URLSearchParams(url.hash.replace(/^#/u, ""));
@@ -214,6 +220,14 @@ function updatePuzzleDateUrl(date: string, method: "pushState" | "replaceState" 
   globalThis.location.assign(nextUrl.href);
 }
 
+function applicationModeHref(baseUrl: string, mode: "author" | "analytics"): string {
+  const target = new URL(baseUrl, document.baseURI);
+  target.hash = "";
+  target.search = "";
+  target.searchParams.set("mode", mode);
+  return target.href;
+}
+
 export async function startDatedApp({
   mount,
   entries,
@@ -222,6 +236,7 @@ export async function startDatedApp({
   canAuthor,
   locale,
   storage,
+  analytics,
   loadDefinition
 }: {
   mount: HTMLElement;
@@ -231,6 +246,7 @@ export async function startDatedApp({
   canAuthor: boolean;
   locale: LocalePack;
   storage?: StorageLike | null | undefined;
+  analytics?: PuzzleAnalyticsRecorder | null | undefined;
   loadDefinition: (date: string, entry: CatalogEntry, signal: AbortSignal) => Promise<PuzzleDefinition>;
 }): Promise<AppHandle | null> {
   locale = applyBrandName(locale);
@@ -265,6 +281,7 @@ export async function startDatedApp({
         definition,
         localePack: locale,
         storage,
+        analytics,
         dateNavigation: {
           entries,
           selectedDate: date,
@@ -351,7 +368,8 @@ export async function startApp({
   definition: suppliedDefinition = null,
   localePack: suppliedLocale = null,
   storage,
-  dateNavigation = null
+  dateNavigation = null,
+  analytics = null
 }: StartAppOptions = {}): Promise<AppHandle | null> {
   if (!mount) return null;
 
@@ -366,6 +384,7 @@ export async function startApp({
       throw new Error(`Puzzle releaseDate must match catalog date ${dateNavigation.selectedDate}.`);
     }
     const puzzle = compilePuzzle(definition, locale);
+    const analyticsSession = startPuzzleAnalyticsSession(definition, analytics);
     let progress = restoreProgress(puzzle, storage ?? null);
     let view: GameView;
 
@@ -377,6 +396,7 @@ export async function startApp({
         focusCompletion: transition?.becameComplete
       });
       if (transition?.becameComplete) {
+        analyticsSession?.recordCompletion(progress, score);
         announce(view, `${locale.ui.complete} ${puzzle.definition.finalText} ${formatMessage(locale.ui.scoreValue, { score: score.score })}`);
       } else if (transition) {
         const message = eventMessage(transition, puzzle, locale);
@@ -490,13 +510,14 @@ export async function bootstrapApp({
   catalogUrl = new URL("puzzles/manifest.json", document.baseURI),
   localeUrl = new URL("locales/es-ES.json", document.baseURI),
   storage
-}: BootstrapOptions = {}): Promise<AppHandle | AuthorAppHandle | null> {
+}: BootstrapOptions = {}): Promise<AppHandle | AuthorAppHandle | AnalyticsDashboardHandle | null> {
   if (mount) {
     datedAppPopStateCleanups.get(mount)?.();
     datedAppPopStateCleanups.delete(mount);
   }
   if (!mount) return null;
   const supabaseConfig = readSupabaseConfig();
+  const analytics = supabaseConfig ? createSupabaseAnalyticsRecorder(supabaseConfig) : null;
   let repository = supabaseConfig ? createSupabasePuzzleRepository(supabaseConfig) : null;
   const deployedLocale = globalThis.__NEXO_LOCALE_PACK__ ? applyBrandName(globalThis.__NEXO_LOCALE_PACK__) : null;
   const currentUrl = new URL(globalThis.location?.href ?? document.baseURI);
@@ -514,7 +535,7 @@ export async function bootstrapApp({
     ? requestedAuthorSkin
     : undefined;
   let managerSession: import("./supabase-auth.ts").SupabaseManagerSession | null = null;
-  if (mode === "author" && supabaseConfig) {
+  if ((mode === "author" || mode === "analytics") && supabaseConfig) {
     try {
       const { requireSupabaseManagerSession } = await import("./supabase-auth.ts");
       managerSession = await requireSupabaseManagerSession({ config: supabaseConfig, mount, pageUrl: currentUrl });
@@ -533,8 +554,34 @@ export async function bootstrapApp({
       browserStorage = null;
     }
   }
+  if (mode === "analytics") {
+    if (!supabaseConfig || !managerSession) {
+      renderFatalError(mount, "La analítica requiere una sesión de administración de Supabase.");
+      return null;
+    }
+    try {
+      const locale = deployedLocale ?? await loadLocale(localeUrl);
+      const { createSupabaseAnalyticsDashboardLoader, startAnalyticsDashboard } = await import("./analytics-dashboard.ts");
+      return startAnalyticsDashboard({
+        mount,
+        locale,
+        loadReport: createSupabaseAnalyticsDashboardLoader(
+          supabaseConfig,
+          managerSession.getAccessToken
+        ),
+        pageUrl: supabaseConfig.pageUrl,
+        onSignOut: async () => {
+          await managerSession.signOut();
+          globalThis.location.assign(applicationModeHref(globalThis.location.href, "analytics"));
+        }
+      });
+    } catch (error: unknown) {
+      renderFatalError(mount, `No se pudo abrir la analítica. ${errorMessage(error)}`.trim());
+      return null;
+    }
+  }
   if (mode !== "author") {
-    if (puzzleUrl) return startApp({ mount, puzzleUrl, localeUrl, storage: browserStorage });
+    if (puzzleUrl) return startApp({ mount, puzzleUrl, localeUrl, storage: browserStorage, analytics });
     try {
       if (repository) {
         const [listing, locale] = await Promise.all([
@@ -553,6 +600,7 @@ export async function bootstrapApp({
           canAuthor: repository.config.canAuthor,
           locale,
           storage: browserStorage,
+          analytics,
           loadDefinition: (date, _entry, signal) => repository.loadPublic(date, signal)
         });
       }
@@ -578,6 +626,7 @@ export async function bootstrapApp({
         canAuthor: true,
         locale,
         storage: browserStorage,
+        analytics,
         loadDefinition: (_date, entry, signal) => {
           if (entry.definition) return Promise.resolve(entry.definition);
           if (!entry.file) return Promise.reject(new AppError({
@@ -636,6 +685,7 @@ export async function bootstrapApp({
         mount, locale, storage, existingPuzzles, onPublish,
         flow: authorFlow,
         skin: authorSkin,
+        analyticsHref: applicationModeHref(repository.config.pageUrl ?? currentUrl.href, "analytics"),
         onDeletePuzzle: (date) => repository.trashPuzzle(date),
         onRestorePuzzle: (date) => repository.restorePuzzle(date),
         currentDate: listing.currentDate,

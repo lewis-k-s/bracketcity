@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import type { Page, Route } from "@playwright/test";
 
@@ -28,7 +29,7 @@ const managerUser = {
   updated_at: "2026-09-10T13:31:26Z"
 };
 
-function authenticatedAuthorUrl(): string {
+function authenticatedAuthorUrl(mode: "author" | "analytics" = "author"): string {
   const callback = new URLSearchParams({
     access_token: "session-token",
     expires_at: String(Math.floor(Date.now() / 1000) + 3600),
@@ -37,7 +38,8 @@ function authenticatedAuthorUrl(): string {
     token_type: "bearer",
     type: "invite"
   });
-  return `/tests/e2e/fixtures/supabase-page.html#${callback}`;
+  const query = mode === "analytics" ? "?mode=analytics" : "";
+  return `/tests/e2e/fixtures/supabase-page.html${query}#${callback}`;
 }
 
 async function routeManagerSession(page: Page): Promise<void> {
@@ -110,6 +112,7 @@ test("a Supabase invitation callback opens authenticated author mode", async ({ 
 
   await expect(page.getByRole("heading", { name: "Crear Entre Paréntesis" })).toBeVisible();
   await expect(page.getByTestId("manager-sign-out")).toBeVisible();
+  await expect(page.getByTestId("analytics-link")).toHaveAttribute("href", /mode=analytics/u);
   await expect.poll(() => {
     const currentUrl = new URL(page.url());
     return {
@@ -118,6 +121,91 @@ test("a Supabase invitation callback opens authenticated author mode", async ({ 
       hasRefreshToken: currentUrl.hash.includes("refresh_token=")
     };
   }).toEqual({ mode: "author", hasAccessToken: false, hasRefreshToken: false });
+});
+
+test("an authenticated Supabase manager can open the analytics dashboard", async ({ page }) => {
+  await routeManagerSession(page);
+  const requests: Array<{ body: Record<string, unknown>; authorization: string | undefined }> = [];
+  await page.route("**/functions/v1/puzzle-admin", async (route) => {
+    const body = route.request().postDataJSON() as Record<string, unknown>;
+    requests.push({ body, authorization: route.request().headers().authorization });
+    if (body.action !== "analytics") {
+      return json(route, { code: "UNKNOWN_ACTION", message: "Unexpected action" }, 400);
+    }
+    return json(route, {
+      analytics: {
+        generatedAt: "2026-09-13T14:30:00Z",
+        periodDays: body.days,
+        periodStart: "2026-08-14T14:30:00Z",
+        summary: {
+          loads: 20,
+          completions: 12,
+          completionRate: 0.6,
+          meanScore: 91.5,
+          meanMaxScore: 100,
+          meanNormalizedScore: 0.915,
+          medianNormalizedScore: 0.93,
+          meanCompletionSeconds: 75,
+          meanMistakes: 1.2,
+          meanHints: 0.5
+        },
+        puzzles: [{
+          puzzleId: "sample-es",
+          puzzleRevision: 2,
+          title: "Muestra",
+          releaseDate: "2026-09-12",
+          difficulty: 2,
+          difficultyLabel: "medium",
+          loads: 20,
+          completions: 12,
+          completionRate: 0.6,
+          meanScore: 91.5,
+          meanMaxScore: 100,
+          meanNormalizedScore: 0.915,
+          medianNormalizedScore: 0.93,
+          meanCompletionSeconds: 75,
+          meanMistakes: 1.2,
+          meanHints: 0.5
+        }],
+        difficulties: [{
+          difficulty: 2,
+          difficultyLabel: "medium",
+          loads: 20,
+          completions: 12,
+          completionRate: 0.6,
+          meanScore: 91.5,
+          meanMaxScore: 100,
+          meanNormalizedScore: 0.915,
+          medianNormalizedScore: 0.93,
+          meanCompletionSeconds: 75,
+          meanMistakes: 1.2,
+          meanHints: 0.5
+        }]
+      }
+    });
+  });
+
+  await page.goto(authenticatedAuthorUrl("analytics"));
+  await expect(page.getByRole("heading", { name: "Analítica de Entre Paréntesis" })).toBeVisible();
+  await expect(page.getByTestId("analytics-loads")).toContainText("20");
+  await expect(page.getByTestId("analytics-completion-rate")).toContainText("60");
+  await expect(page.getByTestId("analytics-puzzle-table")).toContainText("Muestra · r2");
+  await expect(page.getByTestId("analytics-difficulty-table")).toContainText("Media");
+  await expect(page.getByTestId("manager-sign-out")).toBeVisible();
+  expect(requests[0]?.authorization).toBe("Bearer session-token");
+  expect(requests[0]?.body).toEqual({ action: "analytics", days: 30 });
+
+  await page.getByTestId("analytics-period").selectOption("7");
+  await expect.poll(() => requests.some(({ body }) => body.days === 7)).toBe(true);
+
+  const accessibility = await new AxeBuilder({ page }).analyze();
+  expect(accessibility.violations.filter(({ impact }) => ["serious", "critical"].includes(impact ?? ""))).toEqual([]);
+  await page.setViewportSize({ width: 320, height: 900 });
+  const width = await page.evaluate(() => ({
+    client: document.documentElement.clientWidth,
+    scroll: document.documentElement.scrollWidth
+  }));
+  expect(width.scroll).toBeLessThanOrEqual(width.client);
 });
 
 test("an authenticated Supabase manager creates a puzzle", async ({ page }) => {

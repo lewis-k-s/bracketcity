@@ -110,6 +110,7 @@ test("Pages artifact contains a standalone game and stable embed loader assets",
   assert.ok(files.includes("release.js"));
   assert.equal(files.filter((name) => /^assets\/nexo-[\w-]+\.js$/.test(name)).length, 1);
   assert.equal(files.filter((name) => /^assets\/author-view-[\w-]+\.js$/.test(name)).length, 1);
+  assert.equal(files.filter((name) => /^assets\/analytics-dashboard-[\w-]+\.js$/.test(name)).length, 1);
   assert.equal(files.filter((name) => /^assets\/nexo-[\w-]+\.css$/.test(name)).length, 1);
   assert.equal(files.filter((name) => /^assets\/es-ES-[a-f0-9]+\.js$/.test(name)).length, 1);
   assert.ok(files.includes("locales/es-ES.json"));
@@ -124,4 +125,7 @@ test("Pages artifact contains a standalone game and stable embed loader assets",
   const authorName = files.find((name) => /^assets\/author-view-[\w-]+\.js$/.test(name));
   const author = await readFile(resolve(pagesDirectory, authorName!), "utf8");
   assert.match(author, /author-publish/u);
+  const analyticsName = files.find((name) => /^assets\/analytics-dashboard-[\w-]+\.js$/.test(name));
+  const analytics = await readFile(resolve(pagesDirectory, analyticsName!), "utf8");
+  assert.match(analytics, /analytics-puzzle-table/u);
 });
