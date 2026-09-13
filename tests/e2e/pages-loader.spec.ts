@@ -81,7 +81,10 @@ test("Pages root runs the standalone game", async ({ page }) => {
   await page.goto("http://127.0.0.1:4175/");
 
   await expect(page.getByTestId("puzzle")).toBeVisible();
-  await expect(page.getByTestId("date-selector")).toHaveValue(earlierPuzzle.releaseDate);
+  const configuredForSupabase = await page.locator("#nexo-supabase-config").count() === 1;
+  await expect(page.getByTestId("date-selector")).toHaveValue(
+    configuredForSupabase ? puzzle.releaseDate : earlierPuzzle.releaseDate
+  );
   await expect(page.locator('script[src*="/loader.js"]')).toHaveCount(1);
   await expect(page.locator('script[src*="/assets/nexo-"]')).toHaveCount(1);
 });
