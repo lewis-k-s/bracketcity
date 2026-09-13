@@ -10,6 +10,10 @@ const authGateMigration = readFileSync(
   new URL("../supabase/migrations/20260910160000_gate_auth_tokens_to_puzzle_managers.sql", import.meta.url),
   "utf8"
 );
+const descriptionMigration = readFileSync(
+  new URL("../supabase/migrations/20260913120000_update_puzzles_description.sql", import.meta.url),
+  "utf8"
+);
 const edgeFunction = readFileSync(
   new URL("../supabase/functions/puzzle-admin/index.ts", import.meta.url),
   "utf8"
@@ -53,4 +57,9 @@ test("Auth issues access tokens only to allowlisted puzzle managers", () => {
   assert.match(config, /pg-functions:\/\/postgres\/private\/puzzle_manager_access_token_hook/u);
   assert.match(workflow, /supabase db push[\s\S]*hook_custom_access_token_enabled/u);
   assert.match(workflow, /api\.supabase\.com\/v1\/projects\/\$SUPABASE_PROJECT_REF\/config\/auth/u);
+});
+
+test("a new migration removes the obsolete database description", () => {
+  assert.match(descriptionMigration, /Canonical Entre Paréntesis puzzle definitions managed by Supabase/u);
+  assert.doesNotMatch(descriptionMigration, /WordPress/u);
 });

@@ -50,7 +50,7 @@ async function waitUntil(predicate: () => boolean, timeout = 1_000): Promise<voi
   }
 }
 
-test("Supabase invite callbacks open author mode without a query parameter", () => {
+test("Supabase invite callbacks open author mode and reject removed modes", () => {
   const invite = new URL(
     "https://entre-parentesis.es/#access_token=session&refresh_token=refresh&type=invite"
   );
@@ -65,7 +65,7 @@ test("Supabase invite callbacks open author mode without a query parameter", () 
   assert.equal(readApplicationMode(new URL("https://entre-parentesis.es/#type=invite"), true), null);
   assert.equal(readApplicationMode(new URL(
     "https://entre-parentesis.es/?mode=suggest#access_token=session&refresh_token=refresh&type=invite"
-  ), true), "suggest");
+  ), true), null);
 });
 
 test("destroying a dated application removes navigation and child resources", async () => {

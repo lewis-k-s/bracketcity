@@ -32,8 +32,6 @@ import type { InlineGroupNode, InlineParseResult } from "./author-inline.ts";
 import type {
   AuthorDraft,
   ExistingPuzzle,
-  ExistingSuggestion,
-  ImportResult,
   LocalePack,
   PuzzleDefinition,
   PuzzleDifficulty,
@@ -66,24 +64,14 @@ interface StartAuthorAppOptions {
   readonly locale?: LocalePack | undefined;
   readonly storage?: StorageLike | null | undefined;
   readonly existingPuzzles?: ExistingPuzzle[] | undefined;
-  readonly suggestions?: ExistingSuggestion[] | undefined;
   readonly onPublish?: ((definition: PuzzleDefinition, options: {
     readonly overwrite: boolean;
-    readonly suggestionId?: number;
   }) => unknown) | null | undefined;
-  readonly onSubmitSuggestion?: ((definition: PuzzleDefinition) => unknown) | null | undefined;
-  readonly onRejectSuggestion?: ((suggestionId: number) => unknown) | null | undefined;
   readonly onDeletePuzzle?: ((date: string) => unknown) | null | undefined;
   readonly onRestorePuzzle?: ((date: string) => unknown) | null | undefined;
   readonly onSignOut?: (() => unknown) | null | undefined;
-  readonly legacyPuzzles?: PuzzleDefinition[] | undefined;
-  readonly onImportLegacy?: (() => Promise<ImportResult[]>) | null | undefined;
   readonly currentDate?: string | null | undefined;
   readonly pageUrl?: string | null | undefined;
-  readonly suggestionUrl?: string | null | undefined;
-  readonly acceptingNewPuzzles?: boolean | undefined;
-  readonly puzzleLimit?: number | null | undefined;
-  readonly variant?: "author" | "suggestion" | undefined;
   readonly flow?: "classic" | "inline" | undefined;
   readonly skin?: AuthorPanelSkin | undefined;
 }
@@ -96,10 +84,7 @@ export interface AuthorAppHandle {
   readonly destroy: () => void;
 }
 
-export const SUGGESTION_STORAGE_KEY = "nested-clue:suggestion:v1";
 export const AUTHOR_INLINE_STORAGE_KEY = "nested-clue:author-inline:v2";
-export const SUGGESTION_INLINE_STORAGE_KEY = "nested-clue:suggestion-inline:v2";
-const REVIEW_SUGGESTION_STORAGE_KEY = "nested-clue:review-suggestion:v1";
 const INLINE_BASE_STORAGE_SUFFIX = ":base";
 
 function errorMessage(error: unknown): string {
@@ -190,74 +175,43 @@ export function startAuthorApp({
   locale: localeOption,
   storage,
   existingPuzzles = [],
-  suggestions = [],
   onPublish = null,
-  onSubmitSuggestion = null,
-  onRejectSuggestion = null,
   onDeletePuzzle = null,
   onRestorePuzzle = null,
   onSignOut = null,
-  legacyPuzzles = [],
-  onImportLegacy = null,
   currentDate = null,
   pageUrl = null,
-  suggestionUrl = null,
-  acceptingNewPuzzles: acceptingNewPuzzlesOption = true,
-  puzzleLimit = null,
-  variant = "author",
   flow = "classic",
   skin
 }: StartAuthorAppOptions = {}): AuthorAppHandle | null {
   if (!mountOption || !localeOption) return null;
   const mount = mountOption;
   const locale = applyBrandName(localeOption);
-  const createBlankDraft = (): AuthorDraft => {
-    if (variant !== "suggestion") return createAuthorDraft();
-    const random = globalThis.crypto?.randomUUID?.().replace(/-/gu, "").slice(0, 12)
-      ?? `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-    return createAuthorDraft({
-      id: `sugerencia-${random}`,
-      title: locale.ui.suggestionDefaultTitle ?? "Propuesta"
-    });
-  };
+  const createBlankDraft = (): AuthorDraft => createAuthorDraft();
 
   let operationError = "";
   let liveMessage = "";
   let publishedDate: string | null = null;
   let savedDate: string | null = null;
   let publishing = false;
-  let importing = false;
   let deletingPuzzle = false;
   let restoringPuzzle = false;
-  let activeSuggestionId: number | null = null;
   let activePuzzleDate: string | null = null;
   let lastTrashedPuzzle: ExistingPuzzle | null = null;
-  let submittedSuggestionId: number | null = null;
-  let legacyImportComplete = false;
-  let acceptingNewPuzzles = acceptingNewPuzzlesOption;
   const knownPuzzleDates = new Set(existingPuzzles.map((item) => item.date));
-  const additionsPaused = (): boolean => {
-    if (!acceptingNewPuzzles) return true;
-    if (!Number.isSafeInteger(puzzleLimit) || puzzleLimit === null || puzzleLimit < 1) return false;
-    return existingPuzzles.length + suggestions.length >= puzzleLimit;
-  };
   let storageTarget: StorageLike | null | undefined = storage;
   let storageUnavailable = false;
   let serializedDraft: string | null = null;
-  let serializedReviewSuggestionId: string | null = null;
   let serializedInlineSource: string | null = null;
   let serializedInlineBase: string | null = null;
-  const storageKey = variant === "suggestion" ? SUGGESTION_STORAGE_KEY : AUTHOR_STORAGE_KEY;
-  const inlineStorageKey = variant === "suggestion" ? SUGGESTION_INLINE_STORAGE_KEY : AUTHOR_INLINE_STORAGE_KEY;
+  const storageKey = AUTHOR_STORAGE_KEY;
+  const inlineStorageKey = AUTHOR_INLINE_STORAGE_KEY;
   try {
     if (storageTarget === undefined) storageTarget = globalThis.localStorage;
     serializedDraft = storageTarget?.getItem?.(storageKey) ?? null;
     if (flow === "inline") {
       serializedInlineSource = storageTarget?.getItem?.(inlineStorageKey) ?? null;
       serializedInlineBase = storageTarget?.getItem?.(`${inlineStorageKey}${INLINE_BASE_STORAGE_SUFFIX}`) ?? null;
-    }
-    if (variant === "author") {
-      serializedReviewSuggestionId = storageTarget?.getItem?.(REVIEW_SUGGESTION_STORAGE_KEY) ?? null;
     }
   } catch {
     storageTarget = null;
@@ -274,12 +228,6 @@ export function startAuthorApp({
   let inlineStyleControls: HTMLElement | null = null;
   if (flow === "inline" && inlineParse.issues.length === 0) {
     draft = draftFromAuthorInlineParse(draft, inlineParse);
-  }
-  const restoredSuggestionId = Number(serializedReviewSuggestionId);
-  if (Number.isSafeInteger(restoredSuggestionId) && suggestions.some(
-    (item) => item.metadata.suggestionId === restoredSuggestionId
-  )) {
-    activeSuggestionId = restoredSuggestionId;
   }
   let previewSelection: PreviewSelection | null = null;
   const panelSkin: AuthorPanelSkin = skin ?? (flow === "inline" ? "lab" : "plain");
@@ -308,14 +256,13 @@ export function startAuthorApp({
     const target = new URL(pageUrl, document.baseURI);
     target.searchParams.delete("mode");
     target.searchParams.delete("date");
-    target.searchParams.delete("suggestion_key");
     if (publishedDate) target.searchParams.set("date", publishedDate);
     return target.href;
   };
 
   const flowHref = (targetFlow: "classic" | "inline"): string => {
     const target = new URL(globalThis.location?.href ?? pageUrl ?? document.baseURI, document.baseURI);
-    target.searchParams.set("mode", variant === "suggestion" ? "suggest" : "author");
+    target.searchParams.set("mode", "author");
     if (targetFlow === "inline") target.searchParams.set("flow", "inline");
     else target.searchParams.delete("flow");
     target.searchParams.set("skin", panelSkin);
@@ -324,7 +271,7 @@ export function startAuthorApp({
 
   const skinHref = (targetSkin: AuthorPanelSkin): string => {
     const target = new URL(globalThis.location?.href ?? pageUrl ?? document.baseURI, document.baseURI);
-    target.searchParams.set("mode", variant === "suggestion" ? "suggest" : "author");
+    target.searchParams.set("mode", "author");
     if (flow === "inline") target.searchParams.set("flow", "inline");
     else target.searchParams.delete("flow");
     target.searchParams.set("skin", targetSkin);
@@ -405,14 +352,6 @@ export function startAuthorApp({
           `${inlineStorageKey}${INLINE_BASE_STORAGE_SUFFIX}`,
           formatAuthorDraftAsInlineSource(draft)
         );
-      }
-      if (variant === "author") {
-        if (activeSuggestionId === null) {
-          if (typeof storageTarget?.removeItem === "function") storageTarget.removeItem(REVIEW_SUGGESTION_STORAGE_KEY);
-          else storageTarget?.setItem?.(REVIEW_SUGGESTION_STORAGE_KEY, "");
-        } else {
-          storageTarget?.setItem?.(REVIEW_SUGGESTION_STORAGE_KEY, String(activeSuggestionId));
-        }
       }
       return true;
     } catch {
@@ -706,10 +645,10 @@ export function startAuthorApp({
     }
     difficultyInput.value = draft.metadata.difficulty ?? "";
     grid.append(field(locale.ui.difficulty, difficultyInput));
-    if (variant === "author") grid.append(field(locale.ui.authorPuzzleId, idInput));
+    grid.append(field(locale.ui.authorPuzzleId, idInput));
     grid.append(
       field(locale.ui.authorPuzzleTitle, titleInput),
-      field(variant === "suggestion" ? locale.ui.suggestionRequestedDate : locale.ui.authorReleaseDate, releaseInput)
+      field(locale.ui.authorReleaseDate, releaseInput)
     );
     const syncMetadata = () => {
       draft = updateMetadata(draft, {
@@ -730,7 +669,7 @@ export function startAuthorApp({
   };
 
   const renderExistingPuzzleLoader = (): HTMLElement | null => {
-    if (!existingPuzzles.length && (!legacyPuzzles.length || typeof onImportLegacy !== "function")) return null;
+    if (!existingPuzzles.length) return null;
     const section = element("section", {
       className: "author-panel author-load-panel author-load-panel--top",
       attributes: { "data-testid": "author-load-panel" }
@@ -782,7 +721,6 @@ export function startAuthorApp({
       const selected = existingPuzzles[Number(select.value)];
       if (!selected) return;
       apply(() => {
-        activeSuggestionId = null;
         activePuzzleDate = selected.date;
         lastTrashedPuzzle = null;
         return authorDraftFromDefinition(selected.definition, locale);
@@ -797,119 +735,6 @@ export function startAuthorApp({
       controls.append(loadField, load);
       section.append(controls);
     }
-    if (legacyPuzzles.length && typeof onImportLegacy === "function" && !legacyImportComplete) {
-      const importButton = element("button", {
-        className: "author-button author-button--quiet author-button--compact",
-        text: importing
-          ? locale.ui.authorImportingLegacy
-          : formatMessage(locale.ui.authorImportLegacy, { count: legacyPuzzles.length }),
-        attributes: {
-          type: "button",
-          disabled: importing ? "" : undefined,
-          "data-testid": "author-import-legacy"
-        }
-      });
-      importButton.addEventListener("click", async () => {
-        if (importing) return;
-        importing = true;
-        operationError = "";
-        liveMessage = locale.ui.authorImportingLegacy ?? "";
-        render();
-        try {
-          const results = await onImportLegacy();
-          const failed = results.filter((item) => !item.ok);
-          if (failed.length) {
-            throw new Error(formatMessage(locale.ui.authorImportLegacyFailed, { count: failed.length }));
-          }
-          legacyImportComplete = true;
-          const importedCount = results.filter((item) => item.ok && !item.skipped).length;
-          liveMessage = formatMessage(locale.ui.authorImportLegacyComplete, { count: importedCount });
-        } catch (error) {
-          operationError = errorMessage(error);
-          liveMessage = operationError;
-        } finally {
-          importing = false;
-          render();
-        }
-      });
-      section.append(importButton);
-    }
-    return section;
-  };
-
-  const renderSuggestionLoader = (): HTMLElement | null => {
-    if (variant !== "author" || suggestions.length === 0) return null;
-    const section = element("section", {
-      className: "author-panel author-load-panel",
-      attributes: { "data-testid": "suggestion-review" }
-    });
-    section.append(element("h2", { className: "author-panel-title", text: locale.ui.suggestionReviewHeading }));
-    const select = element("select", {
-      className: "author-input",
-      attributes: { id: "author-existing-suggestion", "data-testid": "author-existing-suggestion" }
-    });
-    select.append(element("option", { text: locale.ui.suggestionReviewPlaceholder, attributes: { value: "" } }));
-    suggestions.forEach((item, index) => {
-      const date = item.metadata.requestedDate ? ` · ${item.metadata.requestedDate}` : "";
-      select.append(element("option", {
-        text: `#${item.metadata.suggestionId} · ${item.metadata.title}${date}`,
-        attributes: { value: String(index) }
-      }));
-    });
-    const load = element("button", {
-      className: "author-button",
-      text: locale.ui.suggestionReviewLoad,
-      attributes: { type: "button", disabled: "", "data-testid": "suggestion-load" }
-    });
-    const reject = element("button", {
-      className: "author-button author-button--danger",
-      text: locale.ui.suggestionReject,
-      attributes: { type: "button", disabled: "", "data-testid": "suggestion-reject" }
-    });
-    select.addEventListener("change", () => {
-      load.disabled = select.value === "";
-      reject.disabled = select.value === "" || typeof onRejectSuggestion !== "function";
-    });
-    load.addEventListener("click", () => {
-      const selected = suggestions[Number(select.value)];
-      if (!selected) return;
-      if (globalThis.confirm?.(locale.ui.suggestionReviewLoadConfirm) === false) return;
-      apply(() => {
-        const next = authorDraftFromDefinition({ ...selected.definition, revision: 1 }, locale);
-        activeSuggestionId = selected.metadata.suggestionId;
-        activePuzzleDate = null;
-        lastTrashedPuzzle = null;
-        return next;
-      }, locale.ui.suggestionLoaded);
-    });
-    reject.addEventListener("click", async () => {
-      const index = Number(select.value);
-      const selected = suggestions[index];
-      if (!selected || typeof onRejectSuggestion !== "function") return;
-      if (globalThis.confirm?.(locale.ui.suggestionRejectConfirm) === false) return;
-      try {
-        reject.disabled = true;
-        await onRejectSuggestion(selected.metadata.suggestionId);
-        suggestions.splice(index, 1);
-        acceptingNewPuzzles = true;
-        if (activeSuggestionId === selected.metadata.suggestionId) {
-          activeSuggestionId = null;
-          activePuzzleDate = null;
-          draft = createBlankDraft();
-          resetInlineSourceFromDraft();
-          persist();
-        }
-        liveMessage = locale.ui.suggestionRejected ?? "";
-        operationError = "";
-      } catch (error) {
-        operationError = errorMessage(error);
-        liveMessage = operationError;
-      }
-      render();
-    });
-    const controls = element("div", { className: "author-load-controls" });
-    controls.append(field(locale.ui.suggestionReviewLabel, select), load, reject);
-    section.append(controls);
     return section;
   };
 
@@ -1427,7 +1252,7 @@ export function startAuthorApp({
     const exportPanel = element("section", { className: "author-panel" });
     exportPanel.append(element("h2", {
       className: "author-panel-title",
-      text: variant === "suggestion" ? locale.ui.suggestionSubmitHeading : locale.ui.authorExport
+      text: locale.ui.authorExport
     }));
     let json = "";
     if (validation.valid) json = serializeAuthorPuzzle(draft, locale);
@@ -1443,13 +1268,12 @@ export function startAuthorApp({
     output.value = json;
 
     if (typeof onPublish === "function") {
-      const capacityBlocked = activePuzzleDate === null && activeSuggestionId === null && additionsPaused();
       const publish = element("button", {
         className: "author-button author-button--accent author-publish",
         text: locale.ui.authorPublish,
         attributes: {
           type: "button",
-          disabled: validation.valid && !publishing && !deletingPuzzle && !restoringPuzzle && !capacityBlocked ? undefined : "",
+          disabled: validation.valid && !publishing && !deletingPuzzle && !restoringPuzzle ? undefined : "",
           "data-testid": "author-publish"
         }
       });
@@ -1464,10 +1288,9 @@ export function startAuthorApp({
           render();
           return;
         }
-        const suggestionId = activeSuggestionId;
         const existing = existingPuzzles.find((item) => item.date === date);
-        const replace = suggestionId === null && (existing !== undefined || knownPuzzleDates.has(date));
-        if (existing && suggestionId === null) {
+        const replace = existing !== undefined || knownPuzzleDates.has(date);
+        if (existing) {
           const revision = (existing.definition.revision ?? 1) + 1;
           definition = { ...definition, revision };
           draft = updateMetadata(draft, { revision });
@@ -1478,12 +1301,6 @@ export function startAuthorApp({
           if (stored) stored.definition = structuredClone(definition);
           else existingPuzzles.push({ date, definition: structuredClone(definition) });
           knownPuzzleDates.add(date);
-          if (suggestionId !== null) {
-            const suggestionIndex = suggestions.findIndex((item) => item.metadata.suggestionId === suggestionId);
-            if (suggestionIndex >= 0) suggestions.splice(suggestionIndex, 1);
-            activeSuggestionId = null;
-            persist();
-          }
           activePuzzleDate = date;
           lastTrashedPuzzle = null;
           savedDate = date;
@@ -1500,10 +1317,7 @@ export function startAuthorApp({
           render();
         };
         try {
-          const result = onPublish(definition, {
-            overwrite: replace,
-            ...(suggestionId !== null ? { suggestionId } : {})
-          });
+          const result = onPublish(definition, { overwrite: replace });
           if (result !== null && typeof result === "object" && "then" in result && typeof result.then === "function") {
             publishing = true;
             liveMessage = locale.ui.authorPublishing ?? "";
@@ -1517,12 +1331,6 @@ export function startAuthorApp({
         }
       });
       exportPanel.append(publish);
-      if (capacityBlocked) {
-        exportPanel.append(element("p", {
-          className: "author-error",
-          text: formatMessage(locale.ui.puzzleLimitReached, { limit: puzzleLimit ?? 1000 })
-        }));
-      }
       if (savedDate) {
         exportPanel.append(element("p", {
           className: "author-publish-status",
@@ -1532,7 +1340,7 @@ export function startAuthorApp({
       }
     }
 
-    if (variant === "author" && activePuzzleDate !== null && typeof onDeletePuzzle === "function") {
+    if (activePuzzleDate !== null && typeof onDeletePuzzle === "function") {
       const date = activePuzzleDate;
       const remove = element("button", {
         className: "author-button author-button--danger",
@@ -1557,7 +1365,6 @@ export function startAuthorApp({
           knownPuzzleDates.delete(date);
           lastTrashedPuzzle = { date, definition: structuredClone(current.definition) };
           activePuzzleDate = null;
-          acceptingNewPuzzles = true;
           draft = createBlankDraft();
           resetInlineSourceFromDraft();
           savedDate = null;
@@ -1577,7 +1384,7 @@ export function startAuthorApp({
       exportPanel.append(remove);
     }
 
-    if (variant === "author" && lastTrashedPuzzle !== null && typeof onRestorePuzzle === "function") {
+    if (lastTrashedPuzzle !== null && typeof onRestorePuzzle === "function") {
       const removed = lastTrashedPuzzle;
       const undo = element("button", {
         className: "author-button author-button--quiet",
@@ -1619,69 +1426,7 @@ export function startAuthorApp({
       );
     }
 
-    if (variant === "suggestion" && typeof onSubmitSuggestion === "function") {
-      exportPanel.append(element("p", {
-        className: "author-submit-help",
-        text: locale.ui.suggestionSubmitHelp
-      }));
-      const submit = element("button", {
-        className: "author-button author-button--accent author-publish",
-        text: locale.ui.suggestionSubmit,
-        attributes: {
-          type: "button",
-          disabled: validation.valid && !publishing && submittedSuggestionId === null && !additionsPaused() ? undefined : "",
-          "data-testid": "suggestion-submit"
-        }
-      });
-      submit.addEventListener("click", () => {
-        const currentJson = prepareExport();
-        if (currentJson === null) return;
-        const definition = JSON.parse(currentJson) as PuzzleDefinition;
-        const complete = (result: unknown): void => {
-          const response = result as { readonly suggestionId?: unknown } | null;
-          submittedSuggestionId = Number.isSafeInteger(response?.suggestionId) ? Number(response?.suggestionId) : 0;
-          publishing = false;
-          operationError = "";
-          liveMessage = submittedSuggestionId
-            ? formatMessage(locale.ui.suggestionSubmittedWithId ?? "", { id: submittedSuggestionId })
-            : locale.ui.suggestionSubmitted ?? "";
-          render();
-        };
-        const fail = (error: unknown): void => {
-          publishing = false;
-          operationError = errorMessage(error);
-          liveMessage = operationError;
-          render();
-        };
-        try {
-          publishing = true;
-          liveMessage = locale.ui.suggestionSubmitting ?? "";
-          render();
-          Promise.resolve(onSubmitSuggestion(definition)).then(complete, fail);
-        } catch (error) {
-          fail(error);
-        }
-      });
-      exportPanel.append(submit);
-      if (additionsPaused()) {
-        exportPanel.append(element("p", {
-          className: "author-error",
-          text: formatMessage(locale.ui.puzzleLimitReached, { limit: puzzleLimit ?? 1000 }),
-          attributes: { "data-testid": "puzzle-limit-message" }
-        }));
-      }
-      if (submittedSuggestionId !== null) {
-        exportPanel.append(element("p", {
-          className: "author-publish-status",
-          text: submittedSuggestionId
-            ? formatMessage(locale.ui.suggestionSubmittedWithId ?? "", { id: submittedSuggestionId })
-            : locale.ui.suggestionSubmitted,
-          attributes: { "data-testid": "suggestion-submit-status" }
-        }));
-      }
-    }
-
-    if (variant === "author") {
+    {
       const actions = element("div", { className: "author-export-actions" });
       const copy = element("button", {
         className: "author-button author-button--quiet",
@@ -1746,7 +1491,7 @@ export function startAuthorApp({
     });
     const header = element("header", { className: "author-header" });
     const identity = element("div");
-    identity.append(element("h1", { className: "brand", text: variant === "suggestion" ? locale.ui.suggestionTitle : locale.ui.authorTitle }));
+    identity.append(element("h1", { className: "brand", text: locale.ui.authorTitle }));
     const nav = element("nav", { className: "mode-nav", attributes: { "aria-label": locale.ui.modeNavigation } });
     nav.append(element("a", {
       className: "mode-link",
@@ -1761,7 +1506,7 @@ export function startAuthorApp({
         "aria-current": "page"
       }
     }));
-    if (variant === "author" && typeof onSignOut === "function") {
+    if (typeof onSignOut === "function") {
       const signOut = element("button", {
         className: "mode-link",
         text: locale.ui.authorSignOut ?? "Cerrar sesión",
@@ -1839,9 +1584,7 @@ export function startAuthorApp({
     reset.addEventListener("click", () => {
       if (globalThis.confirm?.(locale.ui.authorResetConfirm) === false) return;
       apply(() => {
-        activeSuggestionId = null;
         activePuzzleDate = null;
-        submittedSuggestionId = null;
         return createBlankDraft();
       }, locale.ui.authorDraftReset);
     });
@@ -1850,85 +1593,8 @@ export function startAuthorApp({
     intro.append(element("p", {
       text: flow === "inline"
         ? locale.ui.authorInlinePageIntro
-        : variant === "suggestion" ? locale.ui.suggestionIntro : locale.ui.authorIntro
+        : locale.ui.authorIntro
     }), introActions);
-    let suggestionDialog: HTMLDialogElement | null = null;
-    const suggestionActions = element("div", { className: "author-suggestion-actions" });
-    if (variant === "author" && suggestionUrl) {
-      suggestionActions.append(element("span", {
-        className: "author-suggestion-label",
-        text: locale.ui.suggestionShareHeading ?? "Propuestas"
-      }));
-      const suggestionLink = element("a", {
-        className: "author-button author-button--quiet",
-        text: locale.ui.suggestionShareLink,
-        attributes: {
-          href: suggestionUrl,
-          "data-testid": "suggestion-page-link"
-        }
-      });
-      const copySuggestionLink = element("button", {
-        className: "author-button author-button--quiet author-button--compact",
-        text: locale.ui.suggestionCopyLinkShort ?? "Copiar",
-        attributes: {
-          type: "button",
-          "aria-label": locale.ui.suggestionCopyLink,
-          "data-testid": "suggestion-copy-link"
-        }
-      });
-      copySuggestionLink.addEventListener("click", async () => {
-        try {
-          await navigator.clipboard.writeText(suggestionUrl);
-          liveMessage = locale.ui.suggestionLinkCopied ?? "";
-        } catch {
-          liveMessage = locale.ui.suggestionLinkCopyFailed ?? "";
-        }
-        render();
-      });
-      suggestionActions.append(suggestionLink, copySuggestionLink);
-    }
-    if (variant === "suggestion" || suggestionUrl) {
-      const suggestionInfoTitleId = "suggestion-info-title";
-      suggestionDialog = element("dialog", {
-        className: "author-suggestion-dialog",
-        attributes: {
-          "aria-labelledby": suggestionInfoTitleId,
-          "data-testid": "suggestion-info-dialog"
-        }
-      });
-      suggestionDialog.append(
-        element("h2", {
-          className: "author-suggestion-dialog-title",
-          text: locale.ui.suggestionInfoTitle ?? "Modo de propuestas",
-          attributes: { id: suggestionInfoTitleId }
-        }),
-        element("p", { text: locale.ui.suggestionInfoIntro }),
-        element("p", { text: locale.ui.suggestionInfoReview }),
-        element("p", { text: locale.ui.suggestionInfoPrivacy })
-      );
-      const closeSuggestionInfo = element("button", {
-        className: "author-button author-button--accent",
-        text: locale.ui.suggestionInfoClose ?? "Entendido",
-        attributes: { type: "button", "data-testid": "suggestion-info-close" }
-      });
-      closeSuggestionInfo.addEventListener("click", () => {
-        if (typeof suggestionDialog?.close === "function") suggestionDialog.close();
-        else suggestionDialog?.removeAttribute("open");
-      });
-      suggestionDialog.append(closeSuggestionInfo);
-
-      const openSuggestionInfo = element("button", {
-        className: "author-button author-button--quiet author-button--compact author-suggestion-info",
-        text: locale.ui.suggestionInfoOpen ?? "Cómo funciona",
-        attributes: { type: "button", "data-testid": "suggestion-info-open" }
-      });
-      openSuggestionInfo.addEventListener("click", () => {
-        if (typeof suggestionDialog?.showModal === "function") suggestionDialog.showModal();
-        else suggestionDialog?.setAttribute("open", "");
-      });
-      suggestionActions.append(openSuggestionInfo);
-      introActions.append(suggestionActions);
-    }
 
     const layout = element("div", { className: "author-layout" });
     const editor = element("div", { className: "author-editor" });
@@ -1979,8 +1645,6 @@ export function startAuthorApp({
       attributes: { "aria-label": locale.ui.authorUtilities, "data-testid": "author-utilities" }
     });
     utilities.append(styleOptions, element("p", { className: "author-utilities-label", text: locale.ui.authorUtilities }));
-    const suggestionLoader = renderSuggestionLoader();
-    if (suggestionLoader) utilities.append(suggestionLoader);
     utilities.append(renderMetadata(), renderOutput(validation));
     layout.append(editor, utilities);
 
@@ -2002,12 +1666,11 @@ export function startAuthorApp({
       attributes: { role: "status", "aria-live": "polite", "aria-atomic": "true", "data-testid": "author-live" }
     });
     shell.append(header, viewControls, topContent, layout);
-    if (suggestionDialog) shell.append(suggestionDialog);
     shell.append(live);
     mount.replaceChildren(shell);
     document.documentElement.lang = locale.id;
     document.documentElement.dir = locale.dir;
-    document.title = `${variant === "suggestion" ? locale.ui.suggestionTitle : locale.ui.authorTitle} — ${locale.ui.gameName}`;
+    document.title = `${locale.ui.authorTitle} — ${locale.ui.gameName}`;
   }
 
   persist();

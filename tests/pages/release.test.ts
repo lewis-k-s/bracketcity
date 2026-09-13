@@ -9,7 +9,6 @@ import {
   renderPagesRelease,
   readPagesSupabaseConfig
 } from "../../scripts/build-pages.ts";
-import { renderWordPressDevLoader } from "../../scripts/local-wordpress-loader.ts";
 
 const projectRoot = resolve(import.meta.dirname, "../..");
 const pagesDirectory = resolve(projectRoot, "dist-pages");
@@ -17,7 +16,7 @@ const pagesDirectory = resolve(projectRoot, "dist-pages");
 function browserDocument(currentScriptUrl: string): JSDOM {
   const dom = new JSDOM('<!doctype html><div id="bracket-city-app"></div>', {
     runScripts: "outside-only",
-    url: "https://example.wordpress.com/nexo/"
+    url: "https://example.test/nexo/"
   });
   Object.defineProperty(dom.window.document, "currentScript", {
     configurable: true,
@@ -46,15 +45,6 @@ test("loader resolves release.js from its own URL and reports a failure", () => 
 
   release.dispatchEvent(new dom.window.Event("error"));
   assert.match(dom.window.document.getElementById("bracket-city-app")!.textContent, /versión publicada/);
-});
-
-test("local WordPress loader starts the Vite module from its own origin", () => {
-  const dom = browserDocument("http://127.0.0.1:4176/loader.js");
-  dom.window.eval(renderWordPressDevLoader({ id: "es-ES" }));
-  const application = dom.window.document.head.querySelector<HTMLScriptElement>('script[type="module"]');
-  assert.ok(application);
-  assert.equal(application.src, "http://127.0.0.1:4176/src/pages-entry.ts");
-  assert.equal(JSON.stringify(dom.window.__NEXO_LOCALE_PACK__), '{"id":"es-ES"}');
 });
 
 test("release injects hashed CSS, locale, and module application scripts", () => {
@@ -112,7 +102,7 @@ test("standalone page embeds only a validated Supabase browser configuration", (
   }), /publishable browser key/u);
 });
 
-test("Pages artifact contains a standalone game and stable WordPress loader assets", async () => {
+test("Pages artifact contains a standalone game and stable embed loader assets", async () => {
   const files = await listFiles(pagesDirectory);
   assert.ok(files.includes(".nojekyll"));
   assert.ok(files.includes("index.html"));

@@ -5,7 +5,6 @@ import { JSDOM } from "jsdom";
 import { AUTHOR_STORAGE_KEY } from "../src/author.ts";
 import {
   AUTHOR_INLINE_STORAGE_KEY,
-  SUGGESTION_STORAGE_KEY,
   startAuthorApp
 } from "../src/author-view.ts";
 import type { LocalePack, PuzzleDefinition, StorageLike } from "../src/types.ts";
@@ -145,43 +144,6 @@ test("the shared metadata form stores and clears an optional difficulty", () => 
   difficulty.value = "";
   difficulty.dispatchEvent(new window.Event("change", { bubbles: true }));
   assert.equal(Object.hasOwn(app.getDraft().metadata, "difficulty"), false);
-});
-
-test("author mode opens the suggestion page in place, explains access, and copies its URL", async () => {
-  installDom();
-  const suggestionUrl = "https://example.test/sugerir";
-  const copied: string[] = [];
-  const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
-  Object.defineProperty(globalThis, "navigator", {
-    configurable: true,
-    value: { clipboard: { writeText: async (value: string) => { copied.push(value); } } }
-  });
-  try {
-    startAuthorApp({ mount: q("#app"), locale, storage: memoryStorage(), suggestionUrl });
-
-    const link = q('[data-testid="suggestion-page-link"]');
-    assert.equal(link.getAttribute("href"), suggestionUrl);
-    assert.equal(link.getAttribute("target"), null);
-    assert.equal(link.textContent, locale.ui.suggestionShareLink);
-
-    const dialog = q('[data-testid="suggestion-info-dialog"]');
-    assert.equal(dialog.hasAttribute("open"), false);
-    q('[data-testid="suggestion-info-open"]').click();
-    assert.equal(dialog.hasAttribute("open"), true);
-    assert.match(dialog.textContent, /sin iniciar sesión en WordPress/u);
-    assert.match(dialog.textContent, /administrador/u);
-    q('[data-testid="suggestion-info-close"]').click();
-    assert.equal(dialog.hasAttribute("open"), false);
-
-    q('[data-testid="suggestion-copy-link"]').click();
-    await Promise.resolve();
-
-    assert.deepEqual(copied, [suggestionUrl]);
-    assert.equal(q('[data-testid="author-live"]').textContent, locale.ui.suggestionLinkCopied);
-  } finally {
-    if (originalNavigator) Object.defineProperty(globalThis, "navigator", originalNavigator);
-    else delete (globalThis as { navigator?: Navigator }).navigator;
-  }
 });
 
 test("guided parenthesis formats explain directional forms without rendering internal IDs", () => {
@@ -540,26 +502,6 @@ test("a loaded puzzle can move to Trash and be restored immediately", async () =
   assert.ok(q('[data-testid="author-delete-puzzle"]'));
 });
 
-test("the release limit pauses new suggestions but keeps the draft editable", () => {
-  installDom();
-  let submissions = 0;
-  startAuthorApp({
-    mount: q("#app"),
-    locale,
-    storage: memoryStorage(),
-    variant: "suggestion",
-    acceptingNewPuzzles: false,
-    puzzleLimit: 1000,
-    onSubmitSuggestion() { submissions += 1; }
-  });
-
-  assert.equal(q('[data-testid="suggestion-submit"]').disabled, true);
-  assert.match(q('[data-testid="puzzle-limit-message"]').textContent, /1000/u);
-  inputValue(q("#author-title-input"), "Un borrador que se conserva");
-  assert.equal(q("#author-title-input").value, "Un borrador que se conserva");
-  assert.equal(submissions, 0);
-});
-
 test("field edits update the draft before copy and download", async () => {
   installDom();
   const storage = memoryStorage();
@@ -687,67 +629,6 @@ test("a valid draft asks for a date instead of publishing without one", () => {
   assert.equal(q(".author-error").textContent, locale.ui.authorPublishDateRequired);
 });
 
-test("suggestion mode submits a valid undated draft without exposing JSON controls", async () => {
-  installDom();
-  const storage = memoryStorage();
-  buildDirectedDraft(storage);
-  storage.setItem(SUGGESTION_STORAGE_KEY, storage.value(AUTHOR_STORAGE_KEY)!);
-  const submitted: PuzzleDefinition[] = [];
-  startAuthorApp({
-    mount: q("#app"),
-    locale,
-    storage,
-    variant: "suggestion",
-    async onSubmitSuggestion(definition) {
-      submitted.push(definition);
-      return { suggestionId: 17, status: "pending" };
-    }
-  });
-
-  assert.equal(q("h1").textContent, "Proponer Entre Paréntesis");
-  assert.equal(q("#author-release-date").value, "");
-  assert.equal(q('[data-testid="author-json"]'), null);
-  assert.equal(q('[data-testid="author-download"]'), null);
-  q('[data-testid="suggestion-info-open"]').click();
-  assert.match(q('[data-testid="suggestion-info-dialog"]').textContent, /queda pendiente/u);
-  q('[data-testid="suggestion-submit"]').click();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  assert.equal(submitted.length, 1);
-  assert.equal(submitted[0]!.releaseDate, undefined);
-  assert.match(q('[data-testid="suggestion-submit-status"]').textContent, /#17/u);
-  assert.equal(q('[data-testid="suggestion-submit"]').disabled, true);
-});
-
-test("an admin can load a pending suggestion and approve it with a date", () => {
-  installDom();
-  const definition = readPuzzle("2026-08-31-es.json");
-  delete definition.releaseDate;
-  const storage = memoryStorage();
-  const published: Array<{ definition: PuzzleDefinition; suggestionId?: number }> = [];
-  const suggestions = [{
-    metadata: { suggestionId: 17, id: definition.id, title: definition.title ?? definition.id },
-    definition
-  }];
-  const onPublish = (next: PuzzleDefinition, options: { readonly suggestionId?: number }) => {
-      published.push({
-        definition: next,
-        ...(options.suggestionId === undefined ? {} : { suggestionId: options.suggestionId })
-      });
-  };
-  startAuthorApp({ mount: q("#app"), locale, storage, suggestions, onPublish });
-  const select = q('[data-testid="author-existing-suggestion"]');
-  select.value = "0";
-  select.dispatchEvent(new window.Event("change", { bubbles: true }));
-  q('[data-testid="suggestion-load"]').click();
-  startAuthorApp({ mount: q("#app"), locale, storage, suggestions, onPublish });
-  inputValue(q("#author-release-date"), "2026-09-04");
-  q('[data-testid="author-publish"]').click();
-  assert.equal(published.length, 1);
-  assert.equal(published[0]!.suggestionId, 17);
-  assert.equal(published[0]!.definition.releaseDate, "2026-09-04");
-  assert.equal(published[0]!.definition.revision, 1);
-});
-
 test("an invalid creator draft cannot publish", () => {
   installDom();
   let calls = 0;
@@ -763,7 +644,7 @@ test("an invalid creator draft cannot publish", () => {
   assert.equal(calls, 0);
 });
 
-test("an asynchronous WordPress save reports progress and a useful failure", async () => {
+test("an asynchronous Supabase save reports progress and a useful failure", async () => {
   installDom();
   const storage = memoryStorage();
   buildDirectedDraft(storage);
@@ -785,7 +666,7 @@ test("an asynchronous WordPress save reports progress and a useful failure", asy
   assert.equal(q('[data-testid="author-publish"]').disabled, false);
 });
 
-test("an asynchronous correction succeeds and keeps the WordPress page permalink", async () => {
+test("an asynchronous correction succeeds and keeps the dedicated-domain permalink", async () => {
   installDom();
   const storage = memoryStorage();
   buildDirectedDraft(storage);
@@ -812,7 +693,7 @@ test("an asynchronous correction succeeds and keeps the WordPress page permalink
   assert.equal(q(".mode-link").href, "https://example.test/juegos/nexo/?ref=menu&date=2026-09-01");
 });
 
-test("a future save never adds its date to the WordPress play link", async () => {
+test("a future save never adds its date to the play link", async () => {
   installDom();
   const storage = memoryStorage();
   buildDirectedDraft(storage);
@@ -828,26 +709,4 @@ test("a future save never adds its date to the WordPress play link", async () =>
   q('[data-testid="author-publish"]').click();
   await new Promise((resolve) => setTimeout(resolve, 0));
   assert.equal(q(".mode-link").href, "https://example.test/juegos/nexo/");
-});
-
-test("legacy browser puzzles have an import action that keeps local records", async () => {
-  installDom();
-  const storage = memoryStorage();
-  const definition = readPuzzle("2026-08-31-es.json");
-  let imported = 0;
-  startAuthorApp({
-    mount: q("#app"),
-    locale,
-    storage,
-    legacyPuzzles: [definition],
-    async onImportLegacy() {
-      imported += 1;
-      return [{ date: definition.releaseDate!, ok: true }];
-    }
-  });
-  q('[data-testid="author-import-legacy"]').click();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  assert.equal(imported, 1);
-  assert.equal(q('[data-testid="author-import-legacy"]'), null);
-  assert.match(document.body.textContent, /datos locales se conservaron/u);
 });

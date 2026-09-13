@@ -9,8 +9,7 @@ import type {
   PuzzleCatalog,
   PuzzleDefinition,
   StorageLike,
-  SupabaseConfig,
-  WordPressConfig
+  SupabaseConfig
 } from "./types.ts";
 
 const DirectionSchema = Schema.Literals(["left", "right"]);
@@ -121,22 +120,6 @@ const LegacyProgressSchema = Schema.Struct({
   completedAt: Schema.optionalKey(Schema.String)
 });
 
-export const WordPressConfigSchema = Schema.Struct({
-  restBase: Schema.String,
-  assetBase: Schema.optionalKey(Schema.String),
-  nonce: Schema.optionalKey(Schema.String),
-  canAuthor: Schema.Boolean,
-  canSuggest: Schema.optionalKey(Schema.Boolean),
-  suggestionKey: Schema.optionalKey(Schema.String),
-  suggestionUrl: Schema.optionalKey(Schema.String),
-  acceptingNewPuzzles: Schema.optionalKey(Schema.Boolean),
-  puzzleLimit: Schema.optionalKey(Schema.Finite),
-  pageUrl: Schema.optionalKey(Schema.String),
-  localeUrl: Schema.optionalKey(Schema.String),
-  currentDate: Schema.optionalKey(Schema.String),
-  timeZone: Schema.optionalKey(Schema.String)
-});
-
 export const SupabaseConfigSchema = Schema.Struct({
   url: Schema.String,
   publishableKey: Schema.String,
@@ -197,7 +180,6 @@ type Decodable = typeof PuzzleDefinitionSchema
   | typeof PuzzleCatalogSchema
   | typeof ProgressSchema
   | typeof LegacyProgressSchema
-  | typeof WordPressConfigSchema
   | typeof SupabaseConfigSchema
   | typeof AuthorDraftSchema
   | typeof PublishedPuzzleStoreSchema
@@ -226,9 +208,6 @@ export const decodeProgress = (source: string, input: unknown) =>
 
 export const decodeLegacyProgress = (source: string, input: unknown) =>
   decodeUnknownEffect(LegacyProgressSchema, source, input);
-
-export const decodeWordPressConfig = (source: string, input: unknown) =>
-  decodeUnknownEffect(WordPressConfigSchema, source, input) as Effect.Effect<WordPressConfig, DecodeError>;
 
 export const decodeSupabaseConfig = (source: string, input: unknown) =>
   decodeUnknownEffect(SupabaseConfigSchema, source, input) as Effect.Effect<SupabaseConfig, DecodeError>;

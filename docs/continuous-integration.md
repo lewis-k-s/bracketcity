@@ -26,8 +26,7 @@ repository variable or frontend build.
 
 The Supabase migration workflow also uses `SUPABASE_ACCESS_TOKEN` and
 `SUPABASE_DB_PASSWORD` as repository secrets. It applies checked-in database
-migrations and the checked-in project configuration. Do not add WordPress
-credentials to GitHub.
+migrations and the checked-in project configuration.
 
 The same workflow deploys checked-in Edge Functions. Supabase provides the
 function with its runtime URL, publishable key, and service-role key. The Pages
@@ -35,7 +34,7 @@ artifact receives only `SUPABASE_PUBLISHABLE_KEY`. Authentication URL settings,
 user invitations and entries in `private.puzzle_managers` are deliberate
 production operations.
 
-## WordPress embed
+## Blog embed
 
 The Mudlarker page embeds the public Pages bundle with a Custom HTML block:
 
@@ -48,8 +47,8 @@ The Mudlarker page embeds the public Pages bundle with a Custom HTML block:
 ```
 
 The publishable key is safe to include in page source. The embed reads released
-puzzles from Supabase. It does not enable creator sign-in. The legacy PHP
-plugin remains in the repository only for rollback and migration work.
+puzzles from Supabase and does not enable creator sign-in. It does not install
+a plugin, expose application REST routes, or access the WordPress database.
 
 ## Rollback
 

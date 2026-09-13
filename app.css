@@ -683,57 +683,6 @@ body:has(#bracket-city-app) .is-layout-constrained > #bracket-city-app {
   line-height: 1.45;
 }
 
-:is(#app, #bracket-city-app) .author-suggestion-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-:is(#app, #bracket-city-app) .author-suggestion-label {
-  flex: 1 0 100%;
-  color: var(--muted);
-  font-size: 0.65rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-:is(#app, #bracket-city-app) .author-suggestion-actions .author-button--compact {
-  min-height: 2rem;
-  padding: 0.2rem 0.45rem;
-  font-size: 0.7rem;
-}
-
-:is(#app, #bracket-city-app) .author-suggestion-dialog {
-  width: min(calc(100% - 2rem), 32rem);
-  padding: clamp(1rem, 3vw, 1.5rem);
-  border: 1px solid var(--ink);
-  border-radius: 0.3rem;
-  background: var(--paper);
-  color: var(--ink);
-  box-shadow: 0.5rem 0.5rem 0 rgba(44, 42, 40, 0.2);
-}
-
-:is(#app, #bracket-city-app) .author-suggestion-dialog::backdrop {
-  background: rgba(26, 24, 22, 0.55);
-}
-
-:is(#app, #bracket-city-app) .author-suggestion-dialog-title {
-  margin: 0 0 0.8rem;
-  font-size: clamp(1.2rem, 4vw, 1.55rem);
-}
-
-:is(#app, #bracket-city-app) .author-suggestion-dialog p {
-  margin: 0 0 0.8rem;
-  font-size: 0.86rem;
-  line-height: 1.55;
-}
-
-:is(#app, #bracket-city-app) .author-suggestion-dialog .author-button {
-  margin-top: 0.25rem;
-}
-
 :is(#app, #bracket-city-app) .instructions-dialog {
   width: min(calc(100% - 2rem), 44rem);
   max-height: calc(100dvh - 2rem);

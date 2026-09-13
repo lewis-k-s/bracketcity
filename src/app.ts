@@ -25,16 +25,11 @@ import {
 import { PuzzleCatalogError, readRequestedPuzzleDate, resolvePuzzleEntry, validatePuzzleCatalog } from "./catalog.ts";
 import {
   PuzzleRepositoryError,
-  addSuccessfulLegacyImports,
   assertValidCorrection,
   createAuthenticatedSupabasePuzzleRepository,
   createSupabasePuzzleRepository,
-  createWordPressPuzzleRepository,
-  getLegacyPublishedPuzzles,
-  importLegacyPublishedPuzzles,
   latestAvailablePuzzleDate,
-  readSupabaseConfig,
-  readWordPressConfig
+  readSupabaseConfig
 } from "./puzzle-repository.ts";
 import { mergePublishedPuzzles, publishPuzzle, restorePublishedPuzzles } from "./published.ts";
 import { createCompletionShare } from "./share.ts";
@@ -50,7 +45,6 @@ import type {
   CatalogEntry,
   CompiledPuzzle,
   ExistingPuzzle,
-  ExistingSuggestion,
   LocalePack,
   Progress,
   PuzzleDefinition,
@@ -105,7 +99,7 @@ const datedAppPopStateCleanups = new WeakMap<HTMLElement, () => void>();
 export function readApplicationMode(url: URL, authorModeEnabled = false): string | null {
   const requestedMode = url.searchParams.get("mode");
   if (requestedMode !== null) {
-    return requestedMode === "author" && !authorModeEnabled ? null : requestedMode;
+    return requestedMode === "author" && authorModeEnabled ? "author" : null;
   }
   if (!authorModeEnabled) return null;
   const callback = new URLSearchParams(url.hash.replace(/^#/u, ""));
@@ -502,24 +496,11 @@ export async function bootstrapApp({
     datedAppPopStateCleanups.delete(mount);
   }
   if (!mount) return null;
-  const wordpressConfig = readWordPressConfig();
   const supabaseConfig = readSupabaseConfig();
-  let repository = supabaseConfig
-    ? createSupabasePuzzleRepository(supabaseConfig)
-    : wordpressConfig
-      ? createWordPressPuzzleRepository(wordpressConfig)
-      : null;
+  let repository = supabaseConfig ? createSupabasePuzzleRepository(supabaseConfig) : null;
   const deployedLocale = globalThis.__NEXO_LOCALE_PACK__ ? applyBrandName(globalThis.__NEXO_LOCALE_PACK__) : null;
-  if (!supabaseConfig && wordpressConfig?.localeUrl && localeUrl?.pathname?.endsWith?.("/locales/es-ES.json")) {
-    localeUrl = new URL(wordpressConfig.localeUrl, document.baseURI);
-  }
   const currentUrl = new URL(globalThis.location?.href ?? document.baseURI);
-  const mode = readApplicationMode(
-    currentUrl,
-    supabaseConfig
-      ? supabaseConfig.authorModeEnabled
-      : wordpressConfig !== null || mount.id === "app"
-  );
+  const mode = readApplicationMode(currentUrl, supabaseConfig?.authorModeEnabled ?? mount.id === "app");
   if (mode === "author" && !currentUrl.searchParams.has("mode")) {
     currentUrl.searchParams.set("mode", "author");
     globalThis.history.replaceState(globalThis.history.state, "", currentUrl.href);
@@ -550,30 +531,6 @@ export async function bootstrapApp({
       browserStorage = globalThis.localStorage;
     } catch {
       browserStorage = null;
-    }
-  }
-  if (mode === "suggest") {
-    try {
-      if (!repository?.config.canSuggest) throw new Error("Este enlace de sugerencias no es válido.");
-      const [locale, { startAuthorApp }] = await Promise.all([
-        deployedLocale ?? loadLocale(localeUrl),
-        import("./author-view.ts")
-      ]);
-      return startAuthorApp({
-        mount,
-        locale,
-        storage: browserStorage,
-        variant: "suggestion",
-        flow: authorFlow,
-        skin: authorSkin,
-        pageUrl: repository.config.pageUrl,
-        acceptingNewPuzzles: repository.config.acceptingNewPuzzles,
-        puzzleLimit: repository.config.puzzleLimit,
-        onSubmitSuggestion: (definition) => repository.submitSuggestion(definition)
-      });
-    } catch (error: unknown) {
-      renderFatalError(mount, `No se pudo abrir el formulario de sugerencias. ${errorMessage(error)}`.trim());
-      return null;
     }
   }
   if (mode !== "author") {
@@ -641,39 +598,31 @@ export async function bootstrapApp({
     if (repository && !repository.config.canAuthor) throw new Error("No tienes permiso para abrir el editor.");
     const { startAuthorApp } = await import("./author-view.ts");
     if (repository) {
-      const [locale, listing, suggestionMetadata] = await Promise.all([
+      const [locale, listing] = await Promise.all([
         deployedLocale ?? loadLocale(localeUrl),
-        repository.listAdmin(),
-        repository.listSuggestions()
+        repository.listAdmin()
       ]);
       const existingPuzzles: ExistingPuzzle[] = await Promise.all(listing.entries.map(async (entry) => ({
         date: entry.date,
         definition: await repository.loadAdmin(entry.date)
       })));
-      const suggestions: ExistingSuggestion[] = await Promise.all(suggestionMetadata.map(async (metadata) => ({
-        metadata,
-        definition: await repository.loadSuggestion(metadata.suggestionId)
-      })));
-      const existingDates = new Set(existingPuzzles.map((item) => item.date));
       const onPublish = async (
         definition: PuzzleDefinition,
-        { overwrite = false, suggestionId }: { overwrite?: boolean; suggestionId?: number } = {}
+        { overwrite = false }: { overwrite?: boolean } = {}
       ): Promise<unknown> => {
         const priorDefinition = existingPuzzles.find((item) => item.date === definition.releaseDate)?.definition;
-        if (overwrite && suggestionId === undefined) {
+        if (overwrite) {
           assertValidCorrection(definition, priorDefinition, {
             idMismatch: locale.ui.authorCorrectionIdMismatch ?? "La corrección debe conservar el identificador del rompecabezas.",
             revisionRequired: locale.ui.authorCorrectionRevisionRequired ?? "La corrección debe usar una revisión superior."
           });
         }
-        const result = suggestionId === undefined
-          ? await repository.save(definition, {
-            overwrite,
-            ...(overwrite && priorDefinition
-              ? { expectedRevision: priorDefinition.revision ?? 1 }
-              : {})
-          })
-          : await repository.approveSuggestion(suggestionId, definition);
+        const result = await repository.save(definition, {
+          overwrite,
+          ...(overwrite && priorDefinition
+            ? { expectedRevision: priorDefinition.revision ?? 1 }
+            : {})
+        });
         for (const candidate of [priorDefinition, definition]) {
           if (!candidate || typeof browserStorage?.removeItem !== "function") continue;
           try { browserStorage.removeItem(progressStorageKey(compilePuzzle(candidate, locale))); } catch { /* fail closed */ }
@@ -681,27 +630,16 @@ export async function bootstrapApp({
         const existing = existingPuzzles.find((item) => item.date === definition.releaseDate);
         if (existing) existing.definition = structuredClone(definition);
         else if (definition.releaseDate) existingPuzzles.push({ date: definition.releaseDate, definition: structuredClone(definition) });
-        if (definition.releaseDate) existingDates.add(definition.releaseDate);
         return result;
       };
-      const legacyPuzzles = getLegacyPublishedPuzzles(browserStorage, locale);
-      const onImportLegacy = async () => {
-        const results = await importLegacyPublishedPuzzles(repository, legacyPuzzles, existingDates);
-        addSuccessfulLegacyImports(existingPuzzles, legacyPuzzles, results);
-        return results;
-      };
       return startAuthorApp({
-        mount, locale, storage, existingPuzzles, suggestions, onPublish, legacyPuzzles, onImportLegacy,
+        mount, locale, storage, existingPuzzles, onPublish,
         flow: authorFlow,
         skin: authorSkin,
-        onRejectSuggestion: (suggestionId) => repository.rejectSuggestion(suggestionId),
         onDeletePuzzle: (date) => repository.trashPuzzle(date),
         onRestorePuzzle: (date) => repository.restorePuzzle(date),
-        acceptingNewPuzzles: repository.config.acceptingNewPuzzles,
-        puzzleLimit: repository.config.puzzleLimit,
         currentDate: listing.currentDate,
         pageUrl: repository.config.pageUrl,
-        suggestionUrl: repository.config.suggestionUrl,
         onSignOut: managerSession ? async () => {
           await managerSession.signOut();
           const signInUrl = new URL(globalThis.location.href);

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Entre Paréntesis WordPress fixture</title>
+    <title>Entre Paréntesis blog embed fixture</title>
     <style>
       :root {
         --wp--preset--spacing--50: 6rem;
@@ -57,24 +57,11 @@
       </div>
       <div class="wp-block-column" style="flex-basis: 10%"></div>
     </div>
-    <div class="wp-block-columns" data-testid="wordpress-content-row" style="padding-top: var(--wp--preset--spacing--50)">
+    <div class="wp-block-columns" data-testid="blog-content-row" style="padding-top: var(--wp--preset--spacing--50)">
       <div class="wp-block-column" style="flex-basis: 30%"></div>
       <div class="wp-block-column entry-content is-layout-constrained" style="flex-basis: 60%">
-        <script id="bracket-city-config" type="application/json">
-          {
-            "restBase": "http://127.0.0.1:4174/wp-json/bracket-city/v1",
-            "currentDate": "2026-09-01",
-            "timeZone": "Europe/Madrid",
-            "pageUrl": "http://127.0.0.1:4174/tests/e2e/fixtures/wordpress-page.html",
-            "assetBase": "http://127.0.0.1:4175",
-            "canAuthor": true,
-            "canSuggest": true,
-            "acceptingNewPuzzles": true,
-            "puzzleLimit": 1000,
-            "suggestionKey": "fixture-suggestion-key",
-            "suggestionUrl": "http://127.0.0.1:4174/tests/e2e/fixtures/wordpress-page.html?mode=suggest&suggestion_key=fixture-suggestion-key",
-            "nonce": "rest-nonce"
-          }
+        <script id="nexo-supabase-config" type="application/json">
+          {"url":"https://abcdefghijklmnopqrst.supabase.co","publishableKey":"sb_publishable_test-key"}
         </script>
         <main id="bracket-city-app"></main>
       </div>
