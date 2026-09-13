@@ -20,7 +20,7 @@ create table public.puzzle_analytics (
 	constraint puzzle_analytics_puzzle_id_check check (
 		puzzle_id ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'
 	),
-	constraint puzzle_analytics_difficulty_check check (
+	constraint puzzle_analytics_difficulty_pair_check check (
 		(difficulty is null and difficulty_label is null)
 		or (difficulty is not null and difficulty_label is not null)
 	),
